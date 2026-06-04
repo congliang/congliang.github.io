@@ -27,7 +27,7 @@ comments: false
 ## 📬 联系方式
 
 - **GitHub：** [congliang](https://github.com/congliang)
-- **邮箱：** guomi40@gmail.com
+- **邮箱：** yunshang0069@126.com
 
 ---
 
