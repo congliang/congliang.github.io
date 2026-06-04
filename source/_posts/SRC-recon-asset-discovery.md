@@ -17,6 +17,40 @@ description: SRC 挖洞前置工作全记录。从根域名开始，子域名爆
 
 ***
 
+## 信息收集总流程
+
+先把整体思路摆在这里，后面再展开每个环节：
+
+```mermaid
+flowchart TB
+    A["根域名 target.com"] --> B[子域名收集]
+    B --> B1["被动收集<br/>crt.sh / Subfinder / Amass / 搜索引擎"]
+    B --> B2["字典爆破<br/>OneForAll / ksubdomain / massdns"]
+    B1 --> C[去重 + 存活验证]
+    B2 --> C
+    C --> D["DNS 解析 → 提取 IP / C段"]
+    C --> E["指纹识别<br/>WhatWeb / httpx / Fofa / Shodan"]
+    C --> F["空间搜索引擎<br/>搜 C段 / 证书关联 / 备案"]
+    D --> G[端口扫描<br/>Nmap / Naabu]
+    E --> H["目录扫描<br/>dirsearch / ffuf"]
+    F --> H
+    G --> H
+    H --> I["敏感路径 / 备份文件"]
+    E --> J["JS 分析<br/>Katana / LinkFinder / SecretFinder"]
+    E --> K["API 发现<br/>Swagger / 抓包 / 小程序反编译"]
+    C --> L["GitHub 泄露监控<br/>关键字搜索 / GitDorker"]
+    C --> M[资产清单 + 优先级排序]
+    M --> N["开始手工+自动化漏洞挖掘"]
+    
+    style A fill:#4a90d9,color:#fff
+    style N fill:#2e7d32,color:#fff
+    style B fill:#f5a623,color:#fff
+    style J fill:#f5a623,color:#fff
+    style L fill:#f5a623,color:#fff
+```
+
+***
+
 ## 一、先搞清楚你要什么
 
 ### 1.1 信息收集的目标
