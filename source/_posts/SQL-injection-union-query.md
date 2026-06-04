@@ -33,7 +33,7 @@ flowchart LR
     A[发现注入点] --> B[ORDER BY 猜列数]
     B --> C[UNION SELECT 找回显位]
     C --> D[查库名]
-    D --> E[information_schema 枚举表/字段]
+    D --> E["information_schema 枚举表/字段"]
     E --> F[Dump 数据]
 ```
 

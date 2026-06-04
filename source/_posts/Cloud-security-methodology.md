@@ -18,9 +18,9 @@ flowchart TD
     A[云安全测试] --> B[资产发现]
     A --> C[存储安全]
     A --> D[IAM权限]
-    A --> E[计算/Serverless]
-    A --> F[CI/CD与IaC]
-    B --> B1[cloudlist] --> B2[DNS/crt.sh] --> B3[API枚举]
+    A --> E["计算/Serverless"]
+    A --> F["CI/CD与IaC"]
+    B --> B1[cloudlist] --> B2["DNS/crt.sh"] --> B3[API枚举]
     C --> C1[桶爆破] --> C2[ACL审计] --> C3[元数据利用]
     D --> D1[权限枚举] --> D2[提权路径] --> D3[跨账号假定]
     E --> E1[Lambda攻击] --> E2[容器逃逸] --> E3[凭证窃取]
@@ -296,7 +296,7 @@ prowler aws --output-formats html
 ```mermaid
 flowchart LR
     subgraph 侦察
-        R1[cloudlist] --> R2[DNS/crt.sh] --> R3[目标清单]
+        R1[cloudlist] --> R2["DNS/crt.sh"] --> R3[目标清单]
     end
     subgraph 存储
         S1[桶爆破] --> S2[ACL审计]
@@ -305,7 +305,7 @@ flowchart LR
         I1[权限枚举] --> I2[pmapper] --> I3[提权路径]
     end
     subgraph 计算
-        C1[Serverless] --> C2[容器/元数据]
+        C1[Serverless] --> C2["容器/元数据"]
     end
     subgraph CI/CD
         P1[State文件] --> P2[密钥扫描]

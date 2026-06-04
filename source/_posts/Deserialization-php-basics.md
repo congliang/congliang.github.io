@@ -154,8 +154,6 @@ flowchart LR
     C --> D["__call()"]
     D --> E["__destruct()"]
     E --> F["危险函数执行 system/eval/file_put_contents"]
-    style A fill:#4a90d9,color:#fff
-    style F fill:#d94a4a,color:#fff
 ```
 
 ### POP链构造实例
@@ -218,8 +216,6 @@ flowchart TD
     C --> D["call_user_func_array()"]
     D --> E["system('任意命令')"]
 
-    style A fill:#4a90d9,color:#fff
-    style E fill:#d94a4a,color:#fff
 ```
 
 链跨越3个不同类，攻击者只需构造`Windows`对象的序列化字符串，即可通过框架逻辑执行到危险函数。

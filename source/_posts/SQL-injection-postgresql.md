@@ -196,15 +196,15 @@ flowchart TD
     A[发现 SQL 注入点] --> B{堆叠查询?}
     B -->|是| C{当前角色权限?}
     B -->|否| D{有回显?}
-    D -->|有| E[联合查询 / 报错注入]
+    D -->|有| E["联合查询 / 报错注入"]
     D -->|无| F[pg_sleep 时间盲注]
     C -->|超级用户| G{攻击目标?}
     C -->|普通用户| H[查询敏感数据]
-    G -->|读文件| I[pg_read_file / COPY FROM]
-    G -->|写文件| J[COPY TO / lo_export]
+    G -->|读文件| I["pg_read_file / COPY FROM"]
+    G -->|写文件| J["COPY TO / lo_export"]
     G -->|命令执行| K[COPY PROGRAM]
     K --> L{成功?}
-    L -->|否| M[UDF 提权: 写入.so]
+    L -->|否| M["UDF 提权: 写入.so"]
     M --> N[CREATE FUNCTION 注册]
     N --> O[sys_eval 命令执行]
     L -->|是| P[获取 SHELL]

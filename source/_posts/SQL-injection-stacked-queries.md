@@ -87,7 +87,7 @@ flowchart LR
     D --> E[反弹 Shell]
     B -->|MySQL| F{知道绝对路径?}
     F -->|Yes| G[INTO OUTFILE 写 Webshell]
-    F -->|No| H[读文件/修改数据]
+    F -->|No| H["读文件/修改数据"]
 ```
 
 ---

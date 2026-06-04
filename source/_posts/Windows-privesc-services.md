@@ -249,9 +249,9 @@ flowchart TD
     Start([低权限Shell]) --> Enum[PowerUp.ps1枚举]
     Enum -->|Unquoted Path| U[检查目录权限→植入载荷→重启服务] --> Shell1[SYSTEM]
     Enum -->|Writable Binary| W[备份→覆盖→重启→恢复] --> Shell2[SYSTEM]
-    Enum -->|Registry ACL| R[改ImagePath/FailureCommand→重启] --> Shell3[SYSTEM]
+    Enum -->|Registry ACL| R["改ImagePath/FailureCommand→重启"] --> Shell3[SYSTEM]
     Enum -->|Service ACL| A[解析SDDL→CHANGE_CONFIG改binPath] --> Shell4[SYSTEM]
-    Shell1 --> Clean[恢复配置/清理痕迹] --> Done([完成])
+    Shell1 --> Clean["恢复配置/清理痕迹"] --> Done([完成])
     Shell2 --> Clean
     Shell3 --> Clean
     Shell4 --> Clean

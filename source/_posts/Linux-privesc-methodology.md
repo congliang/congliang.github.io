@@ -220,7 +220,7 @@ graph TD
     B -->|紧急| C[LinPEAS全量扫描]
     B -->|非紧急| D[手动快速检查]
     C --> E{发现提权向量?}
-    D --> G[sudo -l / SUID / crontab]
+    D --> G["sudo -l / SUID / crontab"]
     G --> E
     E -->|有| F[直接利用 → Root]
     E -->|无| H[运行pspy后台监控]
@@ -230,7 +230,7 @@ graph TD
     J -->|无| K[LinPEAS深度扫描]
     K --> L{找到路径?}
     L -->|有| F
-    L -->|无| M[研究内核漏洞/定制利用]
+    L -->|无| M["研究内核漏洞/定制利用"]
     M --> F
 ```
 
@@ -251,7 +251,7 @@ graph TD
 ```mermaid
 graph TD
     START[低权限Shell] --> S1[sudo -l]
-    S1 -->|有可利用项| ROOT[Root!]
+    S1 -->|有可利用项| ROOT["Root!"]
     S1 -->|无| S2[SUID检查]
     S2 -->|有可利用SUID| ROOT
     S2 -->|无| S3[Crontab检查]
@@ -266,14 +266,11 @@ graph TD
     S7 -->|容器可逃逸| ROOT
     S7 -->|否| S8[pspy后台监控]
     S8 -->|捕获密码/命令| ROOT
-    S8 -->|无发现| S9[凭据泄露/敏感文件]
+    S8 -->|无发现| S9["凭据泄露/敏感文件"]
     S9 -->|配置文件含密码| ROOT
     S9 -->|无| FINAL[LinPEAS全量 + 手动审计]
     FINAL --> ROOT
 
-    style START fill:#e1f5fe
-    style ROOT fill:#c8e6c9
-    style FINAL fill:#fff9c4
 ```
 
 决策优先级：**sudo > SUID > crontab > 内核 > Capabilities > PATH > Docker > 凭据泄露**

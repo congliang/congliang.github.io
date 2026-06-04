@@ -20,7 +20,7 @@ categories: 渗透测试
 
 ```mermaid
 flowchart LR
-    A[入口: Web RCE / 镜像投毒] --> B{容器内立足}
+    A["入口: Web RCE / 镜像投毒"] --> B{容器内立足}
     B -->|特权容器| C1[挂载宿主机磁盘]
     B -->|docker.sock挂载| C2[Docker API 创建容器]
     B -->|SYS_ADMIN| C3[cgroup release_agent]
@@ -30,7 +30,7 @@ flowchart LR
     C2 --> E
     C3 --> E
 
-    D -->|RBAC绕过| F[创建特权Pod -> 宿主机]
+    D -->|RBAC绕过| F["创建特权Pod -> 宿主机"]
     D -->|Secrets读权| G[窃取高权Token]
     D -->|etcd暴露| H[直接读取集群密钥]
 
@@ -303,23 +303,23 @@ r = requests.get('https://kubernetes.default.svc/api/v1/secrets',
 
 ```mermaid
 flowchart TD
-    A[Web RCE / 镜像投毒] --> B[容器立足]
+    A["Web RCE / 镜像投毒"] --> B[容器立足]
     B --> C{检测环境}
 
-    C -->|特权: --privileged| D1[挂载宿主机磁盘 -> Root]
-    C -->|挂载: docker.sock| D2[Docker API 新启容器 -> Root]
-    C -->|Cap: SYS_ADMIN| D3[cgroup release_agent -> Root]
+    C -->|特权: --privileged| D1["挂载宿主机磁盘 -> Root"]
+    C -->|挂载: docker.sock| D2["Docker API 新启容器 -> Root"]
+    C -->|Cap: SYS_ADMIN| D3["cgroup release_agent -> Root"]
     C -->|Token: 默认SA| E[枚举 K8s API]
 
-    E -->|RBAC: pods create| F1[创建特权Pod -> Root]
-    E -->|RBAC: secrets get| F2[窃取高权Token -> 集群控制]
-    E -->|未授权 etcd| F3[直接读 etcd -> 集群密钥]
+    E -->|RBAC: pods create| F1["创建特权Pod -> Root"]
+    E -->|RBAC: secrets get| F2["窃取高权Token -> 集群控制"]
+    E -->|未授权 etcd| F3["直接读 etcd -> 集群密钥"]
 
     D1 --> G{宿主机后渗透}
     D2 --> G
     D3 --> G
     F1 --> G
-    F2 --> H[持久化/横向移动]
+    F2 --> H["持久化/横向移动"]
     F3 --> H
 ```
 

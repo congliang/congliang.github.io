@@ -38,8 +38,8 @@ categories: 渗透测试
 
 ```mermaid
 flowchart LR
-    A[WebShell / 低权限 Shell] --> B{whoami /priv}
-    B -->|SeImpersonatePrivilege| C[Potato 家族 / 命名管道模拟]
+    A["WebShell / 低权限 Shell"] --> B{whoami /priv}
+    B -->|SeImpersonatePrivilege| C["Potato 家族 / 命名管道模拟"]
     B -->|SeDebugPrivilege| D[窃取 winlogon 令牌]
     B -->|SeAssignPrimaryTokenPrivilege| E[令牌复制 + CreateProcessAsUser]
     C & D & E --> F[SYSTEM Shell]

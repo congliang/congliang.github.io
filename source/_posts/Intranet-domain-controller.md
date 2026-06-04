@@ -16,13 +16,13 @@ categories: 渗透测试
 
 ```mermaid
 flowchart TB
-    A[入口点: 普通域用户] --> B{当前权限}
-    B -->|无特权| C[信息收集 BloodHound / ADExplorer]
+    A["入口点: 普通域用户"] --> B{当前权限}
+    B -->|无特权| C["信息收集 BloodHound / ADExplorer"]
     B -->|机器账户| D[MachineAccountQuota 攻击]
     C --> E{发现攻击路径}
     E -->|ESI 权限| F[DCSync 攻击 模拟域控复制凭据]
     E -->|Netlogon 漏洞| G[Zerologon CVE-2020-1472]
-    E -->|sAMAccountName 篡改| H[sAMAccountName 冒充 CVE-2021-42278 / 42287]
+    E -->|sAMAccountName 篡改| H["sAMAccountName 冒充 CVE-2021-42278 / 42287"]
     E -->|打印服务开启| I[Print Spooler PrintNightmare]
     E -->|DFSCoerce 路径| J[DFSCoerce 强制认证中继]
     E -->|KeyTrust 支持| K[Shadow Credentials 替代 Key Credential]
@@ -35,7 +35,7 @@ flowchart TB
     K --> Z[获取 DC 机器账户 TGT]
     L --> Z[以 DC 身份访问服务]
     Z --> M[完全控制域控制器]
-    M --> N[持久化 / 横向移动 / 数据窃取]
+    M --> N["持久化 / 横向移动 / 数据窃取"]
 ```
 
 ## 一、DCSync —— 模拟域控制器复制凭据

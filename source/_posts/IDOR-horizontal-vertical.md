@@ -36,8 +36,6 @@ flowchart TD
     G --> G1[普通用户调用管理接口]
     G --> G2[未登录访问后台功能]
     G --> G3[低角色执行高权限操作]
-    style F fill:#ff9,stroke:#f90
-    style G fill:#f99,stroke:#f30
 ```
 
 ### 2.1 水平越权（Horizontal Privilege Escalation）
@@ -470,9 +468,6 @@ flowchart LR
     B -- 未登录 --> H[401 Unauthorized]
     C -- 无权限 --> I[403 Forbidden]
     D -- 不是你的数据 --> I
-    style H fill:#faa
-    style I fill:#faa
-    style G fill:#afa
 ```
 
 | 防御层次 | 措施 | 说明 |

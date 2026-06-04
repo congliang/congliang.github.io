@@ -244,15 +244,15 @@ sudo awk 'BEGIN {system("/bin/sh")}'
 
 ```mermaid
 flowchart TD
-    A[获得初始Shell] --> B[枚举SUID: find / -perm -4000]
+    A[获得初始Shell] --> B["枚举SUID: find / -perm -4000"]
     B --> C{发现可利用SUID?}
     C -->|是| E[GTFOBins利用 → 获得root]
     C -->|否| F[审计 sudo -l]
     F --> G{存在NOPASSWD?}
-    G -->|是| H[GTFOBins/通配符利用]
+    G -->|是| H["GTFOBins/通配符利用"]
     G -->|否| I{存在SETENV?}
     I -->|是| J[LD_PRELOAD劫持]
-    I -->|否| K[尝试CVE/溢出: CVE-2021-3156等]
+    I -->|否| K["尝试CVE/溢出: CVE-2021-3156等"]
     H --> E
     J --> E
     K --> E

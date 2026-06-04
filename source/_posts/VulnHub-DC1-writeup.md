@@ -169,21 +169,16 @@ DC-1 的 flag 位于 `/root/thefinalflag.txt`，靶机渗透完成。
 
 ```mermaid
 flowchart TD
-    A[主机发现 netdiscover / arp-scan] --> B[端口扫描 nmap -sV -sC -p-]
-    B --> C[Web 服务识别 端口 80: Apache 2.2.22]
-    C --> D[CMS 版本探测 Drupal 7.54]
-    D --> E[漏洞搜索 searchsploit / MSF search]
-    E --> F[Drupalgeddon2 利用 CVE-2018-7600]
-    F --> G[获取 www-data Shell Meterpreter Reverse Shell]
-    G --> H[本地信息收集 SUID 文件枚举]
-    H --> I[SUID find 提权 find -exec /bin/sh]
-    I --> J[Root 权限 读取 thefinalflag.txt]
+    A["主机发现 netdiscover / arp-scan"] --> B["端口扫描 nmap -sV -sC -p-"]
+    B --> C["Web 服务识别 端口 80: Apache 2.2.22"]
+    C --> D["CMS 版本探测 Drupal 7.54"]
+    D --> E["漏洞搜索 searchsploit / MSF search"]
+    E --> F["Drupalgeddon2 利用 CVE-2018-7600"]
+    F --> G["获取 www-data Shell Meterpreter Reverse Shell"]
+    G --> H["本地信息收集 SUID 文件枚举"]
+    H --> I["SUID find 提权 find -exec /bin/sh"]
+    I --> J["Root 权限 读取 thefinalflag.txt"]
     
-    style A fill:#4CAF50,color:#fff
-    style E fill:#FF9800,color:#fff
-    style F fill:#F44336,color:#fff
-    style I fill:#F44336,color:#fff
-    style J fill:#9C27B0,color:#fff
 ```
 
 ***

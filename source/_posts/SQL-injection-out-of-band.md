@@ -236,10 +236,10 @@ flowchart TD
 flowchart TB
     A[注册DNSLOG] --> B[发现注入点]
     B --> C{DNS Payload触发?}
-    C -->|是| D[枚举库/表/列]
-    C -->|否| E[尝试SMB/HTTP信道]
+    C -->|是| D["枚举库/表/列"]
+    C -->|否| E["尝试SMB/HTTP信道"]
     D --> F[63字符分片拖字段]
-    F --> G[横向移动/收尾]
+    F --> G["横向移动/收尾"]
 ```
 
 ---

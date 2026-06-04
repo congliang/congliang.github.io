@@ -198,9 +198,9 @@ flowchart TD
     B -->|否| D{是否报错?}
     D -->|是| E{CTXSYS 可用?}
     E -->|是| F[CTXSYS.DRITHSX error-based]
-    E -->|否| G[UTL_INADDR / DBMS_XMLQUERY]
+    E -->|否| G["UTL_INADDR / DBMS_XMLQUERY"]
     D -->|否| H{能否出网?}
-    H -->|是| I[UTL_HTTP / DNS OOB]
+    H -->|是| I["UTL_HTTP / DNS OOB"]
     H -->|否| J[DBMS_PIPE 时间盲注]
     C --> K[枚举 all_tables → all_tab_columns → 提取数据]
     F --> K

@@ -79,14 +79,14 @@ updated_option: 'mtime'
 per_page: 10
 pagination_dir: page
 
-# Auto-excerpt (hexo-excerpt plugin)
-excerpt:
-  depth: 2
-  hideWholePostExcerpts: true
-
 include:
 exclude:
 ignore:
+
+# Mermaid diagrams - build-time SVG rendering
+mermaid:
+  enable: true
+  theme: default
 
 # Extensions
 theme: next

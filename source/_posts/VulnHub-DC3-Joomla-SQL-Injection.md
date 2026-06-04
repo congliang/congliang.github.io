@@ -204,7 +204,7 @@ john --wordlist=/usr/share/wordlists/rockyou.txt /tmp/dc3_hashes.txt
 ```mermaid
 flowchart LR
     A[端口扫描] --> B[Joomla CMS 识别]
-    B --> C[JoomScan 版本探测: 3.7.0]
+    B --> C["JoomScan 版本探测: 3.7.0"]
     C --> D[searchsploit 搜索漏洞]
     D --> E[发现 CVE-2017-8917 SQL注入]
     E --> F[SQLMap 自动化注入]

@@ -22,7 +22,7 @@ flowchart TD
     C1 --> D[STS临时凭证]
     C2 --> D
     D --> E[AWS CLI配置与枚举]
-    E --> F[角色/策略分析]
+    E --> F["角色/策略分析"]
     F --> G{提权路径}
     G --> H1[PassRole + Lambda]
     G --> H2[CloudFormation注入]
@@ -144,7 +144,7 @@ flowchart LR
     A[当前PassRole角色] --> B[创建Lambda]
     B --> C[传入Admin Role ARN]
     C --> D[Lambda以Admin权限运行]
-    D --> E[提权/读Secrets/创建用户]
+    D --> E["提权/读Secrets/创建用户"]
 ```
 
 **Lambda Payload与利用**：
@@ -294,7 +294,7 @@ def gen_console(ak, sk, token):
 
 ```mermaid
 flowchart LR
-    A[SSRF/命令注入] -->|curl 169.254.169.254| B[IMDS凭证窃取]
+    A["SSRF/命令注入"] -->|curl 169.254.169.254| B[IMDS凭证窃取]
     B --> C[AWS CLI枚举]
     C --> D[发现PassRole权限]
     D --> E[Lambda反弹Shell 传入Admin Role]

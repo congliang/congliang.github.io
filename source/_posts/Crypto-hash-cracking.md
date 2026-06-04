@@ -504,9 +504,9 @@ hashcat -b -m 3200 --benchmark-all
 
 ```mermaid
 flowchart TD
-    A[获取哈希] --> B[hash-identifier / hashid 识别]
+    A[获取哈希] --> B["hash-identifier / hashid 识别"]
     B --> C{哈希类型是否明确?}
-    C -- 是 --> D[选择 hashcat 模式 / John 格式]
+    C -- 是 --> D["选择 hashcat 模式 / John 格式"]
     C -- 否 --> E[查阅文档、社区求助]
     E --> D
 
@@ -516,10 +516,10 @@ flowchart TD
     G -- 否 --> H[阶段2：字典 + best64 规则]
     H --> I{命中率是否足够?}
     I -- 是 --> Z
-    I -- 否 --> J[阶段3：字典 + 大规则集 / 组合攻击]
+    I -- 否 --> J["阶段3：字典 + 大规则集 / 组合攻击"]
     J --> K{命中率是否足够?}
     K -- 是 --> Z
-    K -- 否 --> L[阶段4：掩码攻击 / 管道组合]
+    K -- 否 --> L["阶段4：掩码攻击 / 管道组合"]
     L --> Z
 ```
 

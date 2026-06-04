@@ -245,7 +245,7 @@ JWT Editor 是 Burp 扩展（BApp Store 安装），可在 Proxy/Repeater 中识
 flowchart LR
     A[拦截请求]-->B[Repeater]
     B-->C[JWT Editor面板]
-    C-->D[修改Header/Payload]
+    C-->D["修改Header/Payload"]
     D-->E{需要签名?}
     E-->|是|F[生成或选择密钥]
     F-->G[Extension自动签名]

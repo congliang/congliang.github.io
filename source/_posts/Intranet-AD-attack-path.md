@@ -19,9 +19,9 @@ flowchart TD
     B --> C{BloodHound分析}
     C --> D1[ACL滥用提权]
     C --> D2[域信任利用]
-    D1 --> E[GenericWrite/WriteDacl]
+    D1 --> E["GenericWrite/WriteDacl"]
     E --> F[DCSync攻击]
-    F --> G[DCShadow/AdminSDHolder持久化]
+    F --> G["DCShadow/AdminSDHolder持久化"]
     C --> H[GPO恶意分发]
     C --> I[LAPS密码读取]
     C --> J[RODC攻击]
@@ -161,7 +161,7 @@ GPO是AD中最强大的配置分发机制。攻击者获得GPO写入权限后，
 flowchart LR
     A[获得GPO写入权限] --> B[SharpGPOAbuse]
     B --> C1[创建计划任务]
-    B --> C2[添加启动/登录脚本]
+    B --> C2["添加启动/登录脚本"]
     B --> C3[修改注册表Run键]
     C1 --> D[域内主机拉取GPO]
     C2 --> D

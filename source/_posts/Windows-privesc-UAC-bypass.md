@@ -265,7 +265,7 @@ graph TD
     E -->|INF执行| F6[CMSTP 54]
     F1 & F2 & F3 & F4 & F5 & F6 --> G[执行 Payload]
     G --> H[获得 High IL Shell]
-    H --> I[清理痕迹: 注册表/文件/日志]
+    H --> I["清理痕迹: 注册表/文件/日志"]
 ```
 
 ## 八、检测与防御

@@ -44,7 +44,7 @@ flowchart TD
     I --> J{发现SUID文件}
     J --> K[nmap SUID提权]
     K --> L[root权限]
-    L --> M[读取/root/proof.txt]
+    L --> M["读取/root/proof.txt"]
 ```
 
 ## 一、信息收集

@@ -278,7 +278,7 @@ systemctl daemon-reload && systemctl start backup.service
 
 ```mermaid
 flowchart TD
-    A[初始Shell] --> B[枚举Cron: /etc/crontab + spool + cron.d]
+    A[初始Shell] --> B["枚举Cron: /etc/crontab + spool + cron.d"]
     B --> C[运行pspy监控进程]
     B --> D[运行LinPEAS扫描]
     C & D --> E{识别攻击向量}
@@ -286,9 +286,9 @@ flowchart TD
     E -->|相对路径| G[PATH劫持：创建同名恶意文件]
     E -->|通配符*| H[Wildcard注入：创建特殊文件名]
     E -->|Systemd Timer| I[检查Service可写性]
-    F & G & H & I --> J[等待Cron/Timer触发]
+    F & G & H & I --> J["等待Cron/Timer触发"]
     J --> K[获得root权限]
-    K --> L[SUID bash / SSH公钥 / 持久化]
+    K --> L["SUID bash / SSH公钥 / 持久化"]
 ```
 
 ---

@@ -80,7 +80,7 @@ flowchart LR
     A[浏览器配置代理] --> B[上传任意合法文件]
     B --> C[Burp Proxy 拦截请求]
     C --> D[Ctrl+R 发送到 Repeater]
-    D --> E[修改 filename / Content-Type / 文件内容]
+    D --> E["修改 filename / Content-Type / 文件内容"]
     E --> F[发送请求并分析响应]
     F --> G{上传成功?}
     G -->|是| H[访问 WebShell]
@@ -206,7 +206,7 @@ flowchart LR
     A[浏览器直接上传 .php] --> B[被前端 JS 拦截]
     B --> C[ 错误结论：网站安全]
     C -.- D[实际：服务端可能完全无校验]
-    D --> E[用 Burp/curl 即可上传 WebShell]
+    D --> E["用 Burp/curl 即可上传 WebShell"]
 ```
 
 **任何未经 Burp 测试的文件上传功能都不能被认定为安全。**
