@@ -2,10 +2,14 @@
 title: VulnHub DC-3 靶机笔记 — Joomla 注入拿后台
 date: 2024-08-10 08:00:00
 updated: 2026-04-05 08:00:00
-tags:  - CMS
+tags:
+  - 渗透测试
+  - VulnHub
+  - Writeup
+  - Joomla
   - SQL注入
-  - VulnHub  - 渗透测试
-
+  - SQLMap
+  - John
 categories: 渗透测试
 description: VulnHub DC-3 靶机渗透实战。通过 JoomScan 识别 CMS 版本后，利用 Joomla 3.7.0 SQL 注入漏洞（CVE-2017-8917）枚举数据库、获取用户凭据，最终 John 破解密码登录后台。
 ---
@@ -197,7 +201,7 @@ john --wordlist=/usr/share/wordlists/rockyou.txt /tmp/dc3_hashes.txt
 
 ---
 
-## 总结
+## 渗透链路总结
 
 ```mermaid
 flowchart LR
@@ -212,7 +216,7 @@ flowchart LR
     I --> J[后台登录成功]
 ```
 
-## 要点
+## 核心知识点
 
 - JoomScan 专用 CMS 扫描器的使用
 - CVE-2017-8917：Joomla 3.7.0 com_fields SQL 注入
@@ -222,3 +226,5 @@ flowchart LR
 - 从信息收集到后台登录的完整渗透链
 
 ---
+
+> 本文为个人安全学习记录，所有操作均在授权靶场环境中进行。
