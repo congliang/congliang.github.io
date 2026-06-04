@@ -1,5 +1,5 @@
 ---
-title: VulnHub DC-3 | Joomla 3.7.0 SQL注入漏洞利用
+title: VulnHub DC-3 靶机笔记 — Joomla 注入拿后台
 date: 2024-08-10 08:00:00
 updated: 2026-04-05 08:00:00
 tags:

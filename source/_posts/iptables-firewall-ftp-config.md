@@ -1,5 +1,5 @@
 ---
-title: Linux防火墙管理：iptables 规则配置与 vsftpd 服务部署
+title: Linux 防火墙管理：iptables 基础与 vsftpd 配置
 date: 2024-07-23 08:00:00
 updated: 2026-03-12 08:00:00
 tags:
