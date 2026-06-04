@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="Python 代码审计要点——os.system&#x2F;subprocess&#x2F;eval&#x2F;pickle&#x2F;yaml 等危险函数追踪、Django&#x2F;Flask 框架审计与 SSTI&#x2F;SSRF 检测。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="代码审计：Python审计要点">
+<meta property="og:url" content="https://congliang.github.io/Code-audit-Python/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="Python 代码审计要点——os.system&#x2F;subprocess&#x2F;eval&#x2F;pickle&#x2F;yaml 等危险函数追踪、Django&#x2F;Flask 框架审计与 SSTI&#x2F;SSRF 检测。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-03-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T16:19:08.259Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="代码审计">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Code-audit-Python/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Code-audit-Python/","path":"Code-audit-Python/","title":"代码审计：Python审计要点"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>代码审计：Python审计要点 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%8D%B1%E9%99%A9%E5%87%BD%E6%95%B0%E9%80%9F%E6%9F%A5"><span class="nav-number">2.</span> <span class="nav-text">一、危险函数速查</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%EF%BC%9Aos-system-%E4%B8%8E-subprocess"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 命令执行：os.system() 与 subprocess</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5%EF%BC%9Aeval-%E4%B8%8E-exec"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 代码注入：eval() 与 exec()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%EF%BC%9Apickle-loads-%E4%B8%8E-yaml-load"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 反序列化：pickle.loads() 与 yaml.load()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%EF%BC%9Arender-template-string"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 模板注入：render_template_string()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Web-%E6%A1%86%E6%9E%B6%E5%AE%A1%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">二、Web 框架审计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Django"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 Django</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Flask"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 Flask</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81SSRF%EF%BC%9Arequests-%E6%97%8F%E5%BA%93"><span class="nav-number">4.</span> <span class="nav-text">三、SSRF：requests 族库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81SQL-%E6%B3%A8%E5%85%A5"><span class="nav-number">5.</span> <span class="nav-text">四、SQL 注入</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C%E6%BC%8F%E6%B4%9E"><span class="nav-number">6.</span> <span class="nav-text">五、文件操作漏洞</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E4%BB%BB%E6%84%8F%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96-%E4%B8%8A%E4%BC%A0-Zip-Slip"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 任意文件读取 &#x2F; 上传 &#x2F; Zip Slip</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E4%BE%9D%E8%B5%96%E4%B8%8E%E4%BE%9B%E5%BA%94%E9%93%BE"><span class="nav-number">7.</span> <span class="nav-text">六、依赖与供应链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E5%AE%A1%E8%AE%A1%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-number">8.</span> <span class="nav-text">七、审计速查表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E8%87%AA%E5%8A%A8%E5%8C%96%E5%B7%A5%E5%85%B7"><span class="nav-number">9.</span> <span class="nav-text">八、自动化工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E7%BB%93%E8%AF%AD"><span class="nav-number">10.</span> <span class="nav-text">九、结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Code-audit-Python/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="代码审计：Python审计要点 | 渗透测试实战记录">
+      <meta itemprop="description" content="Python 代码审计要点——os.system&#x2F;subprocess&#x2F;eval&#x2F;pickle&#x2F;yaml 等危险函数追踪、Django&#x2F;Flask 框架审计与 SSTI&#x2F;SSRF 检测。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          代码审计：Python审计要点
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-03-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-03-01T08:00:00+08:00">2026-03-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-05 00:19:08" itemprop="dateModified" datetime="2026-06-05T00:19:08+08:00">2026-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">Python 代码审计要点——os.system/subprocess/eval/pickle/yaml 等危险函数追踪、Django/Flask 框架审计与 SSTI/SSRF 检测。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Python 凭借简洁的语法和丰富的生态，已成为 Web 开发、自动化运维等领域的首选语言。然而便利性往往伴随安全隐患——开发者在使用某些内建函数或第三方库时，稍有不慎便会引入严重漏洞。本文从渗透测试视角梳理 Python 代码审计中的常见风险点，给出检测方法与修复建议。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究及授权测试使用。未经授权对他人系统实施攻击属违法行为，读者须自行承担一切法律责任。</p>
+</blockquote>
+<hr>
+<h2 id="一、危险函数速查"><a href="#一、危险函数速查" class="headerlink" title="一、危险函数速查"></a>一、危险函数速查</h2><h3 id="1-1-命令执行：os-system-与-subprocess"><a href="#1-1-命令执行：os-system-与-subprocess" class="headerlink" title="1.1 命令执行：os.system() 与 subprocess"></a>1.1 命令执行：<code>os.system()</code> 与 <code>subprocess</code></h3><p><code>os.system()</code> 将字符串参数直接传给系统 Shell，参数可控即导致命令注入。<code>subprocess</code> 是官方推荐替代方案，但 <code>shell=True</code> 时同样危险：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险 — host=; cat /etc/passwd</span></span><br><span class="line">os.system(<span class="string">f&quot;ping -c 1 <span class="subst">&#123;request.args.get(<span class="string">&#x27;host&#x27;</span>)&#125;</span>&quot;</span>)</span><br><span class="line">subprocess.call(<span class="string">f&quot;grep <span class="subst">&#123;user_input&#125;</span> /var/log/app.log&quot;</span>, shell=<span class="literal">True</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安全 — 列表传参 + 关闭 shell</span></span><br><span class="line">subprocess.call([<span class="string">&quot;grep&quot;</span>, user_input, <span class="string">&quot;/var/log/app.log&quot;</span>], shell=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>审计 grep</strong>：<code>os.system(</code>、<code>os.popen(</code>、<code>shell=True</code>。</p>
+<h3 id="1-2-代码注入：eval-与-exec"><a href="#1-2-代码注入：eval-与-exec" class="headerlink" title="1.2 代码注入：eval() 与 exec()"></a>1.2 代码注入：<code>eval()</code> 与 <code>exec()</code></h3><p><code>eval()</code> 执行单个 Python 表达式并返回值，<code>exec()</code> 执行任意代码块。两者均可被利用为 RCE。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险：用户输入直接进入 eval</span></span><br><span class="line">result = <span class="built_in">eval</span>(request.form[<span class="string">&#x27;expression&#x27;</span>])</span><br><span class="line"><span class="comment"># expression = __import__(&#x27;os&#x27;).system(&#x27;id&#x27;)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 危险：exec 同样可被注入</span></span><br><span class="line">code = request.args.get(<span class="string">&#x27;code&#x27;</span>)</span><br><span class="line"><span class="built_in">exec</span>(code)</span><br></pre></td></tr></table></figure>
+
+<p>即使 <code>eval()</code> 限制了 <code>globals</code>&#x2F;<code>locals</code>（如 <code>&#123;&#39;__builtins__&#39;: &#123;&#125;&#125;</code>），绕过技巧层出不穷——Python 的自省能力使得沙箱极不可靠。审计时若看到 <code>eval()</code>、<code>exec()</code>、<code>compile()</code> 参数来自用户输入，直接判定为高危。</p>
+<p><strong>审计 grep</strong>：<code>eval(</code>、<code>exec(</code>、<code>compile(</code>、<code>__import__(</code>。</p>
+<h3 id="1-3-反序列化：pickle-loads-与-yaml-load"><a href="#1-3-反序列化：pickle-loads-与-yaml-load" class="headerlink" title="1.3 反序列化：pickle.loads() 与 yaml.load()"></a>1.3 反序列化：<code>pickle.loads()</code> 与 <code>yaml.load()</code></h3><p><code>pickle</code> 协议在反序列化时自动调用 <code>__reduce__()</code>，可执行任意代码；PyYAML 的 <code>yaml.load()</code> 默认构造器可实例化任意对象：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Evil</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__reduce__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="keyword">return</span> (os.system, (<span class="string">&#x27;id&#x27;</span>,))</span><br><span class="line"></span><br><span class="line">pickle.loads(request.get_data())                <span class="comment"># RCE！</span></span><br><span class="line">config = yaml.load(request.data)               <span class="comment"># !!python/object/apply:os.system [&#x27;id&#x27;]</span></span><br><span class="line">config = yaml.safe_load(request.data)           <span class="comment"># 安全替代</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>审计 grep</strong>：<code>pickle.loads(</code>、<code>yaml.load(</code>、<code>yaml.full_load(</code>、<code>dill.loads(</code>。同族危险库：<code>dill</code>、<code>cloudpickle</code>、<code>joblib</code>。</p>
+<h3 id="1-4-模板注入：render-template-string"><a href="#1-4-模板注入：render-template-string" class="headerlink" title="1.4 模板注入：render_template_string()"></a>1.4 模板注入：<code>render_template_string()</code></h3><p>Flask 的 <code>render_template_string()</code> 是 SSTI 重灾区——危险在于模板字符串本身由用户输入拼接：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险：name 直接拼入模板，可注入 &#123;&#123; config &#125;&#125; 或 RCE 链</span></span><br><span class="line"><span class="keyword">return</span> render_template_string(<span class="string">f&#x27;&lt;h1&gt;Hello <span class="subst">&#123;name&#125;</span>!&lt;/h1&gt;&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安全：name 作为变量传入，不参与模板构造</span></span><br><span class="line"><span class="keyword">return</span> render_template_string(<span class="string">&#x27;&lt;h1&gt;Hello &#123;&#123;name&#125;&#125;!&lt;/h1&gt;&#x27;</span>, name=name)</span><br></pre></td></tr></table></figure>
+
+<p><strong>经典 RCE 载荷</strong>：<code>&#123;&#123; config.__class__.__init__.__globals__[&#39;os&#39;].popen(&#39;id&#39;).read() &#125;&#125;</code>、<code>&#123;&#123; lipsum.__globals__[&#39;os&#39;].popen(&#39;id&#39;).read() &#125;&#125;</code>。</p>
+<p><strong>审计 grep</strong>：<code>render_template_string(</code>、<code>Environment().from_string(</code>。</p>
+<hr>
+<h2 id="二、Web-框架审计"><a href="#二、Web-框架审计" class="headerlink" title="二、Web 框架审计"></a>二、Web 框架审计</h2><h3 id="2-1-Django"><a href="#2-1-Django" class="headerlink" title="2.1 Django"></a>2.1 Django</h3><p><strong>Raw SQL</strong>：Django ORM 能屏蔽多数注入，但 <code>raw()</code>、<code>extra()</code>、<code>RawSQL()</code> 仍提供裸 SQL 入口：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险</span></span><br><span class="line">User.objects.raw(<span class="string">f&quot;SELECT * FROM auth_user WHERE username = &#x27;<span class="subst">&#123;username&#125;</span>&#x27;&quot;</span>)</span><br><span class="line"><span class="comment"># 安全 — 参数化</span></span><br><span class="line">User.objects.raw(<span class="string">&quot;SELECT * FROM auth_user WHERE username = %s&quot;</span>, [username])</span><br></pre></td></tr></table></figure>
+
+<p><strong>XSS</strong>：模板中 <code>|safe</code> 过滤器、<code>mark_safe()</code> 关闭 HTML 转义，审计时确认输入来源。<strong>调试泄露</strong>：<code>DEBUG=True</code> + 不当的 <code>ALLOWED_HOSTS</code> 导致源码泄露。</p>
+<p><strong>审计 grep</strong>：<code>.raw(</code>、<code>.extra(</code>、<code>RawSQL(</code>、<code>|safe</code>、<code>mark_safe(</code>。</p>
+<h3 id="2-2-Flask"><a href="#2-2-Flask" class="headerlink" title="2.2 Flask"></a>2.2 Flask</h3><p><strong>SSTI</strong>：见 1.4 节。额外关注 <code>Environment().from_string()</code>。</p>
+<p><strong>Debug Mode RCE</strong>：<code>app.run(debug=True, host=&#39;0.0.0.0&#39;)</code> 时，<code>/console</code> 可获取 Shell。<strong>密钥硬编码</strong>：源码中硬编码 <code>secret_key</code> 导致 Session&#x2F;JWT 可被伪造。</p>
+<hr>
+<h2 id="三、SSRF：requests-族库"><a href="#三、SSRF：requests-族库" class="headerlink" title="三、SSRF：requests 族库"></a>三、SSRF：requests 族库</h2><p><code>requests</code>、<code>urllib</code>、<code>httpx</code> 本身不产生漏洞——危险在于服务端将用户输入的 URL 交给它们：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">resp = requests.get(request.args.get(<span class="string">&#x27;url&#x27;</span>))   <span class="comment"># file:///etc/passwd 或 169.254.169.254</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>审计 grep</strong>：<code>requests.get(</code>、<code>urllib.request.urlopen(</code>、<code>httpx.get(</code>。每项追问：URL 来自哪里？是否有协议和域名白名单？</p>
+<p><strong>修复</strong>：白名单校验协议与域名；过滤内网 IP 段（<code>10.0.0.0/8</code> 等）。</p>
+<hr>
+<h2 id="四、SQL-注入"><a href="#四、SQL-注入" class="headerlink" title="四、SQL 注入"></a>四、SQL 注入</h2><p>原生驱动中最常见的注入来自字符串拼接；SQLAlchemy 的 <code>text()</code> 同样可被注入：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险 — f-string 拼接</span></span><br><span class="line">cursor.execute(<span class="string">f&quot;SELECT * FROM users WHERE name = &#x27;<span class="subst">&#123;username&#125;</span>&#x27;&quot;</span>)</span><br><span class="line">db.session.execute(text(<span class="string">f&quot;SELECT * FROM users WHERE id = <span class="subst">&#123;user_id&#125;</span>&quot;</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安全 — 参数化</span></span><br><span class="line">cursor.execute(<span class="string">&quot;SELECT * FROM users WHERE name = %s&quot;</span>, (username,))</span><br><span class="line">db.session.execute(text(<span class="string">&quot;SELECT * FROM users WHERE id = :uid&quot;</span>), &#123;<span class="string">&quot;uid&quot;</span>: user_id&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>ORDER BY 注入</strong>：这些子句不支持参数化，直接拼接字段名即漏洞，用白名单映射修复。</p>
+<p><strong>审计 grep</strong>：<code>.execute(f&quot;</code>、<code>text(f&quot;</code>、<code>.raw(</code>、<code>.extra(</code>。</p>
+<hr>
+<h2 id="五、文件操作漏洞"><a href="#五、文件操作漏洞" class="headerlink" title="五、文件操作漏洞"></a>五、文件操作漏洞</h2><h3 id="5-1-任意文件读取-上传-Zip-Slip"><a href="#5-1-任意文件读取-上传-Zip-Slip" class="headerlink" title="5.1 任意文件读取 &#x2F; 上传 &#x2F; Zip Slip"></a>5.1 任意文件读取 &#x2F; 上传 &#x2F; Zip Slip</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">open</span>(request.args.get(<span class="string">&#x27;file&#x27;</span>), <span class="string">&#x27;rb&#x27;</span>).read()       <span class="comment"># 路径穿越：../../etc/passwd</span></span><br><span class="line">f.save(os.path.join(UPLOAD_FOLDER, filename))     <span class="comment"># 上传须用 secure_filename()</span></span><br><span class="line">z.extractall(<span class="string">&#x27;/var/app/uploads/&#x27;</span>)                 <span class="comment"># Zip Slip：内部路径穿越</span></span><br></pre></td></tr></table></figure>
+
+<p>要点：<code>secure_filename()</code> 是否使用；上传目录是否在 Web 根内；解压前校验路径在目标目录内。</p>
+<p><strong>审计 grep</strong>：<code>open(</code>、<code>Path.read_text(</code>、<code>.save(</code>、<code>zipfile.ZipFile(</code>。</p>
+<hr>
+<h2 id="六、依赖与供应链"><a href="#六、依赖与供应链" class="headerlink" title="六、依赖与供应链"></a>六、依赖与供应链</h2><ul>
+<li>检查 <code>requirements.txt</code> &#x2F; <code>poetry.lock</code> 中版本是否锁死（<code>==</code>）。</li>
+<li>运行 <code>pip-audit</code> 或 <code>safety check --full-report</code> 扫描已知 CVE。</li>
+<li>关注已弃用包（如 <code>cPickle</code> 已迁移至 <code>pickle</code>）。</li>
+</ul>
+<hr>
+<h2 id="七、审计速查表"><a href="#七、审计速查表" class="headerlink" title="七、审计速查表"></a>七、审计速查表</h2><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>搜索关键词</th>
+<th>关注点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>命令执行</td>
+<td><code>os.system(</code>, <code>os.popen(</code>, <code>shell=True</code></td>
+<td>参数是否来自用户输入</td>
+</tr>
+<tr>
+<td>代码注入</td>
+<td><code>eval(</code>, <code>exec(</code>, <code>compile(</code></td>
+<td>拼接用户输入</td>
+</tr>
+<tr>
+<td>反序列化</td>
+<td><code>pickle.loads(</code>, <code>yaml.load(</code>, <code>dill.loads(</code></td>
+<td>数据源是否可信</td>
+</tr>
+<tr>
+<td>SSTI</td>
+<td><code>render_template_string(</code>, <code>from_string(</code></td>
+<td>模板含用户输入</td>
+</tr>
+<tr>
+<td>SQL 注入</td>
+<td><code>.execute(f&quot;</code>, <code>.raw(</code>, <code>.extra(</code>, <code>text(f&quot;</code></td>
+<td>SQL 中字符串拼接</td>
+</tr>
+<tr>
+<td>SSRF</td>
+<td><code>requests.get(</code>, <code>urllib.request.urlopen(</code></td>
+<td>URL 来自用户且无白名单</td>
+</tr>
+<tr>
+<td>文件操作</td>
+<td><code>open(</code>, <code>Path.read_text(</code>, <code>.save(</code></td>
+<td>路径穿越、上传无校验</td>
+</tr>
+<tr>
+<td>密钥泄露</td>
+<td><code>secret_key</code>, <code>SECRET_KEY</code>, <code>password = </code></td>
+<td>硬编码密钥</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="八、自动化工具"><a href="#八、自动化工具" class="headerlink" title="八、自动化工具"></a>八、自动化工具</h2><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a target="_blank" rel="noopener" href="https://github.com/PyCQA/bandit">Bandit</a></td>
+<td>Python AST 级静态分析，扫描常见安全模式</td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://semgrep.dev/">Semgrep</a></td>
+<td>模式匹配引擎，社区有大量 Python 规则</td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://codeql.github.com/">CodeQL</a></td>
+<td>GitHub 语义分析，支持 Python</td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://pypi.org/project/pip-audit/">pip-audit</a></td>
+<td>依赖漏洞扫描</td>
+</tr>
+</tbody></table>
+<p><strong>Bandit 示例</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pip install bandit</span><br><span class="line">bandit -r ./src -f html -o report.html</span><br><span class="line">bandit -ll   <span class="comment"># 仅输出高危/中危</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Semgrep SSTI 检测规则</strong>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">rules:</span></span><br><span class="line">    <span class="attr">patterns:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">pattern:</span> <span class="string">render_template_string(&quot;...&quot;</span> <span class="string">+</span> <span class="string">$VAR)</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">pattern-inside:</span> <span class="string">|</span></span><br><span class="line"><span class="string">          def $FUNC(...):</span></span><br><span class="line"><span class="string">            ...</span></span><br><span class="line"><span class="string">            return render_template_string(...)</span></span><br><span class="line"><span class="string"></span>    <span class="attr">message:</span> <span class="string">&quot;Potential SSTI: user input concatenated into template string&quot;</span></span><br><span class="line">    <span class="attr">severity:</span> <span class="string">ERROR</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、结语"><a href="#九、结语" class="headerlink" title="九、结语"></a>九、结语</h2><p>Python 代码审计的核心不在背”关键词”，而在于理解<strong>数据流如何从入口流向危险函数</strong>。每次审计都是对”信任边界”的建模——开发者在哪划定代码边界，攻击者就在哪寻找越界的路径。</p>
+<p>几条原则：所有用户输入都不可信；Python 沙箱不可靠；不要自己实现加密&#x2F;过滤&#x2F;转义；遵循最小权限原则。</p>
+<p>希望本文能为你提供一份可操作的 Python 审计速查地图。</p>
+<hr>
+<p><em>本文首发于 <a target="_blank" rel="noopener" href="https://example.com/">Security Blog</a>，转载请注明出处。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag"># 代码审计</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/SSTI-flask-jinja2-exploitation/" rel="prev" title="SSTI：Flask Jinja2 模板注入利用链">
+                  <i class="fa fa-angle-left"></i> SSTI：Flask Jinja2 模板注入利用链
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Framework-JBoss-WebSphere/" rel="next" title="JBoss与WebSphere安全测试">
+                  JBoss与WebSphere安全测试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
