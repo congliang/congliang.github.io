@@ -135,7 +135,6 @@ vim /etc/sysconfig/iptables-config
 IPTABLES_MODULES="ip_conntrack_ftp"
 ```
 
-<img src="/imgs/B-image6.png" alt="iptables 配置" />
 <img src="/imgs/B-image7.png" alt="ip_conntrack_ftp 配置" />
 
 配置后主动/被动模式均可正常连接。
@@ -159,7 +158,7 @@ vim /etc/sysconfig/iptables
 iptables-save > /etc/sysconfig/iptables
 ```
 
-<img src="/imgs/B-image12.png" alt="iptables 持久化" />
+<img src="/imgs/B-image6.png" alt="iptables 规则持久化" />
 
 ---
 
