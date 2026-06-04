@@ -3,9 +3,11 @@ title: XSS 绕过 WAF 的几个思路
 date: 2025-06-10 08:00:00
 updated: 2026-06-01 08:00:00
 tags:
-  - XSS
+
   - WAF
+  - XSS
   - 渗透测试
+
 categories: 渗透测试
 description: 记录几种实际挖 SRC 时遇到的 XSS 绕过 WAF 手法，包括大小写混写、双写、编码绕过、标签属性组合、onerror 变体等。
 ---

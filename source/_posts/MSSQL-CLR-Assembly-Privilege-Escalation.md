@@ -3,11 +3,11 @@ title: MSSQL CLR 程序集利用 — 从数据库权限到命令执行
 date: 2024-09-15 08:00:00
 updated: 2026-04-20 08:00:00
 tags:
+
   - MSSQL
-  - CLR提权
+  - 提权
   - 渗透测试
-  - 数据库安全
-  - 权限提升
+
 categories: 渗透测试
 description: MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。
 ---

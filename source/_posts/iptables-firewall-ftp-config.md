@@ -3,11 +3,11 @@ title: Linux 防火墙管理：iptables 基础与 vsftpd 配置
 date: 2024-07-23 08:00:00
 updated: 2026-03-12 08:00:00
 tags:
+
+  - FTP
   - Linux
   - iptables
-  - 防火墙
-  - vsftpd
-  - FTP
+
 categories: 安全运维
 description: 实训笔记：iptables 防火墙规则管理（链、表、规则增删改），multiport 模块实战，vsftpd FTP 服务配置（主动/被动模式），以及 iptables 规则持久化。
 ---
