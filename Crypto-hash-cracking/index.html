@@ -19,15 +19,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
 
-    <meta name="description" content="前言密码哈希破解是渗透测试和红队行动中的核心技能之一。从获取哈希到成功还原明文，中间涉及哈希类型识别、攻击策略选择、工具调参与硬件优化等一系列决策。本文系统性梳理哈希破解工作流的全貌：先用 hash-identifier 与 hashid 确认哈希类型，再分别用 John the Ripper 和 hashcat 实施基于规则、掩码和组合的爆破，最后从 GPU&#x2F;CPU 架构层面分析破解效">
+    <meta name="description" content="Hash 破解从识别到爆破——hash-identifier、John the Ripper、Hashcat 模式号与 GPU 加速。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Hash破解：从识别到爆破">
 <meta property="og:url" content="https://congliang.github.io/Crypto-hash-cracking/">
 <meta property="og:site_name" content="渗透测试实战记录">
-<meta property="og:description" content="前言密码哈希破解是渗透测试和红队行动中的核心技能之一。从获取哈希到成功还原明文，中间涉及哈希类型识别、攻击策略选择、工具调参与硬件优化等一系列决策。本文系统性梳理哈希破解工作流的全貌：先用 hash-identifier 与 hashid 确认哈希类型，再分别用 John the Ripper 和 hashcat 实施基于规则、掩码和组合的爆破，最后从 GPU&#x2F;CPU 架构层面分析破解效">
+<meta property="og:description" content="Hash 破解从识别到爆破——hash-identifier、John the Ripper、Hashcat 模式号与 GPU 加速。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-05-15T00:00:00.000Z">
-<meta property="article:modified_time" content="2026-06-04T15:34:45.849Z">
+<meta property="article:modified_time" content="2026-06-04T16:11:42.866Z">
 <meta property="article:author" content="YunShang">
 <meta property="article:tag" content="密码学">
 <meta property="article:tag" content="渗透测试">
@@ -145,7 +145,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -203,7 +203,7 @@
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
       <meta itemprop="name" content="Hash破解：从识别到爆破 | 渗透测试实战记录">
-      <meta itemprop="description" content="">
+      <meta itemprop="description" content="Hash 破解从识别到爆破——hash-identifier、John the Ripper、Hashcat 模式号与 GPU 加速。">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
@@ -225,7 +225,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -240,6 +240,7 @@
   
 </div>
 
+            <div class="post-description">Hash 破解从识别到爆破——hash-identifier、John the Ripper、Hashcat 模式号与 GPU 加速。</div>
         </div>
       </header>
 

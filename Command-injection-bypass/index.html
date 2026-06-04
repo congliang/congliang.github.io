@@ -27,7 +27,7 @@
 <meta property="og:description" content="前言命令注入（Command Injection）是 Web 安全领域最经典的漏洞类型之一，其危害等级常年位居 OWASP Top 10 前列。随着 WAF（Web Application Firewall）与各类输入过滤规则的普及，简单的 ;cat &#x2F;etc&#x2F;passwd 早已成为历史。本文系统梳理了实战中行之有效的命令注入绕过技巧，涵盖关键字黑名单绕过、长度受限注入、无字母数字 Shell 等">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-02-01T00:00:00.000Z">
-<meta property="article:modified_time" content="2026-06-04T15:34:45.845Z">
+<meta property="article:modified_time" content="2026-06-04T16:11:42.860Z">
 <meta property="article:author" content="YunShang">
 <meta property="article:tag" content="Web安全">
 <meta property="article:tag" content="渗透测试">
@@ -145,7 +145,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -225,7 +225,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -259,6 +259,7 @@
 <li>邮件发送功能中的 <code>sendmail</code> 调用</li>
 <li>备份&#x2F;导出功能中的 <code>tar</code>、<code>zip</code> 调用</li>
 </ul>
+<p>description: 命令注入绕过——空格&#x2F;关键字&#x2F;长度限制绕过与无字母数字 Shell 技巧。</p>
 <h3 id="1-2-命令注入连接符总览"><a href="#1-2-命令注入连接符总览" class="headerlink" title="1.2 命令注入连接符总览"></a>1.2 命令注入连接符总览</h3><table>
 <thead>
 <tr>

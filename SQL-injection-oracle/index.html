@@ -19,15 +19,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
 
-    <meta name="description" content="前言Oracle 在企业级应用中地位重要。其 SQL 注入手法与 MySQL &#x2F; MSSQL 存在本质差异 — 语法更严格、内置包更多、攻击面更广。本文系统梳理 Oracle 注入技术，每项均给出可复现的实战示例。 Oracle 注入核心差异强制 FROM 子句与 DUAL 表Oracle SELECT 必须带 FROM，无表时使用内置单行单列的 DUAL： 12SELECT &amp;#x27">
+    <meta name="description" content="Oracle 注入实战——dual 表、UTL_HTTP 外带、DBMS_PIPE 盲注与 CTXSYS 漏洞。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="SQL注入：Oracle注入实战">
 <meta property="og:url" content="https://congliang.github.io/SQL-injection-oracle/">
 <meta property="og:site_name" content="渗透测试实战记录">
-<meta property="og:description" content="前言Oracle 在企业级应用中地位重要。其 SQL 注入手法与 MySQL &#x2F; MSSQL 存在本质差异 — 语法更严格、内置包更多、攻击面更广。本文系统梳理 Oracle 注入技术，每项均给出可复现的实战示例。 Oracle 注入核心差异强制 FROM 子句与 DUAL 表Oracle SELECT 必须带 FROM，无表时使用内置单行单列的 DUAL： 12SELECT &amp;#x27">
+<meta property="og:description" content="Oracle 注入实战——dual 表、UTL_HTTP 外带、DBMS_PIPE 盲注与 CTXSYS 漏洞。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-12-15T00:00:00.000Z">
-<meta property="article:modified_time" content="2026-06-04T15:34:45.958Z">
+<meta property="article:modified_time" content="2026-06-04T16:11:42.968Z">
 <meta property="article:author" content="YunShang">
 <meta property="article:tag" content="Web安全">
 <meta property="article:tag" content="数据库安全">
@@ -146,7 +146,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -204,7 +204,7 @@
 
     <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
       <meta itemprop="name" content="SQL注入：Oracle注入实战 | 渗透测试实战记录">
-      <meta itemprop="description" content="">
+      <meta itemprop="description" content="Oracle 注入实战——dual 表、UTL_HTTP 外带、DBMS_PIPE 盲注与 CTXSYS 漏洞。">
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
@@ -226,7 +226,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -241,6 +241,7 @@
   
 </div>
 
+            <div class="post-description">Oracle 注入实战——dual 表、UTL_HTTP 外带、DBMS_PIPE 盲注与 CTXSYS 漏洞。</div>
         </div>
       </header>
 

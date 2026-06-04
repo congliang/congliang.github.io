@@ -27,7 +27,7 @@
 <meta property="og:description" content="前言Cobalt Strike（简称CS）是由Raphael Mudge开发的商业化渗透测试框架，将后渗透代理（Beacon）、横向移动、隐蔽隧道和报告生成整合在一起，是红队行动中最常用的C2平台之一。本文梳理CS的核心组件与基础使用方法。 一、Teamserver 部署Teamserver是Cobalt Strike的服务端核心，所有Beacon回连到它。基本启动命令： 12# 语法: .&#x2F;te">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-03-20T00:00:00.000Z">
-<meta property="article:modified_time" content="2026-06-04T15:34:45.986Z">
+<meta property="article:modified_time" content="2026-06-04T16:11:42.998Z">
 <meta property="article:author" content="YunShang">
 <meta property="article:tag" content="工具">
 <meta property="article:tag" content="渗透测试">
@@ -145,7 +145,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-count">125</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -225,7 +225,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -257,7 +257,7 @@
 <li><strong>profile</strong>：可选C2配置文件，用于伪装流量特征。</li>
 <li><strong>killdate</strong>：可选有效期，格式YYYY-MM-DD。</li>
 </ul>
-<p>生产环境建议：使用强密码；定制Malleable C2 Profile；搭配CDN或域前置隐藏真实IP；用systemd或screen保持后台运行；合理设置killdate防止Beacon长期失控。客户端连接时填写host、port（默认50050）、password和用户名。</p>
+<p>description: Cobalt Strike 基础使用——TeamServer 搭建、Beacon 命令与 Socks 代理。<br>生产环境建议：使用强密码；定制Malleable C2 Profile；搭配CDN或域前置隐藏真实IP；用systemd或screen保持后台运行；合理设置killdate防止Beacon长期失控。客户端连接时填写host、port（默认50050）、password和用户名。</p>
 <h2 id="二、Listener-监听器类型"><a href="#二、Listener-监听器类型" class="headerlink" title="二、Listener 监听器类型"></a>二、Listener 监听器类型</h2><h3 id="2-1-HTTP-HTTPS-Listener"><a href="#2-1-HTTP-HTTPS-Listener" class="headerlink" title="2.1 HTTP &#x2F; HTTPS Listener"></a>2.1 HTTP &#x2F; HTTPS Listener</h3><p>最常用的类型，Beacon通过HTTP&#x2F;HTTPS请求回连C2。穿透性强，可配合域前置（Domain Fronting）。HTTPS提供传输加密，HTTP便于隐蔽在大量Web流量中。</p>
 <h3 id="2-2-DNS-Listener"><a href="#2-2-DNS-Listener" class="headerlink" title="2.2 DNS Listener"></a>2.2 DNS Listener</h3><p>通过DNS隧道通信，适用于HTTP&#x2F;HTTPS被严格封锁的环境。Beacon发送TXT&#x2F;MX&#x2F;A记录查询，请求携带加密任务数据，Teamserver通过DNS响应下发指令。速度较慢但隐蔽性极高，需提前配置NS记录指向Teamserver。</p>
 <h3 id="2-3-SMB-Listener"><a href="#2-3-SMB-Listener" class="headerlink" title="2.3 SMB Listener"></a>2.3 SMB Listener</h3><p>使用命名管道在同一网段内点对点通信。不产生网络流量，需要已有上线主机作中转（Link Listener）。多个SMB Beacon可串联形成链式连接，适合无法直接出网的内网主机。</p>
