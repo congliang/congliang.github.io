@@ -21,7 +21,7 @@ minify: false
 custom_file_path:
   #head: source/_data/head.njk
   #header: source/_data/header.njk
-  #sidebar: source/_data/sidebar.njk
+  sidebar: source/_data/sidebar.njk
   #postMeta: source/_data/post-meta.njk
   #postBodyStart: source/_data/post-body-start.njk
   #postBodyEnd: source/_data/post-body-end.njk
@@ -124,7 +124,7 @@ menu_settings:
 
 sidebar:
   # Sidebar position. Available values: left | right
-  position: left
+  position: right
 
   # Sidebar width.
   # Applicable to Muse | Mist and mobile of Pisces | Gemini.
