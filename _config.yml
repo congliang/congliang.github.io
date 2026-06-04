@@ -1,0 +1,93 @@
+# Hexo Configuration
+
+# Site
+title: 渗透测试实战记录
+subtitle: Pentest Journey
+description: 网络安全学习笔记 | 渗透测试实战 Writeup | VulnHub · HackTheBox · CTF网络安全学习笔记 | 渗透测试实战 Writeup | VulnHub · HackTheBox · CTF
+keywords: 渗透测试,网络安全,Writeup,VulnHub,CTF,信息安全
+author: yunshang
+language: zh-CN
+timezone: 'Asia/Shanghai'
+
+# URL
+url: https://congliang.github.io
+root: /
+permalink: :title/
+permalink_defaults:
+pretty_urls:
+  trailing_index: false
+  trailing_html: false
+
+# Directory
+source_dir: source
+public_dir: public
+tag_dir: tags
+archive_dir: archives
+category_dir: categories
+code_dir: downloads/code
+i18n_dir: :lang
+skip_render:
+
+# Writing
+new_post_name: :title.md
+default_layout: post
+titlecase: false
+external_link:
+  enable: true
+  field: site
+  exclude: ''
+filename_case: 0
+render_drafts: false
+post_asset_folder: true
+relative_link: false
+future: true
+syntax_highlighter: highlight.js
+highlight:
+  line_number: true
+  auto_detect: false
+  tab_replace: ''
+  wrap: true
+  hljs: false
+prismjs:
+  preprocess: true
+  line_number: true
+  tab_replace: ''
+
+# Home page setting
+index_generator:
+  path: ''
+  per_page: 10
+  order_by: -date
+
+# Category & Tag
+default_category: 渗透测试
+category_map:
+  渗透测试: pentest
+  CTF: ctf
+  工具开发: tools
+tag_map:
+
+# Metadata elements
+meta_generator: true
+
+# Date / Time format
+date_format: YYYY-MM-DD
+time_format: HH:mm:ss
+updated_option: 'mtime'
+
+# Pagination
+per_page: 10
+pagination_dir: page
+
+include:
+exclude:
+ignore:
+
+# Extensions
+theme: next
+
+# Deployment
+deploy:
+  type: git
+  repo: https://github.com/congliang/congliang.github.io.git
+  branch: main
