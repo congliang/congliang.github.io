@@ -1,6 +1,7 @@
 ---
 title: Linux防火墙管理：iptables 规则配置与 vsftpd 服务部署
-date: 2024-07-23 10:00:00
+date: 2024-07-23 08:00:00
+updated: 2026-03-12 08:00:00
 tags:
   - Linux
   - iptables
@@ -10,6 +11,7 @@ tags:
 categories: 安全运维
 description: 实训笔记：iptables 防火墙规则管理（链、表、规则增删改），multiport 模块实战，vsftpd FTP 服务配置（主动/被动模式），以及 iptables 规则持久化。
 ---
+
 
 > 本文为个人实训笔记，记录了 iptables 高频操作与 vsftpd 服务部署要点。
 
