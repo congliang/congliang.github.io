@@ -4,8 +4,7 @@ date: 2025-06-10 08:00:00
 updated: 2026-06-01 08:00:00
 tags:
 
-  - WAF
-  - XSS
+  - Web安全
   - 渗透测试
 
 categories: 渗透测试
