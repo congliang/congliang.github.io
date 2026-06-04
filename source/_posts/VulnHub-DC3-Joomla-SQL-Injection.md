@@ -201,7 +201,7 @@ john --wordlist=/usr/share/wordlists/rockyou.txt /tmp/dc3_hashes.txt
 
 ---
 
-## 渗透链路总结
+## 总结
 
 ```mermaid
 flowchart LR
@@ -216,7 +216,7 @@ flowchart LR
     I --> J[后台登录成功]
 ```
 
-## 核心知识点
+## 要点
 
 - JoomScan 专用 CMS 扫描器的使用
 - CVE-2017-8917：Joomla 3.7.0 com_fields SQL 注入
@@ -226,5 +226,3 @@ flowchart LR
 - 从信息收集到后台登录的完整渗透链
 
 ---
-
-> 本文为个人安全学习记录，所有操作均在授权靶场环境中进行。

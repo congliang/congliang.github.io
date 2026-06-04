@@ -12,9 +12,7 @@ categories: 渗透测试
 description: MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。
 ---
 
-> **测试环境：** SQL Server 2016 / 2019（Windows）  
-> **前置条件：** `sysadmin` 或 `CREATE ASSEMBLY` / `ALTER ASSEMBLY` 权限  
-> **核心原理：** 利用 CLR 集成功能将 .NET DLL 导入为存储过程，以服务账户执行系统命令
+> 环境：SQL Server 2016 / 2019，Windows。需要有 `CREATE ASSEMBLY` 或 `sysadmin` 权限。
 
 ***
 
@@ -42,7 +40,7 @@ CLR（Common Language Runtime，公共语言运行时）是 SQL Server 的一项
 | `CREATE/ALTER ASSEMBLY` 权限 | sysadmin 持有 | db_ddladmin 角色有 ALTER 权限 |
 | `clr strict security` = 0 | SQL 2017+ 默认为 ON | 需额外禁用或提供证书签名 |
 
-> **⚡ 关键：** CLR 程序集在 `PERMISSION_SET = UNSAFE` 模式下可直接调用 `System.Diagnostics.Process` 执行任意系统命令，以 SQL Server 服务账户身份运行。
+> **** CLR 程序集在 `PERMISSION_SET = UNSAFE` 模式下可直接调用 `System.Diagnostics.Process` 执行任意系统命令，以 SQL Server 服务账户身份运行。
 
 ### 1.4 攻击链路概述
 
@@ -179,7 +177,7 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library C:\temp\
 
 编译后在 `C:\temp\` 生成 `cmd_exec.dll`。
 
-> **🎯 场景变体：** 如果目标服务器无法直接写文件，可以在本地 Kali 安装 `mono-mcs` 编译：
+> **场景变体：** 如果目标服务器无法直接写文件，可以在本地 Kali 安装 `mono-mcs` 编译：
 > ```bash
 > sudo apt install mono-mcs
 > mcs -target:library -out:cmd_exec.dll cmd_exec.cs
@@ -247,7 +245,7 @@ AS EXTERNAL NAME [cmd_exec_asm].[StoredProcedures].[cmd_exec];
 GO
 ```
 
-> **✅ 优势：** 不落盘 DLL，绕过文件监控；适合只掌握 SQL 客户端连接（如 SQLCMD / SSMS / Navicat）的场景。
+> **优势：** 不落盘 DLL，绕过文件监控；适合只掌握 SQL 客户端连接（如 SQLCMD / SSMS / Navicat）的场景。
 
 ### 3.5 执行系统命令
 
@@ -406,10 +404,3 @@ flowchart LR
 - 结合 SQL Agent Job 可实现持久化定时任务
 
 ---
-
-> **参考来源：**  
-> [NetSPI - Attacking SQL Server CLR Assemblies](https://www.netspi.com/blog/technical-blog/adversary-simulation/attacking-sql-server-clr-assemblies/)  
-> [Hacking Articles - MSSQL Command Execution with CLR Assembly](https://www.hackingarticles.in/mssql-for-pentester-command-execution-with-clr-assembly/)  
-> [安全客 - 攻击SQL Server CLR程序集](https://www.anquanke.com/post/id/86552)  
-
-> ⚠️ 本文为安全学习记录，所有技术仅用于授权渗透测试环境。
