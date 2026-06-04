@@ -7,22 +7,28 @@ comments: false
 
 ## 👋 你好
 
-我是一名网络安全学习者，持有 **CISP-PTE（国家注册渗透测试工程师）** 认证，热爱渗透测试与攻防技术。
+我是一名网络安全学习者，持有 **CISP-PTE（国家注册渗透测试工程师）** 认证，专注渗透测试与攻防技术研究。
 
 ## 🛠 技能方向
 
-- **Web 渗透测试** — OWASP Top 10、SQL 注入、XSS、文件上传、反序列化
-- **渗透工具链** — Burp Suite、Nmap、SQLMap、Metasploit、蚁剑
-- **靶机实战** — VulnHub、HackTheBox、TryHackMe
-- **编程能力** — Python 安全脚本开发，PHP / Java 代码审计基础
+- **Web 安全** — OWASP Top 10、SQL 注入、XSS、CSRF、SSRF、XXE、文件上传、文件包含、命令注入、SSTI、反序列化、JWT/OAuth 认证攻防、WAF 绕过
+- **内网渗透** — NTLM 中继、Kerberos 票据攻击、AD 域攻防、横向移动、免杀与 EDR 规避
+- **权限提升** — Linux SUID/Sudo/Cron/内核提权、Windows 服务/令牌/UAC/域环境提权
+- **云安全** — AWS/阿里云/腾讯云、Docker/K8s 容器安全
+- **移动安全** — Android/iOS APP 渗透、小程序安全测试
+- **代码审计** — PHP/Java/Python/Node.js 代码审计
+- **工具链** — Burp Suite、Nmap、SQLMap、Metasploit、Cobalt Strike、BloodHound、Frida
 
 ## 📝 关于本博客
 
-在这里记录我的渗透测试学习过程，主要包括：
+渗透测试实战笔记，涵盖：
 
-- **VulnHub / HTB 靶机 Writeup** — 完整渗透测试报告，含命令、截图与总结
-- **漏洞分析笔记** — 经典漏洞的复现、分析与防御思路
-- **工具使用技巧** — 常用安全工具的配置与使用心得
+- **Web 漏洞** — 从原理到绕过，完整攻击链路
+- **内网攻防** — 域渗透、横向移动、权限维持
+- **靶机 Writeup** — VulnHub DC 系列全通关
+- **提权笔记** — Linux/Windows 提权方法论
+- **云与移动** — 云服务攻防、APP 渗透测试
+- **工具速查** — Burp/Metasploit/CS 等工具实战
 
 ## 📬 联系方式
 
