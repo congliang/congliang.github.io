@@ -4,6 +4,7 @@ date: 2025-06-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 文件上传漏洞——Content-Type 伪造、图片马与二次渲染绕过 getimagesize。
 categories: 渗透测试
 ---
 

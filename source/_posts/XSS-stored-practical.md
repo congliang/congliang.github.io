@@ -4,8 +4,8 @@ date: 2025-03-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 存储型XSS挖掘与利用——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 存储型XSS（Stored XSS）将恶意脚本持久化到服务端，受害者每次访问页面都会触发，不经二次请求即可扩大影响面。文章覆盖评论/富文本/个人资料等实战挖掘场景、存储上下文的过滤绕过技巧、Beef/XSSHunter 平台联动、HttpOnly 绕过与 Cookie 窃取、SRC 真实案例复盘，以及 CSP + 输出编码的纵深防御方案。
 ---
 
 ## 概述

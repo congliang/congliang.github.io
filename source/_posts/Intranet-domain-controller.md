@@ -4,6 +4,7 @@ date: 2025-10-05 08:00:00
 tags:
   - 内网渗透
   - 渗透测试
+description: 域控制器攻击——DCSync、Zerologon、sAMAccountName 冒充与 RBCD 攻击。
 categories: 渗透测试
 ---
 
@@ -16,16 +17,16 @@ categories: 渗透测试
 ```mermaid
 flowchart TB
     A[入口点: 普通域用户] --> B{当前权限}
-    B -->|无特权| C[信息收集<br/>BloodHound / ADExplorer]
+    B -->|无特权| C[信息收集 BloodHound / ADExplorer]
     B -->|机器账户| D[MachineAccountQuota 攻击]
     C --> E{发现攻击路径}
-    E -->|ESI 权限| F[DCSync 攻击<br/>模拟域控复制凭据]
-    E -->|Netlogon 漏洞| G[Zerologon<br/>CVE-2020-1472]
-    E -->|sAMAccountName 篡改| H[sAMAccountName 冒充<br/>CVE-2021-42278 / 42287]
-    E -->|打印服务开启| I[Print Spooler<br/>PrintNightmare]
-    E -->|DFSCoerce 路径| J[DFSCoerce<br/>强制认证中继]
-    E -->|KeyTrust 支持| K[Shadow Credentials<br/>替代 Key Credential]
-    E -->|ACL 可编辑| L[RBCD 攻击<br/>基于资源的约束委派]
+    E -->|ESI 权限| F[DCSync 攻击 模拟域控复制凭据]
+    E -->|Netlogon 漏洞| G[Zerologon CVE-2020-1472]
+    E -->|sAMAccountName 篡改| H[sAMAccountName 冒充 CVE-2021-42278 / 42287]
+    E -->|打印服务开启| I[Print Spooler PrintNightmare]
+    E -->|DFSCoerce 路径| J[DFSCoerce 强制认证中继]
+    E -->|KeyTrust 支持| K[Shadow Credentials 替代 Key Credential]
+    E -->|ACL 可编辑| L[RBCD 攻击 基于资源的约束委派]
     F --> Z[获取 NTDS.dit 中全部凭据]
     G --> Z[重置 DC 机器账户密码为空]
     H --> Z[获取 DC 机器账户 TGT]

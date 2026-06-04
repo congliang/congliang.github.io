@@ -4,8 +4,8 @@ date: 2024-10-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: SQL 注入：时间盲注详解——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 页面完全无差异时，时间盲注是最后的武器——用 sleep 延迟逐位猜解数据，SQLMap --technique=T 全自动化，以及手工构造时间延迟 payload。
 ---
 
 ## 什么时候用时间盲注

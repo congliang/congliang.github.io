@@ -4,6 +4,7 @@ date: 2025-01-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: SQL 注入 OOB 外带——DNSLOG 原理、ceye.io 使用与各数据库外带通道。
 categories: 渗透测试
 ---
 

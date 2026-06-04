@@ -5,6 +5,7 @@ tags:
   - 方法论
   - 权限提升
   - 渗透测试
+description: Linux 提权方法论——LinPEAS/pspy 使用、sudo/crontab/SUID/service 四板斧系统化信息收集。
 categories: 渗透测试
 ---
 

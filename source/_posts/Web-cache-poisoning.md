@@ -4,6 +4,7 @@ date: 2026-07-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: Web 缓存投毒攻击——Unkeyed Inputs 发现、缓存 Key 识别与 CDN 绕过。
 categories: 渗透测试
 ---
 

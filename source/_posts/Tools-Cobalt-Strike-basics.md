@@ -5,6 +5,7 @@ tags:
   - 工具
   - 渗透测试
 categories: 渗透测试
+description: Cobalt Strike 基础使用——TeamServer 搭建、Listener 配置、Beacon 命令与 Socks 代理内网穿透。
 ---
 
 ## 前言
@@ -26,6 +27,7 @@ sudo ./teamserver 192.168.1.100 mypassword myprofile.profile
 - **profile**：可选C2配置文件，用于伪装流量特征。
 - **killdate**：可选有效期，格式YYYY-MM-DD。
 
+description: Cobalt Strike 基础使用——TeamServer 搭建、Beacon 命令与 Socks 代理。
 生产环境建议：使用强密码；定制Malleable C2 Profile；搭配CDN或域前置隐藏真实IP；用systemd或screen保持后台运行；合理设置killdate防止Beacon长期失控。客户端连接时填写host、port（默认50050）、password和用户名。
 
 ## 二、Listener 监听器类型

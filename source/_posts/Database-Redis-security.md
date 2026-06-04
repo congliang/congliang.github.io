@@ -4,6 +4,7 @@ date: 2026-05-10 08:00:00
 tags:
   - 数据库安全
   - 渗透测试
+description: Redis 安全攻击面——未授权访问写 SSH Key/Crontab/Webshell 与主从复制 RCE。
 categories: 渗透测试
 ---
 

@@ -4,6 +4,7 @@ date: 2026-05-15 08:00:00
 tags:
   - 密码学
   - 渗透测试
+description: Hash 破解从识别到爆破——hash-identifier、John the Ripper、Hashcat 模式号与 GPU 加速。
 categories: 渗透测试
 ---
 

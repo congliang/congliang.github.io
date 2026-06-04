@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 数据库安全
   - 渗透测试
+description: PostgreSQL 注入实战——pg_sleep 盲注、pg_read_file 文件操作与 COPY/UDF 命令执行。
 categories: 渗透测试
 ---
 

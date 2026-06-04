@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 反序列化
   - 渗透测试
+description: PHP Phar 反序列化——phar:// 协议触发 unserialize 与文件操作函数利用。
 categories: 渗透测试
 ---
 

@@ -4,6 +4,7 @@ date: 2025-01-15 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Windows UAC 绕过——白名单程序劫持、DLL 加载顺序利用与 UACME 工具使用。
 categories: 渗透测试
 ---
 

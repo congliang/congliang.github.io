@@ -5,8 +5,8 @@ tags:
   - Web安全
   - 框架安全
   - 渗透测试
+description: ThinkPHP RCE 漏洞链——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: ThinkPHP 5.x/6.x 系列 RCE 漏洞总结——路由参数注入、method 代码执行、缓存文件包含、反序列化 POP 链，以及批量检测方法。
 ---
 
 ## ThinkPHP 5.x 核心 RCE

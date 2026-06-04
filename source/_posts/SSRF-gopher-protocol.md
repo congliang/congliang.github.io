@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 渗透测试
 categories: 渗透测试
+description: SSRF Gopher 协议深度利用——构造 GET/POST 请求攻击内网 Redis/Memcached/MySQL/FastCGI 与 gopherus 自动化。
 ---
 
 ## 前言
@@ -24,6 +25,7 @@ gopher://<host>:<port>/<gopher-type><selector>%0d%0a<next-type><next-selector>%0
 - **`%0d%0a`**：URL 编码的 CRLF（`\r\n`），分隔多段数据，使得单条 Gopher URL 可发送完整的 TCP 会话。
 - **Selector 之后的内容原样发送到目标端口**，不附加任何额外头部（与 HTTP 截然不同）。
 
+description: SSRF Gopher 协议利用——构造 GET/POST 请求攻击内网 Redis/MySQL/FastCGI。
 SSRF 利用条件：服务端使用 libcurl 且未禁用 Gopher 协议（curl 7.45.0+ 默认开启）。PHP 的 curl 扩展支持；Java 原生 `URL` 类不支持。发送一次 URL 编码通常足够；若中间件再解码，则需二次编码。
 
 ## 二、通过 Gopher 构造 GET/POST 请求

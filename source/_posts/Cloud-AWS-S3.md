@@ -4,6 +4,7 @@ date: 2025-07-15 08:00:00
 tags:
   - 云安全
   - 渗透测试
+description: AWS S3 存储桶安全——公开访问枚举、策略权限利用与 Access Key 泄露。
 categories: 渗透测试
 ---
 

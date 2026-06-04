@@ -4,6 +4,7 @@ date: 2025-08-05 08:00:00
 tags:
   - 内网渗透
   - 渗透测试
+description: 后渗透横向移动——PsExec/WMIExec/SMBExec 对比、WinRM 与 RDP 会话劫持。
 categories: 渗透测试
 ---
 

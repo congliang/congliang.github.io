@@ -5,6 +5,7 @@ tags:
   - 内网渗透
   - 工具
   - 渗透测试
+description: Active Directory 攻击路径——BloodHound 分析、DCSync 攻击与 ACL 滥用。
 categories: 渗透测试
 ---
 

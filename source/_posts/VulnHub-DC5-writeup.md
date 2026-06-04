@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 渗透测试
   - 靶场
+description: VulnHub DC-5靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
 ---
 

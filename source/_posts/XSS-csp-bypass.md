@@ -4,8 +4,8 @@ date: 2025-04-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: CSP绕过策略——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: CSP（内容安全策略）是防御 XSS 的最后一道防线，但它并非无懈可击。从 JSONP 劫持、CDN 白名单滥用、nonce 窃取、base-uri 注入到 strict-dynamic 绕过与 CSPT2CSRF——本文逐条拆解 CSP 绕过策略，附带可复现的代码示例与决策流程图。
 ---
 
 ## 前言

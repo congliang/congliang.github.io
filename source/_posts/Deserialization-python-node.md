@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 反序列化
   - 渗透测试
+description: Python 与 Node.js 反序列化——Pickle/PyYAML/node-serialize 跨语言漏洞。
 categories: 渗透测试
 ---
 

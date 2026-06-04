@@ -5,8 +5,8 @@ tags:
   - Web安全
   - 框架安全
   - 渗透测试
+description: SSTI：Freemarker/Twig/Velocity/Smarty 利用——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 非 Python 模板引擎 SSTI——Java 端 Freemarker/Velocity 的 Execute 和 ClassTool 利用，PHP 端 Twig/Smarty 的沙箱绕过，以及各引擎 RCE Payload 速查表。
 ---
 
 ## Freemarker (Java)

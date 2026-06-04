@@ -4,6 +4,7 @@ date: 2026-06-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: HTTP 请求走私攻击——CL.TE/TE.CL/TE.TE 三种模式与前后端脱同步利用。
 categories: 渗透测试
 cover: https://portswigger.net/web-security/images/http-request-smuggling.svg
 ---

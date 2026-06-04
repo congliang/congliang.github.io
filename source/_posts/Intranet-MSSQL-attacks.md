@@ -5,6 +5,7 @@ tags:
   - 内网渗透
   - 数据库安全
   - 渗透测试
+description: MSSQL 数据库攻击面——xp_cmdshell、Linked Server 与 UNC 路径 Hash 窃取。
 categories: 渗透测试
 ---
 

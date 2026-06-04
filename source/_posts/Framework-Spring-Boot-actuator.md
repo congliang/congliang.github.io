@@ -4,8 +4,8 @@ date: 2025-07-20 08:00:00
 tags:
   - 框架安全
   - 渗透测试
+description: Spring Boot Actuator 漏洞利用——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: Spring Boot Actuator 各端点利用——env 属性窃取密码、heapdump 内存分析、mappings 路由发现、Spring Cloud Gateway 与 Eureka RCE，以及 Jolokia JMX 利用链。
 ---
 
 ## Actuator 端点一览

@@ -6,6 +6,7 @@ tags:
   - 渗透测试
   - 认证安全
 categories: 渗透测试
+description: JWT 安全深度解析——none 算法绕过、HMAC/RSA 密钥混淆、kid/jku 参数注入与 jwt_tool 实战。
 ---
 
 ## 前言
@@ -28,6 +29,7 @@ JSON Web Token（JWT）是现代Web应用中最广泛使用的身份认证和授
 
 常见签名算法：
 - **HS256**：基于共享密钥的对称算法
+description: JWT 安全——none 算法绕过、HMAC/RSA 密钥混淆与 kid/jku 参数注入。
 - **RS256**：基于公私钥对的非对称算法
 - **ES256**：基于椭圆曲线的非对称算法
 - **none**：无签名（绝不应在生产环境使用）

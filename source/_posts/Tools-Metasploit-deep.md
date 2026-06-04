@@ -4,6 +4,7 @@ date: 2026-02-20 08:00:00
 tags:
   - 工具
   - 渗透测试
+description: Metasploit 从入门到精通——msfconsole、Meterpreter 后渗透与 msfvenom。
 categories: 渗透测试
 ---
 

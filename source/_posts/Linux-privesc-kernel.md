@@ -5,6 +5,7 @@ tags:
   - 权限提升
   - 渗透测试
 categories: 渗透测试
+description: Linux 内核漏洞提权——uname 版本号 CVE 映射、DirtyCow/DirtyPipe/PwnKit 经典利用与 searchsploit 编译实战。
 ---
 
 ## 前言
@@ -28,6 +29,7 @@ cat /etc/os-release
 - 4 — 主版本号 / 15 — 次版本号 / 0 — 补丁级别
 - 142 — 发行版补丁号 / generic — 内核变体（generic/server/aws/kvm）
 
+description: Linux 内核漏洞提权——内核版本 CVE 映射、DirtyCow/DirtyPipe/PwnKit 等经典漏洞利用。
 ---
 
 ## 二、内核版本与CVE速查映射表

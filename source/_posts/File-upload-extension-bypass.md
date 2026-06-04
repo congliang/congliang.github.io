@@ -4,6 +4,7 @@ date: 2025-06-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 文件上传漏洞——后缀名黑名单绕过：php3/phtml/.htaccess/::$DATA 等技巧。
 categories: 渗透测试
 ---
 

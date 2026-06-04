@@ -5,6 +5,7 @@ tags:
   - 框架安全
   - 渗透测试
   - 靶场
+description: VulnHub DC-2靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
 ---
 
@@ -33,7 +34,7 @@ flowchart TD
     M --> N[su tom 横向移动]
     N --> O[SUID 枚举: /usr/bin/git]
     O --> P[git --help → 分页器 !/bin/bash]
-    P --> Q[ROOT 🚩]
+    P --> Q[ROOT ]
 ```
 
 ---

@@ -4,6 +4,7 @@ date: 2025-08-01 08:00:00
 tags:
   - 云安全
   - 渗透测试
+description: AWS EC2 元数据与 IAM 权限提升——STS 临时凭据利用与 Serverless 攻击。
 categories: 渗透测试
 ---
 
@@ -296,7 +297,7 @@ flowchart LR
     A[SSRF/命令注入] -->|curl 169.254.169.254| B[IMDS凭证窃取]
     B --> C[AWS CLI枚举]
     C --> D[发现PassRole权限]
-    D --> E[Lambda反弹Shell<br>传入Admin Role]
+    D --> E[Lambda反弹Shell 传入Admin Role]
     E --> F[高权限会话]
     F --> G[Secrets导出 + 持久化]
     G --> H[aws_consoler]

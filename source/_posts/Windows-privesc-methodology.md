@@ -6,8 +6,8 @@ tags:
   - 权限提升
   - 渗透测试
 
+description: Windows 提权方法论与工具链——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 系统化 Windows 权限提升方法论。从初始信息枚举到自动化工具链（WinPEAS / PowerUp / Watson），覆盖手动分析与自动扫描的协同策略、常见提权路径决策树，以及完整 Checklist 清单。
 ---
 
 > 免责声明：本文所述技术仅供授权的安全测试与教育用途，未经授权对他人系统进行攻击属于违法行为。使用者须自行承担一切法律后果。
@@ -28,7 +28,7 @@ Windows 权限提升（Privilege Escalation）是指从低权限用户（如 `II
 flowchart TD
     A["获得初始 Shell"] --> B{"权限级别判断"}
     B -->|"SYSTEM / Admin"| C["提权完成，转向横向移动"]
-    B -->|"低权限用户"| D["第一阶段：自动化扫描<br/>WinPEAS / PowerUp / Watson"]
+    B -->|"低权限用户"| D["第一阶段：自动化扫描 WinPEAS / PowerUp / Watson"]
     D --> E{"扫描结果"}
     E -->|"发现已知漏洞"| F["第二阶段：漏洞利用"]
     E -->|"未发现或利用失败"| G["第二阶段：手工枚举"]
@@ -199,7 +199,7 @@ reg query HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\ /v Con
 ```mermaid
 flowchart TD
     A["whoami /priv"] --> B{"SeImpersonatePrivilege?"}
-    B -->|"Yes"| P1["🥔 Potato 家族<br/>RoguePotato / JuicyPotato / PrintSpoofer"]
+    B -->|"Yes"| P1[" Potato 家族 RoguePotato / JuicyPotato / PrintSpoofer"]
     P1 --> S1["NT AUTHORITY\SYSTEM"]
     B -->|"No"| C{"系统老旧 / 补丁少?"}
     C -->|"Yes"| D["Watson 扫描 → 内核 Exploit"]

@@ -4,6 +4,7 @@ date: 2026-01-15 08:00:00
 tags:
   - 工具
   - 渗透测试
+description: Burp Suite 高级技巧——Intruder 攻击模式、Collaborator OOB 与必装插件。
 categories: 渗透测试
 ---
 

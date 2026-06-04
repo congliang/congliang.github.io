@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 渗透测试
   - 认证安全
+description: OAuth 2.0 攻击面——授权码劫持、redirect_uri 绕过与 state 参数 CSRF。
 categories: 渗透测试
 ---
 

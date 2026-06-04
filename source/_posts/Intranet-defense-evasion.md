@@ -4,6 +4,7 @@ date: 2025-12-05 08:00:00
 tags:
   - 内网渗透
   - 渗透测试
+description: 内网免杀与防御规避——Windows Defender/AMSI/ETW 绕过与 EDR 规避思路。
 categories: 渗透测试
 ---
 

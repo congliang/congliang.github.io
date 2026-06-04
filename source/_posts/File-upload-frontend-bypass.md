@@ -6,8 +6,8 @@ tags:
   - Web安全
   - 渗透测试
 
+description: 文件上传漏洞——绕过前端 JS 校验、修改 MIME 类型与 Burp 抓包改包。
 categories: 渗透测试
-description: 文件上传漏洞前端校验绕过实战。覆盖 JavaScript 删除/禁用、Burp Suite 拦截修改、MIME 类型伪造、扩展名绕过，以及服务端多层防御方案。
 ---
 
 > 环境：任意 Web 应用（前端使用 JavaScript 校验文件类型）。测试工具：Burp Suite / 浏览器开发者工具。
@@ -204,7 +204,7 @@ if (forbidden.indexOf(ext) !== -1) {
 ```mermaid
 flowchart LR
     A[浏览器直接上传 .php] --> B[被前端 JS 拦截]
-    B --> C[❌ 错误结论：网站安全]
+    B --> C[ 错误结论：网站安全]
     C -.- D[实际：服务端可能完全无校验]
     D --> E[用 Burp/curl 即可上传 WebShell]
 ```
@@ -263,12 +263,12 @@ GIF89a;
 ```mermaid
 flowchart TD
     A[用户上传文件] --> B[① 扩展名白名单]
-    B -->|通过| C[② MIME 类型校验<br/>finfo 读真实类型]
+    B -->|通过| C[② MIME 类型校验 finfo 读真实类型]
     B -->|拒绝| X1[拒绝]
-    C -->|匹配| D[③ 文件内容检测<br/>Magic Bytes + 病毒扫描]
+    C -->|匹配| D[③ 文件内容检测 Magic Bytes + 病毒扫描]
     C -->|不匹配| X2[拒绝]
-    D -->|安全| E[④ 随机文件名<br/>bin2hex + UUID]
-    E --> F[⑤ 存储隔离<br/>上传目录禁止脚本执行]
+    D -->|安全| E[④ 随机文件名 bin2hex + UUID]
+    E --> F[⑤ 存储隔离 上传目录禁止脚本执行]
     F --> G[⑥ 日志记录]
 ```
 

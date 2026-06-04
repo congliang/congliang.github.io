@@ -4,6 +4,7 @@ date: 2025-09-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: PHP 伪协议与 RFI——php://filter 读源码、php://input RCE 与 data:// 协议。
 categories: 渗透测试
 ---
 

@@ -5,8 +5,8 @@ tags:
   - Web安全
   - 渗透测试
   - 靶场
+description: VulnHub DC-9 靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: VulnHub DC-9 靶机完整渗透实战。从搜索框 SQL 注入入手，通过 SQLMap 拖库获取凭据，利用 LFI 读取 knockd 配置文件完成端口敲门开启 SSH，经 Hydra 两轮爆破拿到 Shell，最终通过 SUID Python 脚本写入 /etc/passwd 实现提权。
 ---
 
 > **靶机来源：** VulnHub - DC-9

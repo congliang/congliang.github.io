@@ -4,6 +4,7 @@ date: 2025-05-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: mXSS 突变型跨站脚本——DOM 解析器差异与富文本编辑器 mXSS 案例。
 categories: 渗透测试
 ---
 

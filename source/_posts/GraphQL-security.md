@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 渗透测试
   - 移动安全
+description: GraphQL 安全测试——Introspection 利用、IDOR via GraphQL 与批量攻击绕过。
 categories: 渗透测试
 ---
 

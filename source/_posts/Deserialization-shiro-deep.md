@@ -5,6 +5,7 @@ tags:
   - 反序列化
   - 框架安全
   - 渗透测试
+description: Shiro RememberMe 反序列化——AES 密钥泄露、Shiro-550/721 与内存马注入。
 categories: 渗透测试
 toc: true
 ---
@@ -70,7 +71,7 @@ public AbstractRememberMeManager() {
 flowchart TD
     A[发现 Shiro 应用] --> B{rememberMe Cookie?}
     B -->|是| C[默认密钥尝试解密]
-    B -->|否| D[未登录发包<br/>观察 Set-Cookie]
+    B -->|否| D[未登录发包 观察 Set-Cookie]
     D --> C
     C --> E{解密成功?}
     E -->|是| F[ysoserial 生成 Payload]

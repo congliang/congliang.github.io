@@ -4,6 +4,7 @@ date: 2025-11-05 08:00:00
 tags:
   - 内网渗透
   - 渗透测试
+description: Exchange 邮件服务器攻击面——ProxyShell/ProxyLogon 系列、EWS 接口与邮件规则后门。
 categories: 渗透测试
 ---
 

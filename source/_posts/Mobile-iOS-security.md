@@ -4,8 +4,8 @@ date: 2025-12-01 08:00:00
 tags:
   - 渗透测试
   - 移动安全
+description: 移动安全：iOS APP 安全测试——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: iOS APP 安全测试入门——越狱环境搭建、IPA 分析、Plist 配置审计、Keychain 访问、SSL Pinning 绕过、Frida/Objection 工具使用。
 ---
 
 ## 环境准备

@@ -8,9 +8,11 @@ tags:
   - 权限提升
   - 渗透测试
 
-categories: 渗透测试
 description: MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。
+categories: 渗透测试
 ---
+
+<!-- more -->
 
 > 环境：SQL Server 2016 / 2019，Windows。需要有 `CREATE ASSEMBLY` 或 `sysadmin` 权限。
 

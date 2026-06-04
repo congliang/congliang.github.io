@@ -4,8 +4,8 @@ date: 2025-12-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: XXE 基础注入与文件读取——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: XXE（XML External Entity）从入门到文件读取——XML/DTD/ENTITY 声明基础、file:// 读文件、php://filter 读源码、CDATA 绕过特殊字符、SVG/Office/PDF 中的 XXE。
 ---
 
 ## XML 基础

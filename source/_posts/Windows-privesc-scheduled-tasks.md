@@ -4,6 +4,7 @@ date: 2024-12-15 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Windows 提权——计划任务劫持、启动文件夹与注册表 Run 键利用。
 categories: 渗透测试
 ---
 

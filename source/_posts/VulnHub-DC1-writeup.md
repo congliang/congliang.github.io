@@ -5,8 +5,8 @@ tags:
   - 框架安全
   - 渗透测试
   - 靶场
+description: VulnHub DC-1 靶机实战——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: VulnHub DC-1 靶机完整渗透实战。从主机发现、端口扫描、Drupal 7 CMS 识别，到利用 Metasploit Drupalgeddon2（CVE-2018-7600）获取 Web Shell，最终通过 SUID find 提权拿下 root。
 ---
 
 
@@ -169,15 +169,15 @@ DC-1 的 flag 位于 `/root/thefinalflag.txt`，靶机渗透完成。
 
 ```mermaid
 flowchart TD
-    A[主机发现<br/>netdiscover / arp-scan] --> B[端口扫描<br/>nmap -sV -sC -p-]
-    B --> C[Web 服务识别<br/>端口 80: Apache 2.2.22]
-    C --> D[CMS 版本探测<br/>Drupal 7.54]
-    D --> E[漏洞搜索<br/>searchsploit / MSF search]
-    E --> F[Drupalgeddon2 利用<br/>CVE-2018-7600]
-    F --> G[获取 www-data Shell<br/>Meterpreter Reverse Shell]
-    G --> H[本地信息收集<br/>SUID 文件枚举]
-    H --> I[SUID find 提权<br/>find -exec /bin/sh]
-    I --> J[Root 权限<br/>读取 thefinalflag.txt]
+    A[主机发现 netdiscover / arp-scan] --> B[端口扫描 nmap -sV -sC -p-]
+    B --> C[Web 服务识别 端口 80: Apache 2.2.22]
+    C --> D[CMS 版本探测 Drupal 7.54]
+    D --> E[漏洞搜索 searchsploit / MSF search]
+    E --> F[Drupalgeddon2 利用 CVE-2018-7600]
+    F --> G[获取 www-data Shell Meterpreter Reverse Shell]
+    G --> H[本地信息收集 SUID 文件枚举]
+    H --> I[SUID find 提权 find -exec /bin/sh]
+    I --> J[Root 权限 读取 thefinalflag.txt]
     
     style A fill:#4CAF50,color:#fff
     style E fill:#FF9800,color:#fff

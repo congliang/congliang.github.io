@@ -4,6 +4,7 @@ date: 2026-03-10 08:00:00
 tags:
   - 框架安全
   - 渗透测试
+description: JBoss 与 WebSphere 安全测试——JMX Console 弱口令与反序列化漏洞。
 categories: 渗透测试
 ---
 

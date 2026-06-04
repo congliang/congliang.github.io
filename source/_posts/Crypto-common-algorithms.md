@@ -4,6 +4,7 @@ date: 2026-05-01 08:00:00
 tags:
   - 密码学
   - 渗透测试
+description: 渗透测试中的密码学——Base64/Hex/MD5/AES/RSA 识别与编码/加密/哈希差异。
 categories: 渗透测试
 ---
 

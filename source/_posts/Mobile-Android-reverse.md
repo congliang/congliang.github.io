@@ -4,8 +4,8 @@ date: 2025-11-15 08:00:00
 tags:
   - 渗透测试
   - 移动安全
+description: 移动安全：Android 脱壳与逆向——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: Android App 加固检测、Frida 脱壳、Xposed SSL 解绑、Smali 代码修改、Native .so 库逆向分析，以及签名验证绕过。
 ---
 
 ## 加固检测

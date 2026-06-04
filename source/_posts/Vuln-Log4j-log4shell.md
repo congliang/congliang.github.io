@@ -28,6 +28,7 @@ Log4Shell 几乎无处不在——只要用户输入会进 Log4j 日志：
 ```
 - HTTP Header: User-Agent、X-Forwarded-For、Cookie
 - URL 参数
+description: Log4j Log4Shell 漏洞全解析——渗透测试实战笔记，含完整攻击链路与防御方案。
 - 登录表单的用户名
 - 任何被日志记录的用户输入
 ```

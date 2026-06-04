@@ -4,6 +4,7 @@ date: 2025-08-15 08:00:00
 tags:
   - 云安全
   - 渗透测试
+description: 阿里云安全测试——OSS/ECS 元数据/RAM STS 凭据利用与 AccessKey 泄露。
 categories: 渗透测试
 ---
 

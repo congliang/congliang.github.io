@@ -8,8 +8,8 @@ tags:
   - 框架安全
   - 渗透测试
   - 靶场
-categories: 渗透测试
 description: VulnHub DC-3 靶机渗透实战。通过 JoomScan 识别 CMS 版本后，利用 Joomla 3.7.0 SQL 注入漏洞（CVE-2017-8917）枚举数据库、获取用户凭据，最终 John 破解密码登录后台。
+categories: 渗透测试
 ---
 
 

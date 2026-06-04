@@ -5,8 +5,8 @@ tags:
   - 信息收集
   - 内网渗透
   - 渗透测试
+description: 内网信息收集方法论——域信息收集、WMI/PowerShell 脚本与 BloodHound 数据采集。
 categories: 渗透测试
-description: 系统化梳理内网渗透信息收集技术，涵盖网络配置、域环境、WMI/PowerShell脚本与BloodHound数据采集，附完整检查清单与流程图。
 ---
 
 ## 一、引言

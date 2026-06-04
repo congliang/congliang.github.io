@@ -4,8 +4,8 @@ date: 2026-09-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 越权漏洞：水平越权与垂直越权——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 深入剖析越权漏洞原理，覆盖水平越权与垂直越权、IDOR利用（UUID与可预测ID）、API端点枚举、Mass Assignment攻击、302/401状态码绕过等实战技术，附SRC赏金案例。
 ---
 
 

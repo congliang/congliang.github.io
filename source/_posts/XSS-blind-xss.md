@@ -4,9 +4,9 @@ date: 2025-04-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 盲XSS实战——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
 cover: /img/blind-xss-cover.png
-description: 盲XSS（Blind XSS）是一种在攻击者无法直接观察到弹窗的输入点注入Payload，等待后端系统触发后回调收集数据的持久型XSS攻击手法。本文分享从环境搭建到SRC实战的完整经验。
 ---
 
 ## 一、什么是盲XSS

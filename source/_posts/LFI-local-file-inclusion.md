@@ -4,6 +4,7 @@ date: 2025-08-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: LFI 本地文件包含——/etc/passwd 到 /proc、路径截断与日志文件利用。
 categories: 渗透测试
 ---
 

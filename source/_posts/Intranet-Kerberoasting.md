@@ -5,6 +5,7 @@ tags:
   - 内网渗透
   - 密码学
   - 渗透测试
+description: Kerberoasting 与 AS-REP Roasting——SPN 服务账户密码爆破与 Hashcat 破解。
 categories: 渗透测试
 ---
 

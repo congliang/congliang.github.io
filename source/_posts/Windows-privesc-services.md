@@ -1,9 +1,10 @@
 ---
-title: "Windows提权：服务权限配置错误"
+title: Windows提权：服务权限配置错误
 date: 2024-12-01 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Windows 提权——服务权限配置错误：PowerUp.ps1 检测、无引号服务路径、可写服务二进制替换与注册表权限修改利用。
 categories: 渗透测试
 ---
 

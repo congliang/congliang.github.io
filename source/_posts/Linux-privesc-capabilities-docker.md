@@ -5,6 +5,7 @@ tags:
   - 云安全
   - 权限提升
   - 渗透测试
+description: Linux Capabilities 与容器逃逸提权——特权能力利用、Docker 特权模式与 docker.sock 挂载逃逸。
 categories: 渗透测试
 ---
 

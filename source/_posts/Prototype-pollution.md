@@ -4,9 +4,9 @@ date: 2026-07-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 原型链污染攻击——__proto__/constructor.prototype 污染与 RCE 利用链。
 categories: 渗透测试
 cover: /img/prototype-pollution-cover.png
-description: 深入剖析 JavaScript 原型链污染漏洞的原理、利用链（从XSS到RCE）以及自动化检测工具 ppfuzz 的实战应用。
 ---
 
 ## 前言

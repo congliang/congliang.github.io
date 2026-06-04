@@ -4,6 +4,7 @@ date: 2025-03-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: DOM 型 XSS 深入分析——Source/Sink 模型与常见危险 Sink 函数利用。
 categories: 渗透测试
 ---
 

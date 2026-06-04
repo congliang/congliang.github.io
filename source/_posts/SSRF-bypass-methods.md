@@ -6,6 +6,7 @@ tags:
   - 渗透测试
 categories:
   - 渗透测试
+description: SSRF 绕过技巧——URL 解析差异、DNS 重绑定、127.0.0.1 变形与 IPv6 绕过。
 ---
 
 ## 前言

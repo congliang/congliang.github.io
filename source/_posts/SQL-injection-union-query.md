@@ -4,8 +4,8 @@ date: 2024-08-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: SQL 注入基础：联合查询注入——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: SQL 注入最经典的利用方式——联合查询注入，从 order by 猜列数到 union select 跨库查询，再到 information_schema 自动枚举数据库对象，配合 SQLMap 入门。
 ---
 
 ## 什么是 SQL 注入

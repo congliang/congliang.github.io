@@ -4,6 +4,7 @@ date: 2025-09-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: Session 安全攻防——会话固定、Session ID 可预测性与 Cookie 属性安全。
 categories: 渗透测试
 ---
 

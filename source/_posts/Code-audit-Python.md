@@ -1,11 +1,11 @@
 ---
-title: "代码审计：Python审计要点"
+title: 代码审计：Python审计要点
 date: 2026-03-01 08:00:00
 tags:
   - 代码审计
   - 渗透测试
+description: Python 代码审计要点——os.system/subprocess/eval/pickle/yaml 等危险函数追踪、Django/Flask 框架审计与 SSTI/SSRF 检测。
 categories: 渗透测试
-cover: /images/python-audit-cover.jpg
 ---
 
 ## 前言

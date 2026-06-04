@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 数据库安全
   - 渗透测试
+description: Oracle 注入实战——dual 表、UTL_HTTP 外带、DBMS_PIPE 盲注与 CTXSYS 漏洞。
 categories: 渗透测试
 ---
 

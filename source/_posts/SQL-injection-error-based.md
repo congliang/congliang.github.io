@@ -4,8 +4,8 @@ date: 2024-09-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: SQL 注入：报错注入实战——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 当联合查询回显位被禁用时，利用数据库报错函数将敏感数据"弹出"到错误信息中——extractvalue、updatexml、floor 三大报错注入手法全覆盖。
 ---
 
 ## 什么时候用报错注入

@@ -4,6 +4,7 @@ date: 2024-09-15 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Linux 提权——Cron 计划任务脚本覆盖、PATH 变量劫持、通配符注入与 Systemd Timer。
 categories: 渗透测试
 ---
 
@@ -159,12 +160,12 @@ chmod +x /opt/monitor/ping
 
 ```mermaid
 flowchart TD
-    A[Cron 任务触发] --> B{脚本命令<br/>使用绝对路径?}
+    A[Cron 任务触发] --> B{脚本命令 使用绝对路径?}
     B -->|是 /usr/bin/cmd| C[安全，无法劫持]
-    B -->|否 cmd / ./cmd| D{PATH中靠前位置<br/>有可写目录?}
-    D -->|否| E{脚本先cd到<br/>可写目录?}
+    B -->|否 cmd / ./cmd| D{PATH中靠前位置 有可写目录?}
+    D -->|否| E{脚本先cd到 可写目录?}
     E -->|否| F[无法通过PATH劫持]
-    D -->|是| G[在可写目录<br/>创建同名恶意文件]
+    D -->|是| G[在可写目录 创建同名恶意文件]
     E -->|是| G
     G --> H[Cron以root执行恶意命令]
     H --> I[获取root权限]

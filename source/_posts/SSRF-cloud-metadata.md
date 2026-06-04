@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 云安全
   - 渗透测试
+description: SSRF 云元数据攻击——AWS/阿里云/腾讯云/GCP metadata 端点与 STS 凭据。
 categories: 渗透测试
 ---
 

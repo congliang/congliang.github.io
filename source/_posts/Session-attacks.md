@@ -4,8 +4,8 @@ date: 2026-08-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: Session 安全攻防——会话固定、Session ID 可预测性与 Cookie 属性安全。
 categories: 渗透测试
-description: 系统梳理 Session 安全攻击面：Session 固定、ID 可预测性、Cookie 属性绕过、XSS 劫持、PHP/Java 反序列化、超时缺陷及纵深防御实践。
 ---
 
 ## 前言

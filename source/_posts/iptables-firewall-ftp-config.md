@@ -5,8 +5,8 @@ updated: 2026-03-12 08:00:00
 tags:
   - 安全运维
   - 渗透测试
-categories: 安全运维
 description: 实训笔记：iptables 防火墙规则管理（链、表、规则增删改），multiport 模块实战，vsftpd FTP 服务配置（主动/被动模式），以及 iptables 规则持久化。
+categories: 安全运维
 ---
 
 

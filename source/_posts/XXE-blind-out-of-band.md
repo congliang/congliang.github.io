@@ -4,8 +4,8 @@ date: 2026-01-01 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: SQL 注入 OOB 外带——DNSLOG 原理、ceye.io 使用与各数据库外带通道。
 categories: 渗透测试
-description: 盲 XXE 检测与外带数据——参数实体的 DTD 级联技巧、FTP/HTTP 外带通道搭建、Java netdoc 协议、以及内网盲 XXE 的完整攻击链路。
 ---
 
 ## 盲 XXE 判断

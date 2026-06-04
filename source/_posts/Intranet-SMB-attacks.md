@@ -4,6 +4,7 @@ date: 2025-07-05 08:00:00
 tags:
   - 内网渗透
   - 渗透测试
+description: SMB 协议攻击——SMB 签名检测、SMB Relay、EternalBlue 与 SMBGhost 漏洞利用。
 categories: 渗透测试
 ---
 

@@ -4,6 +4,7 @@ date: 2026-05-20 08:00:00
 tags:
   - 工具
   - 渗透测试
+description: Nmap 深度使用指南——扫描类型、NSE 脚本引擎与防火墙/IDS 规避技巧。
 categories: 渗透测试
 ---
 

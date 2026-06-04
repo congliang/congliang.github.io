@@ -5,6 +5,7 @@ tags:
   - Web安全
   - 渗透测试
 categories: 渗透测试
+description: 命令注入绕过——空格/关键字/长度限制绕过、无字母数字 Shell、Base64 编码执行与 WAF 规避技巧汇总。
 ---
 
 ## 前言
@@ -27,6 +28,7 @@ categories: 渗透测试
 - 邮件发送功能中的 `sendmail` 调用
 - 备份/导出功能中的 `tar`、`zip` 调用
 
+description: 命令注入绕过——空格/关键字/长度限制绕过与无字母数字 Shell 技巧。
 ### 1.2 命令注入连接符总览
 
 | 连接符 | 格式 | 说明 |

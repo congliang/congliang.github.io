@@ -5,6 +5,7 @@ tags:
   - 反序列化
   - 框架安全
   - 渗透测试
+description: Fastjson 漏洞利用——AutoType 机制、checkAutoType 绕过与各版本检测。
 categories: 渗透测试
 ---
 

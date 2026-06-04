@@ -4,8 +4,8 @@ date: 2025-01-01 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Windows 令牌窃取与模拟——SeImpersonate 权限、Potato 家族与 Named Pipe 模拟攻击。
 categories: 渗透测试
-description: Windows 令牌窃取与模拟提权全流程。深入分析 SeImpersonatePrivilege / SeAssignPrimaryToken / SeDebugPrivilege，详解 Potato 家族（PrintSpoofer、RoguePotato、EfsPotato、JuicyPotato）、命名管道模拟、LSASS 令牌窃取、Meterpreter getsystem 内部机制。
 ---
 
 > 环境：Windows 10 / 11、Windows Server 2016 / 2019 / 2022。部分技术需管理员权限或对应特权。

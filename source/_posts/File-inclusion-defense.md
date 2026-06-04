@@ -6,6 +6,7 @@ tags:
   - 代码审计
   - 方法论
   - 渗透测试
+description: 文件包含漏洞防御——allow list 策略、危险封装器禁用与 open_basedir 绕过。
 categories: 渗透测试
 ---
 

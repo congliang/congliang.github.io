@@ -4,8 +4,8 @@ date: 2026-01-05 08:00:00
 tags:
   - 渗透测试
   - 移动安全
+description: 移动安全：API 接口安全测试——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
-description: 移动 App API 测试完整流程——Burp/mitmproxy/Charles 抓包配置、证书固定绕过后的流量分析、API 越权/注入/认证绕过测试、GraphQL 和 REST API 测试要点。
 ---
 
 ## 抓包环境搭建

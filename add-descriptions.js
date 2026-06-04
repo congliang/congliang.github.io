@@ -1,0 +1,117 @@
+const fs = require("fs");
+const path = require("path");
+const dir = "source/_posts";
+
+const files = fs.readdirSync(dir).filter(f => f.endsWith(".md"));
+let count = 0;
+for (const file of files) {
+    const fp = path.join(dir, file);
+    let content = fs.readFileSync(fp, "utf8");
+    if (/^description:/.test(content)) continue;
+
+    const titleMatch = content.match(/^title:\s*(.+)$/m);
+    if (!titleMatch) continue;
+    const title = titleMatch[1].trim();
+
+    let desc = "";
+    if (title.includes("提权") && title.includes("SUID")) desc = "Linux 提权——SUID 文件利用、sudo -l 配置缺陷、LD_PRELOAD 劫持与 GTFOBins 速查。";
+    else if (title.includes("Cron") || title.includes("PATH")) desc = "Linux 提权——Cron 计划任务脚本覆盖、PATH 变量劫持、通配符注入与 Systemd Timer。";
+    else if (title.includes("内核") && title.includes("Linux")) desc = "Linux 内核漏洞提权——内核版本 CVE 映射、DirtyCow/DirtyPipe/PwnKit 等经典漏洞利用。";
+    else if (title.includes("Capabilities") || title.includes("容器逃逸")) desc = "Linux Capabilities 与容器逃逸提权——特权能力利用、Docker 特权模式与 docker.sock 挂载逃逸。";
+    else if (title.includes("服务") && title.includes("Linux")) desc = "Linux 服务与配置错误提权——MySQL UDF、NFS no_root_squash、Logrotate 通配符注入。";
+    else if (title.includes("方法论") && title.includes("Linux")) desc = "Linux 提权方法论——LinPEAS/pspy 使用、sudo/crontab/SUID/service 四板斧系统化信息收集。";
+    else if (title.includes("UAC")) desc = "Windows UAC 绕过——白名单程序劫持、DLL 加载顺序利用与 UACME 工具使用。";
+    else if (title.includes("计划任务") && title.includes("Windows")) desc = "Windows 提权——计划任务劫持、启动文件夹与注册表 Run 键利用。";
+    else if (title.includes("令牌")) desc = "Windows 令牌窃取与模拟——SeImpersonate 权限、Potato 家族与 Named Pipe 模拟攻击。";
+    else if (title.includes("域环境")) desc = "Windows 域环境提权——ACL 滥用、AdminSDHolder、ADCS 证书服务攻击与 LAPS 密码读取。";
+    else if (title.includes("权限维持") && title.includes("Linux")) desc = "后渗透 Linux 权限维持——SSH Key 植入、Crontab 反弹、PAM 后门与 LD_PRELOAD Rootkit。";
+    else if (title.includes("权限维持") && title.includes("Windows")) desc = "后渗透 Windows 权限维持——启动项、计划任务、DLL 劫持、COM 劫持与映像劫持。";
+    else if (title.includes("横向移动") && !title.includes("内网")) desc = "后渗透横向移动——PsExec/WMIExec/SMBExec 对比、WinRM 与 RDP 会话劫持。";
+    else if (title.includes("痕迹清理")) desc = "后渗透痕迹清理——Linux/Windows 日志清除、bash_history 删除与时间戳伪造。";
+    else if (title.includes("数据窃取")) desc = "后渗透数据窃取与外传——DNS/HTTP/ICMP 隧道、分卷加密传输与反溯源。";
+    else if (title.includes("NTLM")) desc = "NTLM 中继攻击——Responder 监听、ntlmrelayx 中继与强制认证利用。";
+    else if (title.includes("票据")) desc = "Kerberos 票据攻击——Golden Ticket/Silver Ticket 伪造与 mimikatz 票据传递。";
+    else if (title.includes("Kerberoasting")) desc = "Kerberoasting 与 AS-REP Roasting——SPN 服务账户密码爆破与 Hashcat 破解。";
+    else if (title.includes("Active Directory") || title.includes("攻击路径")) desc = "Active Directory 攻击路径——BloodHound 分析、DCSync 攻击与 ACL 滥用。";
+    else if (title.includes("SMB")) desc = "SMB 协议攻击——SMB 签名检测、SMB Relay、EternalBlue 与 SMBGhost 漏洞利用。";
+    else if (title.includes("防御规避") || title.includes("免杀")) desc = "内网免杀与防御规避——Windows Defender/AMSI/ETW 绕过与 EDR 规避思路。";
+    else if (title.includes("域控制器")) desc = "域控制器攻击——DCSync、Zerologon、sAMAccountName 冒充与 RBCD 攻击。";
+    else if (title.includes("Exchange")) desc = "Exchange 邮件服务器攻击面——ProxyShell/ProxyLogon 系列、EWS 接口与邮件规则后门。";
+    else if (title.includes("隧道") || title.includes("代理")) desc = "内网穿透与隧道技术——SSH 转发、Chisel/FRP、ICMP/DNS 隧道与 ProxyChains。";
+    else if (title.includes("信息收集") && title.includes("内网")) desc = "内网信息收集方法论——域信息收集、WMI/PowerShell 脚本与 BloodHound 数据采集。";
+    else if (title.includes("MSSQL") && !title.includes("CLR")) desc = "MSSQL 数据库攻击面——xp_cmdshell、Linked Server 与 UNC 路径 Hash 窃取。";
+    else if (title.includes("Redis")) desc = "Redis 安全攻击面——未授权访问写 SSH Key/Crontab/Webshell 与主从复制 RCE。";
+    else if (title.includes("S3")) desc = "AWS S3 存储桶安全——公开访问枚举、策略权限利用与 Access Key 泄露。";
+    else if (title.includes("EC2")) desc = "AWS EC2 元数据与 IAM 权限提升——STS 临时凭据利用与 Serverless 攻击。";
+    else if (title.includes("阿里云")) desc = "阿里云安全测试——OSS/ECS 元数据/RAM STS 凭据利用与 AccessKey 泄露。";
+    else if (title.includes("腾讯云") || title.includes("GCP")) desc = "腾讯云与 GCP 安全——CVM/COS 与 Compute Engine/Cloud Storage 安全测试。";
+    else if (title.includes("方法论") && title.includes("云")) desc = "云安全测试方法论——多云资产发现、存储桶爆破、元数据利用与 IAM 权限枚举。";
+    else if (title.includes("Docker") || title.includes("Kubernetes")) desc = "云原生安全——Docker 容器逃逸与 Kubernetes RBAC/Pod 逃逸攻击面。";
+    else if (title.includes("PHP反序列化")) desc = "PHP 反序列化基础——serialize/unserialize 原理、魔术方法与 POP 链构造。";
+    else if (title.includes("Phar")) desc = "PHP Phar 反序列化——phar:// 协议触发 unserialize 与文件操作函数利用。";
+    else if (title.includes("Java") && title.includes("反序列化")) desc = "Java 反序列化——ysoserial 工具集、CommonsCollections 利用链与 JNDI 注入。";
+    else if (title.includes("Shiro")) desc = "Shiro RememberMe 反序列化——AES 密钥泄露、Shiro-550/721 与内存马注入。";
+    else if (title.includes("Fastjson")) desc = "Fastjson 漏洞利用——AutoType 机制、checkAutoType 绕过与各版本检测。";
+    else if (title.includes("Python") && title.includes("Node")) desc = "Python 与 Node.js 反序列化——Pickle/PyYAML/node-serialize 跨语言漏洞。";
+    else if (title.includes("弱口令") || title.includes("默认口令")) desc = "认证安全——弱口令与默认口令、密码喷洒 vs 暴力破解与常见设备默认凭证。";
+    else if (title.includes("JWT")) desc = "JWT 安全——none 算法绕过、HMAC/RSA 密钥混淆与 kid/jku 参数注入。";
+    else if (title.includes("OAuth")) desc = "OAuth 2.0 攻击面——授权码劫持、redirect_uri 绕过与 state 参数 CSRF。";
+    else if (title.includes("Session")) desc = "Session 安全攻防——会话固定、Session ID 可预测性与 Cookie 属性安全。";
+    else if (title.includes("GraphQL")) desc = "GraphQL 安全测试——Introspection 利用、IDOR via GraphQL 与批量攻击绕过。";
+    else if (title.includes("HTTP") && title.includes("走私")) desc = "HTTP 请求走私攻击——CL.TE/TE.CL/TE.TE 三种模式与前后端脱同步利用。";
+    else if (title.includes("缓存")) desc = "Web 缓存投毒攻击——Unkeyed Inputs 发现、缓存 Key 识别与 CDN 绕过。";
+    else if (title.includes("原型链")) desc = "原型链污染攻击——__proto__/constructor.prototype 污染与 RCE 利用链。";
+    else if (title.includes("Oracle")) desc = "Oracle 注入实战——dual 表、UTL_HTTP 外带、DBMS_PIPE 盲注与 CTXSYS 漏洞。";
+    else if (title.includes("OOB") || title.includes("外带")) desc = "SQL 注入 OOB 外带——DNSLOG 原理、ceye.io 使用与各数据库外带通道。";
+    else if (title.includes("PostgreSQL")) desc = "PostgreSQL 注入实战——pg_sleep 盲注、pg_read_file 文件操作与 COPY/UDF 命令执行。";
+    else if (title.includes("SSRF") && title.includes("基础")) desc = "SSRF 基础原理——file/http/dict 协议利用、内网探测与云元数据访问。";
+    else if (title.includes("SSRF") && title.includes("绕过")) desc = "SSRF 绕过技巧——URL 解析差异、DNS 重绑定、127.0.0.1 变形与 IPv6 绕过。";
+    else if (title.includes("SSRF") && title.includes("云元数据")) desc = "SSRF 云元数据攻击——AWS/阿里云/腾讯云/GCP metadata 端点与 STS 凭据。";
+    else if (title.includes("Gopher")) desc = "SSRF Gopher 协议利用——构造 GET/POST 请求攻击内网 Redis/MySQL/FastCGI。";
+    else if (title.includes("前端")) desc = "文件上传漏洞——绕过前端 JS 校验、修改 MIME 类型与 Burp 抓包改包。";
+    else if (title.includes("后缀")) desc = "文件上传漏洞——后缀名黑名单绕过：php3/phtml/.htaccess/::$DATA 等技巧。";
+    else if (title.includes("MIME") || title.includes("内容类型")) desc = "文件上传漏洞——Content-Type 伪造、图片马与二次渲染绕过 getimagesize。";
+    else if (title.includes("htaccess")) desc = "文件上传漏洞——.htaccess/.user.ini/web.config 配置文件攻击与 PHP 代码执行。";
+    else if (title.includes("文件包含") && title.includes("防御")) desc = "文件包含漏洞防御——allow list 策略、危险封装器禁用与 open_basedir 绕过。";
+    else if (title.includes("LFI") && title.includes("本地")) desc = "LFI 本地文件包含——/etc/passwd 到 /proc、路径截断与日志文件利用。";
+    else if (title.includes("日志注入") || title.includes("Session包含")) desc = "文件包含漏洞——Apache/Nginx/SSH 日志污染与 PHP Session 文件包含。";
+    else if (title.includes("php伪协议") || title.includes("RFI")) desc = "PHP 伪协议与 RFI——php://filter 读源码、php://input RCE 与 data:// 协议。";
+    else if (title.includes("命令注入") && title.includes("基础")) desc = "命令注入基础——命令拼接符、常见注入点与无回显延迟检测技巧。";
+    else if (title.includes("命令注入") && title.includes("绕过")) desc = "命令注入绕过——空格/关键字/长度限制绕过与无字母数字 Shell 技巧。";
+    else if (title.includes("反弹Shell")) desc = "反弹 Shell 方式汇总——Bash/Python/PHP/Perl/Ruby/Netcat/PowerShell 全部一键脚本。";
+    else if (title.includes("密码学") && title.includes("识别")) desc = "渗透测试中的密码学——Base64/Hex/MD5/AES/RSA 识别与编码/加密/哈希差异。";
+    else if (title.includes("Hash破解")) desc = "Hash 破解从识别到爆破——hash-identifier、John the Ripper、Hashcat 模式号与 GPU 加速。";
+    else if (title.includes("加密算法") || title.includes("弱随机")) desc = "加密算法漏洞——弱随机数预测、ECB 企鹅攻击、Padding Oracle 与哈希长度扩展。";
+    else if (title.includes("JBoss") || title.includes("WebSphere")) desc = "JBoss 与 WebSphere 安全测试——JMX Console 弱口令与反序列化漏洞。";
+    else if (title.includes("Nacos")) desc = "Nacos 安全测试——默认口令、未授权访问与 CVE-2021-29441 认证绕过。";
+    else if (title.includes("WebLogic")) desc = "WebLogic 漏洞利用——T3/IIOP 协议、控制台绕过与 Coherence 反序列化。";
+    else if (title.includes("Cobalt")) desc = "Cobalt Strike 基础使用——TeamServer 搭建、Beacon 命令与 Socks 代理。";
+    else if (title.includes("Burp")) desc = "Burp Suite 高级技巧——Intruder 攻击模式、Collaborator OOB 与必装插件。";
+    else if (title.includes("Metasploit")) desc = "Metasploit 从入门到精通——msfconsole、Meterpreter 后渗透与 msfvenom。";
+    else if (title.includes("Nmap")) desc = "Nmap 深度使用指南——扫描类型、NSE 脚本引擎与防火墙/IDS 规避技巧。";
+    else if (title.includes("CMS") && title.includes("常见")) desc = "常见 CMS 漏洞挖掘——ThinkCMF/Discuz/DedeCMS/PHPCMS 后台 Getshell 通用技巧。";
+    else if (title.includes("DOM")) desc = "DOM 型 XSS 深入分析——Source/Sink 模型与常见危险 Sink 函数利用。";
+    else if (title.includes("mXSS")) desc = "mXSS 突变型跨站脚本——DOM 解析器差异与富文本编辑器 mXSS 案例。";
+    else if (title.includes("DC2")) desc = "VulnHub DC-2 靶机实战——WordPress wpscan、cewl 字典生成与 rbash 逃逸。";
+    else if (title.includes("DC4")) desc = "VulnHub DC-4 靶机实战——Web 登录爆破、命令注入与 teehee SUID 提权。";
+    else if (title.includes("DC5")) desc = "VulnHub DC-5 靶机实战——LFI 文件包含、Nginx 日志污染与 screen 提权。";
+    else if (title.includes("DC6")) desc = "VulnHub DC-6 靶机实战——WordPress 插件 CVE-2018-15877 RCE 与 nmap 提权。";
+    else if (title.includes("BloodHound")) desc = "BloodHound AD 攻击路径分析——SharpHound 数据收集与 Cypher 查询技巧。";
+    else if (title.includes("XSS") && title.includes("DOM")) desc = "DOM 型 XSS——Source 到 Sink 的完整追踪与 DOM Invader 自动化检测。";
+    else desc = title + "——渗透测试实战笔记，含完整攻击链路与防御方案。";
+
+    const lines = content.split("\n");
+    let lastTagLine = -1;
+    for (let i = 0; i < Math.min(lines.length, 30); i++) {
+        if (lines[i].trim().startsWith("- ")) lastTagLine = i;
+    }
+    let insertIdx = lastTagLine + 1;
+    while (insertIdx < lines.length && lines[insertIdx].trim() === "") insertIdx++;
+
+    lines.splice(insertIdx, 0, "description: " + desc);
+    content = lines.join("\n");
+
+    fs.writeFileSync(fp, content, "utf8");
+    count++;
+}
+console.log("Added description to " + count + " files");

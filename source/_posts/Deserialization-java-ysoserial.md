@@ -5,6 +5,7 @@ tags:
   - 反序列化
   - 框架安全
   - 渗透测试
+description: Java 反序列化——ysoserial 工具集、CommonsCollections 利用链与 JNDI 注入。
 categories: 渗透测试
 ---
 

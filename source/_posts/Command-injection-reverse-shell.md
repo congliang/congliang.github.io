@@ -4,6 +4,7 @@ date: 2026-02-15 08:00:00
 tags:
   - Web安全
   - 渗透测试
+description: 反弹 Shell 方式汇总——Bash/Python/PHP/Perl/Ruby/Netcat/PowerShell 全部一键脚本。
 categories: 渗透测试
 ---
 

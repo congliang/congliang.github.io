@@ -4,8 +4,8 @@ date: 2024-11-01 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Linux 服务与配置错误提权——MySQL UDF、NFS no_root_squash、Logrotate 通配符注入。
 categories: 渗透测试
-description: 系统梳理七种基于服务错误配置的 Linux 本地提权技术：NFS no_root_squash、MySQL UDF/MOF、PAM 后门植入、Logrotate 通配符注入、systemctl 服务配置缺陷、可写 /etc/shadow 及 SSH 密钥窃取。每种技术均附可复现的代码示例与完整攻击链路。
 ---
 
 > 适用场景：已获取 Linux 低权限 shell，目标系统存在服务类配置缺陷。本文所有方法均假定攻击者拥有普通用户（或数据库用户）权限，需要进一步横向或纵向提权。
@@ -23,12 +23,12 @@ flowchart TD
     START["已获取低权限 Shell"]
 
     subgraph CHECK["信息收集阶段"]
-        A1["find / -perm -o+w -ls | grep shadow<br>检查可写 /etc/shadow"]
-        A2["mount | grep nfs<br>检查 NFS 导出"]
-        A3["mysql -V; grep mysql /etc/passwd<br>检查 MySQL 服务"]
-        A4["find / -writable -name '*.service'<br>检查可写 systemd 服务"]
-        A5["find / -name authorized_keys -ls<br>检查 SSH 密钥位置"]
-        A6["grep logrotate /etc/crontab<br>检查 logrotate 定时任务"]
+        A1["find / -perm -o+w -ls | grep shadow 检查可写 /etc/shadow"]
+        A2["mount | grep nfs 检查 NFS 导出"]
+        A3["mysql -V; grep mysql /etc/passwd 检查 MySQL 服务"]
+        A4["find / -writable -name '*.service' 检查可写 systemd 服务"]
+        A5["find / -name authorized_keys -ls 检查 SSH 密钥位置"]
+        A6["grep logrotate /etc/crontab 检查 logrotate 定时任务"]
     end
 
     START --> A1
@@ -38,13 +38,13 @@ flowchart TD
     START --> A5
     START --> A6
 
-    A1 -->|"writable"| SHADOW["可写 /etc/shadow<br>→ 直接修改 root 密码"]
-    A2 -->|"no_root_squash"| NFS["NFS no_root_squash<br>→ 挂载后 suid 提权"]
-    A3 -->|"root 运行"| MYSQL["MySQL UDF/MOF<br>→ 数据库扩展提权"]
-    A4 -->|"writable"| SYSTEMCTL["systemctl 服务劫持<br>→ ExecStart 重写"]
-    A5 -->|"可读"| SSH["SSH 密钥窃取<br>→ 免密登录"]
-    A6 -->|"cron + wildcard"| LOGROTATE["Logrotate 通配符注入<br>→ 任意命令执行"]
-    A7["PAM 模块后门<br>→ 万能密码登录"]
+    A1 -->|"writable"| SHADOW["可写 /etc/shadow → 直接修改 root 密码"]
+    A2 -->|"no_root_squash"| NFS["NFS no_root_squash → 挂载后 suid 提权"]
+    A3 -->|"root 运行"| MYSQL["MySQL UDF/MOF → 数据库扩展提权"]
+    A4 -->|"writable"| SYSTEMCTL["systemctl 服务劫持 → ExecStart 重写"]
+    A5 -->|"可读"| SSH["SSH 密钥窃取 → 免密登录"]
+    A6 -->|"cron + wildcard"| LOGROTATE["Logrotate 通配符注入 → 任意命令执行"]
+    A7["PAM 模块后门 → 万能密码登录"]
 
     SHADOW --> ROOT["ROOT"]
     NFS --> ROOT

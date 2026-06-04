@@ -4,6 +4,7 @@ date: 2026-03-15 08:00:00
 tags:
   - 代码审计
   - 渗透测试
+description: 代码审计：Node.js审计要点——渗透测试实战笔记，含完整攻击链路与防御方案。
 categories: 渗透测试
 cover: /img/nodejs-audit-cover.png
 ---

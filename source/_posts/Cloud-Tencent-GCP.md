@@ -4,6 +4,7 @@ date: 2025-09-01 08:00:00
 tags:
   - 云安全
   - 渗透测试
+description: 腾讯云与 GCP 安全——CVM/COS 与 Compute Engine/Cloud Storage 安全测试。
 categories: 渗透测试
 ---
 

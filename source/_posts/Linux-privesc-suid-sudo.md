@@ -4,6 +4,7 @@ date: 2024-09-01 08:00:00
 tags:
   - 权限提升
   - 渗透测试
+description: Linux 提权——SUID 文件利用、sudo -l 配置缺陷、LD_PRELOAD 劫持与 GTFOBins 速查。
 categories: 渗透测试
 ---
 

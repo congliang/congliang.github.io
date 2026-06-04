@@ -5,6 +5,7 @@ tags:
   - 内网渗透
   - 渗透测试
 categories: 渗透测试
+description: Kerberos 票据攻击——Golden Ticket/Silver Ticket 伪造、mimikatz 票据传递与域持久化防御绕过。
 ---
 
 ## 前言
@@ -23,6 +24,7 @@ categories: 渗透测试
 - **KDC（Key Distribution Center）**：密钥分发中心，运行在域控上，由AS和TGS两个服务组成
 - **应用服务器（AP）**：提供具体服务的服务器
 
+description: Kerberos 票据攻击——Golden Ticket/Silver Ticket 伪造与 mimikatz 票据传递。
 ### 1.2 认证流程
 
 整个Kerberos认证分为三个阶段、六个步骤：
