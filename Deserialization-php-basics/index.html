@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言PHP反序列化漏洞是Web安全领域的经典议题。从OWASP Top 10中的”Insecure Deserialization”到历年CTF高频考点，再到现实世界中层出不穷的CMS漏洞，反序列化攻击始终占据重要位置。本文从基础概念出发，逐步深入到POP链构造与实际CVE分析。 一、序列化与反序列化基本概念对象存在于内存中。当需要将对象存储到文件、数据库或通过网络传输时，必须转换为字符串格式——">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP反序列化基础">
+<meta property="og:url" content="https://congliang.github.io/Deserialization-php-basics/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言PHP反序列化漏洞是Web安全领域的经典议题。从OWASP Top 10中的”Insecure Deserialization”到历年CTF高频考点，再到现实世界中层出不穷的CMS漏洞，反序列化攻击始终占据重要位置。本文从基础概念出发，逐步深入到POP链构造与实际CVE分析。 一、序列化与反序列化基本概念对象存在于内存中。当需要将对象存储到文件、数据库或通过网络传输时，必须转换为字符串格式——">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-04-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.860Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Deserialization-php-basics/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Deserialization-php-basics/","path":"Deserialization-php-basics/","title":"PHP反序列化基础"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PHP反序列化基础 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8E%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5"><span class="nav-number">2.</span> <span class="nav-text">一、序列化与反序列化基本概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#serialize-%E5%87%BD%E6%95%B0"><span class="nav-number">2.1.</span> <span class="nav-text">serialize() 函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%8F%E5%88%97%E5%8C%96%E6%A0%BC%E5%BC%8F%E8%A7%84%E5%88%99"><span class="nav-number">2.2.</span> <span class="nav-text">序列化格式规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#unserialize-%E5%87%BD%E6%95%B0"><span class="nav-number">2.3.</span> <span class="nav-text">unserialize() 函数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%85%B3%E9%94%AE%E9%AD%94%E6%9C%AF%E6%96%B9%E6%B3%95%EF%BC%88Magic-Methods%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">二、关键魔术方法（Magic Methods）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#wakeup"><span class="nav-number">3.1.</span> <span class="nav-text">__wakeup()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#destruct"><span class="nav-number">3.2.</span> <span class="nav-text">__destruct()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#toString-NaN"><span class="nav-number">3.3.</span> <span class="nav-text">__toString()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#call"><span class="nav-number">3.4.</span> <span class="nav-text">__call()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E9%87%8D%E8%A6%81%E9%AD%94%E6%9C%AF%E6%96%B9%E6%B3%95"><span class="nav-number">3.5.</span> <span class="nav-text">其他重要魔术方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81POP%E9%93%BE%EF%BC%88Property-Oriented-Programming%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">三、POP链（Property-Oriented Programming）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#POP%E9%93%BE%E6%9E%84%E9%80%A0%E5%AE%9E%E4%BE%8B"><span class="nav-number">4.1.</span> <span class="nav-text">POP链构造实例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#POP%E9%93%BE%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95"><span class="nav-number">4.2.</span> <span class="nav-text">POP链构造方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E7%8E%B0%E5%AE%9E%E4%B8%96%E7%95%8CCVE%E6%A1%88%E4%BE%8B%E5%88%86%E6%9E%90"><span class="nav-number">5.</span> <span class="nav-text">四、现实世界CVE案例分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%99%E5%85%A5Webshell%E7%9A%84%E7%BB%8F%E5%85%B8%E6%A8%A1%E5%BC%8F"><span class="nav-number">5.1.</span> <span class="nav-text">写入Webshell的经典模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CVE-2016-4010-%E2%80%94%E2%80%94-Magento-2-POP%E9%93%BE"><span class="nav-number">5.2.</span> <span class="nav-text">CVE-2016-4010 —— Magento 2 POP链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ThinkPHP-5-x-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96POP%E9%93%BE"><span class="nav-number">5.3.</span> <span class="nav-text">ThinkPHP 5.x 反序列化POP链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Typecho%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E"><span class="nav-number">5.4.</span> <span class="nav-text">Typecho反序列化漏洞</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Phar%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%EF%BC%9A%E5%AE%B9%E6%98%93%E8%A2%AB%E5%BF%BD%E7%95%A5%E7%9A%84%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">6.</span> <span class="nav-text">五、Phar反序列化：容易被忽略的攻击面</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E5%B8%B8%E8%A7%81%E9%99%B7%E9%98%B1%E4%B8%8E%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">7.</span> <span class="nav-text">六、常见陷阱与注意事项</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BF%E9%97%AE%E4%BF%AE%E9%A5%B0%E7%AC%A6%E7%9A%84NULL%E5%AD%97%E8%8A%82"><span class="nav-number">7.1.</span> <span class="nav-text">访问修饰符的NULL字节</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PHP%E7%89%88%E6%9C%AC%E5%B7%AE%E5%BC%82"><span class="nav-number">7.2.</span> <span class="nav-text">PHP版本差异</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%8F%AF%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E5%86%85%E5%AE%B9"><span class="nav-number">7.3.</span> <span class="nav-text">不可序列化的内容</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%98%B2%E5%BE%A1%E7%AD%96%E7%95%A5"><span class="nav-number">8.</span> <span class="nav-text">七、防御策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B9%E6%9C%AC%E5%8E%9F%E5%88%99%EF%BC%9A%E4%B8%8D%E8%A6%81%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8D%E5%8F%AF%E4%BF%A1%E6%95%B0%E6%8D%AE"><span class="nav-number">8.1.</span> <span class="nav-text">根本原则：不要反序列化不可信数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E5%B1%82%E9%9D%A2"><span class="nav-number">8.2.</span> <span class="nav-text">代码层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD%E5%B1%82%E9%9D%A2"><span class="nav-number">8.3.</span> <span class="nav-text">基础设施层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-number">8.4.</span> <span class="nav-text">代码审计要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Deserialization-php-basics/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="PHP反序列化基础 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PHP反序列化基础
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-04-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-04-01T08:00:00+08:00">2026-04-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>PHP反序列化漏洞是Web安全领域的经典议题。从OWASP Top 10中的”Insecure Deserialization”到历年CTF高频考点，再到现实世界中层出不穷的CMS漏洞，反序列化攻击始终占据重要位置。本文从基础概念出发，逐步深入到POP链构造与实际CVE分析。</p>
+<h2 id="一、序列化与反序列化基本概念"><a href="#一、序列化与反序列化基本概念" class="headerlink" title="一、序列化与反序列化基本概念"></a>一、序列化与反序列化基本概念</h2><p>对象存在于内存中。当需要将对象存储到文件、数据库或通过网络传输时，必须转换为字符串格式——这就是<strong>序列化（Serialization）</strong>。反之，将字符串恢复为内存中的对象，就是<strong>反序列化（Unserialization）</strong>。</p>
+<h3 id="serialize-函数"><a href="#serialize-函数" class="headerlink" title="serialize() 函数"></a>serialize() 函数</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">serialize</span>(<span class="string">&quot;hello&quot;</span>);          <span class="comment">// s:5:&quot;hello&quot;;</span></span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">serialize</span>(<span class="number">123</span>);              <span class="comment">// i:123;</span></span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">serialize</span>(<span class="literal">true</span>);             <span class="comment">// b:1;</span></span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">serialize</span>(<span class="literal">null</span>);             <span class="comment">// N;</span></span><br><span class="line"></span><br><span class="line"><span class="variable">$arr</span> = <span class="keyword">array</span>(<span class="string">&quot;apple&quot;</span>, <span class="string">&quot;banana&quot;</span>);</span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">serialize</span>(<span class="variable">$arr</span>);</span><br><span class="line"><span class="comment">// a:2:&#123;i:0;s:5:&quot;apple&quot;;i:1;s:6:&quot;banana&quot;;&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">User</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$name</span> = <span class="string">&quot;admin&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="variable">$password</span> = <span class="string">&quot;secret123&quot;</span>;</span><br><span class="line">    <span class="keyword">protected</span> <span class="variable">$role</span> = <span class="string">&quot;superuser&quot;</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">serialize</span>(<span class="keyword">new</span> <span class="title class_">User</span>());</span><br><span class="line"><span class="comment">// O:4:&quot;User&quot;:3:&#123;s:4:&quot;name&quot;;s:5:&quot;admin&quot;; ...&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="序列化格式规则"><a href="#序列化格式规则" class="headerlink" title="序列化格式规则"></a>序列化格式规则</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>格式</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>字符串</td>
+<td><code>s:长度:&quot;内容&quot;;</code></td>
+<td><code>s:5:&quot;hello&quot;;</code></td>
+</tr>
+<tr>
+<td>整数</td>
+<td><code>i:值;</code></td>
+<td><code>i:42;</code></td>
+</tr>
+<tr>
+<td>浮点数</td>
+<td><code>d:值;</code></td>
+<td><code>d:3.14;</code></td>
+</tr>
+<tr>
+<td>布尔值</td>
+<td><code>b:0;</code> 或 <code>b:1;</code></td>
+<td><code>b:1;</code></td>
+</tr>
+<tr>
+<td>NULL</td>
+<td><code>N;</code></td>
+<td><code>N;</code></td>
+</tr>
+<tr>
+<td>数组</td>
+<td><code>a:元素数:{键=&gt;值...}</code></td>
+<td><code>a:2:{...}</code></td>
+</tr>
+<tr>
+<td>对象</td>
+<td><code>O:类名长度:&quot;类名&quot;:属性数:{...}</code></td>
+<td><code>O:4:&quot;User&quot;:3:{...}</code></td>
+</tr>
+</tbody></table>
+<p>访问修饰符标记：<strong>public</strong> 原样如 <code>s:4:&quot;name&quot;;</code>；<strong>protected</strong> 前缀 <code>\0*\0</code>；<strong>private</strong> 前缀 <code>\0类名\0</code>。</p>
+<h3 id="unserialize-函数"><a href="#unserialize-函数" class="headerlink" title="unserialize() 函数"></a>unserialize() 函数</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="variable">$serialized</span> = <span class="string">&#x27;O:4:&quot;User&quot;:1:&#123;s:4:&quot;name&quot;;s:5:&quot;admin&quot;;&#125;&#x27;</span>;</span><br><span class="line"><span class="variable">$obj</span> = <span class="title function_ invoke__">unserialize</span>(<span class="variable">$serialized</span>);</span><br><span class="line"><span class="keyword">echo</span> <span class="variable">$obj</span>-&gt;name;  <span class="comment">// admin</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>关键点</strong>：<code>unserialize()</code>在还原对象时自动调用该对象的<code>__wakeup()</code>魔术方法。这是反序列化漏洞利用的重要入口。</p>
+<h2 id="二、关键魔术方法（Magic-Methods）"><a href="#二、关键魔术方法（Magic-Methods）" class="headerlink" title="二、关键魔术方法（Magic Methods）"></a>二、关键魔术方法（Magic Methods）</h2><p>魔术方法在特定时机自动被PHP引擎调用，攻击者通过控制序列化数据触发这些方法执行恶意代码。</p>
+<h3 id="wakeup"><a href="#wakeup" class="headerlink" title="__wakeup()"></a>__wakeup()</h3><p>反序列化时<strong>最先</strong>被调用，本意用于重建数据库连接：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Exploit</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$cmd</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__wakeup</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="title function_ invoke__">system</span>(<span class="variable">$this</span>-&gt;cmd);  <span class="comment">// 危险！反序列化时立即执行</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="variable">$payload</span> = <span class="string">&#x27;O:7:&quot;Exploit&quot;:1:&#123;s:3:&quot;cmd&quot;;s:9:&quot;whoami&quot;;&#125;&#x27;</span>;</span><br><span class="line"><span class="title function_ invoke__">unserialize</span>(<span class="variable">$payload</span>);  <span class="comment">// 触发__wakeup()，执行系统命令</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>CVE-2016-7124</strong>：PHP 5.6.25 &#x2F; 7.0.10之前，序列化字符串中对象属性数量大于实际数量时可跳过<code>__wakeup()</code>。</p>
+<h3 id="destruct"><a href="#destruct" class="headerlink" title="__destruct()"></a>__destruct()</h3><p>析构函数，对象销毁时调用——脚本结束、<code>unset()</code>或引用计数归零：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FileHandler</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$filename</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="title function_ invoke__">file_exists</span>(<span class="variable">$this</span>-&gt;filename)) <span class="title function_ invoke__">unlink</span>(<span class="variable">$this</span>-&gt;filename);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>即使<code>__wakeup()</code>被绕过，对象生命周期结束时<code>__destruct()</code>依然会被调用，是POP链中最可靠的”终点”。</p>
+<h3 id="toString-NaN"><a href="#toString-NaN" class="headerlink" title="__toString()"></a>__toString()</h3><p>对象被当作字符串使用时自动调用（<code>echo</code>输出、<code>.</code>连接、作为字符串参数传递等）：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Logger</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$message</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__toString</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;Log: &quot;</span> . <span class="variable language_">$this</span>-&gt;message;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">echo</span> <span class="keyword">new</span> <span class="title class_">Logger</span>();  <span class="comment">// 触发__toString()</span></span><br></pre></td></tr></table></figure>
+
+<p>在POP链中，<code>__toString()</code>常被用作”跳板”——从看似无害的字符串操作引出更深层的危险调用。</p>
+<h3 id="call"><a href="#call" class="headerlink" title="__call()"></a>__call()</h3><p>当调用对象上不存在或不可访问的方法时触发：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Proxy</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$target</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__call</span>(<span class="params"><span class="variable">$name</span>, <span class="variable">$arguments</span></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="title function_ invoke__">call_user_func_array</span>(<span class="variable">$this</span>-&gt;target, <span class="variable">$arguments</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="variable">$p</span> = <span class="keyword">new</span> <span class="title class_">Proxy</span>(); <span class="variable">$p</span>-&gt;target = <span class="string">&quot;system&quot;</span>; <span class="variable">$p</span>-&gt;<span class="title function_ invoke__">whatever</span>(<span class="string">&quot;id&quot;</span>);  <span class="comment">// → system(&quot;id&quot;)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="其他重要魔术方法"><a href="#其他重要魔术方法" class="headerlink" title="其他重要魔术方法"></a>其他重要魔术方法</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>触发时机</th>
+<th>利用价值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>__get($name)</code></td>
+<td>读取不可访问的属性</td>
+<td>POP链跳板</td>
+</tr>
+<tr>
+<td><code>__set($name, $value)</code></td>
+<td>写入不可访问的属性</td>
+<td>配合属性赋值利用</td>
+</tr>
+<tr>
+<td><code>__invoke()</code></td>
+<td>将对象作为函数调用</td>
+<td>高利用价值</td>
+</tr>
+<tr>
+<td><code>__sleep()</code></td>
+<td><code>serialize()</code>调用前</td>
+<td>可能泄露敏感数据</td>
+</tr>
+</tbody></table>
+<h2 id="三、POP链（Property-Oriented-Programming）"><a href="#三、POP链（Property-Oriented-Programming）" class="headerlink" title="三、POP链（Property-Oriented Programming）"></a>三、POP链（Property-Oriented Programming）</h2><p>POP链通过控制对象的**属性（Property）**串联多个类的魔术方法，形成从”触发点”到”危险操作”的调用链。与ROP在二进制层面控制返回地址不同，POP链工作在应用层，利用PHP对象间的自动化方法调度。</p>
+<pre class="mermaid">flowchart LR
+    A["unserialize()"] --> B["__wakeup()"]
+    B --> C["__toString()"]
+    C --> D["__call()"]
+    D --> E["__destruct()"]
+    E --> F["危险函数执行<br/>system/eval/file_put_contents"]
+    style A fill:#4a90d9,color:#fff
+    style F fill:#d94a4a,color:#fff</pre>
+
+<h3 id="POP链构造实例"><a href="#POP链构造实例" class="headerlink" title="POP链构造实例"></a>POP链构造实例</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$b</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">echo</span> <span class="variable language_">$this</span>-&gt;b;  <span class="comment">// 触发B::__toString()</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$cmd</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__toString</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="title function_ invoke__">system</span>(<span class="variable">$this</span>-&gt;cmd);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="variable">$a</span> = <span class="keyword">new</span> <span class="title function_ invoke__">A</span>(); <span class="variable">$b</span> = <span class="keyword">new</span> <span class="title function_ invoke__">B</span>();</span><br><span class="line"><span class="variable">$b</span>-&gt;cmd = <span class="string">&quot;whoami&quot;</span>; <span class="variable">$a</span>-&gt;b = <span class="variable">$b</span>;</span><br><span class="line"><span class="variable">$payload</span> = <span class="title function_ invoke__">serialize</span>(<span class="variable">$a</span>);</span><br><span class="line"><span class="comment">// O:1:&quot;A&quot;:1:&#123;s:1:&quot;b&quot;;O:1:&quot;B&quot;:1:&#123;s:3:&quot;cmd&quot;;s:6:&quot;whoami&quot;;&#125;&#125;</span></span><br><span class="line"><span class="comment">// 反序列化 → __destruct() → echo $b → __toString() → system(&quot;whoami&quot;)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="POP链构造方法"><a href="#POP链构造方法" class="headerlink" title="POP链构造方法"></a>POP链构造方法</h3><ol>
+<li><strong>确定终点</strong>：在目标代码中寻找危险函数（<code>system</code>、<code>eval</code>、<code>assert</code>、<code>file_put_contents</code>、<code>call_user_func</code>等）。</li>
+<li><strong>确定起点</strong>：寻找可自动触发的魔术方法（<code>__wakeup</code>、<code>__destruct</code>）。</li>
+<li><strong>串联节点</strong>：逐步分析每个方法可触达的其他方法，寻找可控参数路径。</li>
+<li><strong>构造payload</strong>：编写PHP脚本生成序列化字符串，注意private&#x2F;protected属性的NULL字节编码。</li>
+</ol>
+<h2 id="四、现实世界CVE案例分析"><a href="#四、现实世界CVE案例分析" class="headerlink" title="四、现实世界CVE案例分析"></a>四、现实世界CVE案例分析</h2><h3 id="写入Webshell的经典模式"><a href="#写入Webshell的经典模式" class="headerlink" title="写入Webshell的经典模式"></a>写入Webshell的经典模式</h3><p>当POP链终点是<code>file_put_contents()</code>时：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FileWriter</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$filename</span>; <span class="keyword">public</span> <span class="variable">$content</span>;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="title function_ invoke__">file_put_contents</span>(<span class="variable">$this</span>-&gt;filename, <span class="variable">$this</span>-&gt;content);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// payload: /var/www/html/shell.php + &lt;?php @eval($_REQUEST[&quot;cmd&quot;]);</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="CVE-2016-4010-——-Magento-2-POP链"><a href="#CVE-2016-4010-——-Magento-2-POP链" class="headerlink" title="CVE-2016-4010 —— Magento 2 POP链"></a>CVE-2016-4010 —— Magento 2 POP链</h3><p>Magento 2.0.0-2.0.1存在经典POP链漏洞。攻击者注册用户后在Cookie中注入序列化payload，链式调用最终到达<code>call_user_func_array()</code>执行任意命令。链跨越了多个不相关的类（<code>Credis_Client</code> → <code>Magento\Sales\Model\Order\...</code>），静态分析极难发现。</p>
+<h3 id="ThinkPHP-5-x-反序列化POP链"><a href="#ThinkPHP-5-x-反序列化POP链" class="headerlink" title="ThinkPHP 5.x 反序列化POP链"></a>ThinkPHP 5.x 反序列化POP链</h3><pre class="mermaid">flowchart TD
+    A["__destruct()<br/>Windows类"] --> B["__toString()<br/>Model类"]
+    B --> C["__call()<br/>Output类"]
+    C --> D["call_user_func_array()"]
+    D --> E["system('任意命令')"]
+
+    style A fill:#4a90d9,color:#fff
+    style E fill:#d94a4a,color:#fff</pre>
+
+<p>链跨越3个不同类，攻击者只需构造<code>Windows</code>对象的序列化字符串，即可通过框架逻辑执行到危险函数。</p>
+<h3 id="Typecho反序列化漏洞"><a href="#Typecho反序列化漏洞" class="headerlink" title="Typecho反序列化漏洞"></a>Typecho反序列化漏洞</h3><p>Typecho曾存在前台RCE反序列化漏洞。<code>Typecho_Db</code>类的<code>__toString()</code>中调用了<code>install.php</code>代码执行数据库<code>INSERT</code>——攻击者将<code>INSERT</code>构造成<code>SELECT ... INTO OUTFILE</code>即可写入恶意PHP文件，全程无需登录。</p>
+<h2 id="五、Phar反序列化：容易被忽略的攻击面"><a href="#五、Phar反序列化：容易被忽略的攻击面" class="headerlink" title="五、Phar反序列化：容易被忽略的攻击面"></a>五、Phar反序列化：容易被忽略的攻击面</h2><p>即使代码中没有显式的<code>unserialize()</code>调用，使用<code>phar://</code>协议时PHP会自动反序列化Phar metadata中的对象。以下函数均可触发：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">file_exists</span>(<span class="string">&#x27;phar://malicious.phar/test.txt&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">is_file</span>(<span class="string">&#x27;phar://malicious.phar/test.txt&#x27;</span>);</span><br><span class="line"><span class="keyword">include</span> <span class="string">&#x27;phar://malicious.phar/test.txt&#x27;</span>;</span><br><span class="line"><span class="title function_ invoke__">fopen</span>(<span class="string">&#x27;phar://malicious.phar/test.txt&#x27;</span>, <span class="string">&#x27;r&#x27;</span>);</span><br><span class="line"><span class="comment">// 几乎所有接受phar://流的文件系统函数都可能触发</span></span><br></pre></td></tr></table></figure>
+
+<p>Phar反序列化常常绕过仅检查<code>unserialize()</code>调用的安全审计。</p>
+<h2 id="六、常见陷阱与注意事项"><a href="#六、常见陷阱与注意事项" class="headerlink" title="六、常见陷阱与注意事项"></a>六、常见陷阱与注意事项</h2><h3 id="访问修饰符的NULL字节"><a href="#访问修饰符的NULL字节" class="headerlink" title="访问修饰符的NULL字节"></a>访问修饰符的NULL字节</h3><p>private和protected属性在序列化时包含NULL字节，务必用PHP脚本生成并在HTTP传输前URL编码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Demo</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="variable">$secret</span> = <span class="string">&quot;hello&quot;</span>;   <span class="comment">// 序列化含 \0Demo\0secret</span></span><br><span class="line">    <span class="keyword">protected</span> <span class="variable">$data</span> = <span class="string">&quot;world&quot;</span>;   <span class="comment">// 序列化含 \0*\0data</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">urlencode</span>(<span class="title function_ invoke__">serialize</span>(<span class="keyword">new</span> <span class="title class_">Demo</span>()));</span><br></pre></td></tr></table></figure>
+
+<h3 id="PHP版本差异"><a href="#PHP版本差异" class="headerlink" title="PHP版本差异"></a>PHP版本差异</h3><ul>
+<li><strong>PHP &lt; 5.6.25 &#x2F; &lt; 7.0.10</strong>：属性数欺骗可绕过<code>__wakeup()</code>（CVE-2016-7124）。</li>
+<li><strong>PHP 7.0+</strong>：支持<code>allowed_classes</code>类白名单控制。</li>
+<li><strong>PHP 7.4+</strong>：序列化格式调整，部分类内部结构变化。</li>
+</ul>
+<h3 id="不可序列化的内容"><a href="#不可序列化的内容" class="headerlink" title="不可序列化的内容"></a>不可序列化的内容</h3><ul>
+<li><strong>resource</strong>：文件句柄、数据库连接等资源类型。</li>
+<li><strong>Closure</strong>：匿名函数（闭包）不能序列化。</li>
+<li><strong>static属性</strong>：不属于具体对象实例，不会被序列化。</li>
+</ul>
+<h2 id="七、防御策略"><a href="#七、防御策略" class="headerlink" title="七、防御策略"></a>七、防御策略</h2><h3 id="根本原则：不要反序列化不可信数据"><a href="#根本原则：不要反序列化不可信数据" class="headerlink" title="根本原则：不要反序列化不可信数据"></a>根本原则：不要反序列化不可信数据</h3><p><strong>永远不要对用户可控的数据调用<code>unserialize()</code></strong>。优先使用JSON——<code>json_decode()</code>不创建对象，不会触发魔术方法。</p>
+<h3 id="代码层面"><a href="#代码层面" class="headerlink" title="代码层面"></a>代码层面</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 1. allowed_classes 白名单（PHP 7.0+）</span></span><br><span class="line"><span class="variable">$data</span> = <span class="title function_ invoke__">unserialize</span>(<span class="variable">$userInput</span>, [<span class="string">&#x27;allowed_classes&#x27;</span> =&gt; [<span class="string">&#x27;SafeClass&#x27;</span>]]);</span><br><span class="line"><span class="variable">$data</span> = <span class="title function_ invoke__">unserialize</span>(<span class="variable">$userInput</span>, [<span class="string">&#x27;allowed_classes&#x27;</span> =&gt; <span class="literal">false</span>]); <span class="comment">// 完全禁止</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. HMAC签名验证</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">safe_unserialize</span>(<span class="params"><span class="variable">$data</span>, <span class="variable">$secret_key</span></span>) </span>&#123;</span><br><span class="line">    <span class="variable">$parts</span> = <span class="title function_ invoke__">explode</span>(<span class="string">&#x27;.&#x27;</span>, <span class="variable">$data</span>);</span><br><span class="line">    <span class="variable">$payload</span> = <span class="title function_ invoke__">base64_decode</span>(<span class="variable">$parts</span>[<span class="number">0</span>]);</span><br><span class="line">    <span class="variable">$expected</span> = <span class="title function_ invoke__">hash_hmac</span>(<span class="string">&#x27;sha256&#x27;</span>, <span class="variable">$payload</span>, <span class="variable">$secret_key</span>);</span><br><span class="line">    <span class="keyword">if</span> (!<span class="title function_ invoke__">hash_equals</span>(<span class="variable">$expected</span>, <span class="variable">$parts</span>[<span class="number">1</span>] ?? <span class="string">&#x27;&#x27;</span>)) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">Exception</span>(<span class="string">&#x27;签名验证失败&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="title function_ invoke__">unserialize</span>(<span class="variable">$payload</span>, [<span class="string">&#x27;allowed_classes&#x27;</span> =&gt; []]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="基础设施层面"><a href="#基础设施层面" class="headerlink" title="基础设施层面"></a>基础设施层面</h3><ul>
+<li><strong>WAF</strong>：拦截包含<code>O:数字:</code>模式的请求。</li>
+<li><strong>php.ini</strong>：<code>disable_functions = system,exec,passthru,shell_exec,popen,proc_open,pcntl_exec</code>。</li>
+<li><strong>最小权限</strong>：Web服务器以最低权限运行，限制文件系统写权限。</li>
+<li><strong>依赖管理</strong>：定期更新第三方库，关注安全公告。</li>
+</ul>
+<h3 id="代码审计要点"><a href="#代码审计要点" class="headerlink" title="代码审计要点"></a>代码审计要点</h3><ol>
+<li>搜索<code>unserialize(</code>，追溯参数来源（<code>$_GET</code>、<code>$_POST</code>、<code>$_COOKIE</code>）。</li>
+<li>分析所有类的魔术方法，识别危险终点。</li>
+<li>使用PHPGGC等工具生成已知框架的POP链payload辅助测试。</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>PHP反序列化漏洞的本质：攻击者控制传入<code>unserialize()</code>的数据，从而实例化任意存在的类，通过精心构造属性值来”编程”对象行为——让自动化方法一步步调用到危险函数。</p>
+<p>核心理解要点：</p>
+<ol>
+<li><strong>理解序列化格式</strong>，能够读写PHP序列化字符串。</li>
+<li><strong>熟悉魔术方法触发时机</strong>，建立”什么情况下触发什么方法”的映射。</li>
+<li><strong>掌握POP链构造思路</strong>，能将看似独立的方法调用串联成危险操作。</li>
+</ol>
+<p>防御反序列化漏洞的最有效方法是<strong>永远不要反序列化不可信的输入</strong>。如果必须使用，请始终配合<code>allowed_classes</code>白名单和HMAC签名验证。</p>
+<hr>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究和授权测试使用。未经系统所有者明确书面授权，对任何计算机系统进行安全测试均属违法行为。作者不对因滥用本文内容而产生的任何法律责任或损害承担任何责任。请始终遵守适用的法律法规和道德准则。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Tools-Cobalt-Strike-basics/" rel="prev" title="Cobalt Strike基础使用">
+                  <i class="fa fa-angle-left"></i> Cobalt Strike基础使用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Framework-Nacos-security/" rel="next" title="Nacos安全测试">
+                  Nacos安全测试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

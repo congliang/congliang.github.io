@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="PHP 代码审计完整方法论——从敏感函数追踪到 Source-Sink 模型，覆盖 MVC 框架审计技巧、自动化工具使用、以及实际漏洞挖掘案例。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="代码审计：PHP 审计方法论">
+<meta property="og:url" content="https://congliang.github.io/Code-audit-PHP-methodology/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="PHP 代码审计完整方法论——从敏感函数追踪到 Source-Sink 模型，覆盖 MVC 框架审计技巧、自动化工具使用、以及实际漏洞挖掘案例。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-02-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.840Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="代码审计">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Code-audit-PHP-methodology/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Code-audit-PHP-methodology/","path":"Code-audit-PHP-methodology/","title":"代码审计：PHP 审计方法论"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>代码审计：PHP 审计方法论 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A1%E8%AE%A1%E6%80%9D%E8%B7%AF"><span class="nav-number">1.</span> <span class="nav-text">审计思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%B1%E9%99%A9%E5%87%BD%E6%95%B0%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-number">2.</span> <span class="nav-text">危险函数速查表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Source-Sink-%E8%BF%BD%E8%B8%AA%E5%AE%9E%E6%88%98"><span class="nav-number">3.</span> <span class="nav-text">Source-Sink 追踪实战</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A1%86%E6%9E%B6%E5%AE%A1%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-number">4.</span> <span class="nav-text">框架审计要点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ThinkPHP"><span class="nav-number">4.1.</span> <span class="nav-text">ThinkPHP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Laravel"><span class="nav-number">4.2.</span> <span class="nav-text">Laravel</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%87%AA%E5%8A%A8%E5%8C%96%E5%B7%A5%E5%85%B7"><span class="nav-number">5.</span> <span class="nav-text">自动化工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A1%E8%AE%A1-Checklist"><span class="nav-number">6.</span> <span class="nav-text">审计 Checklist</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Code-audit-PHP-methodology/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="代码审计：PHP 审计方法论 | 渗透测试实战记录">
+      <meta itemprop="description" content="PHP 代码审计完整方法论——从敏感函数追踪到 Source-Sink 模型，覆盖 MVC 框架审计技巧、自动化工具使用、以及实际漏洞挖掘案例。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          代码审计：PHP 审计方法论
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-02-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-02-01T08:00:00+08:00">2026-02-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">PHP 代码审计完整方法论——从敏感函数追踪到 Source-Sink 模型，覆盖 MVC 框架审计技巧、自动化工具使用、以及实际漏洞挖掘案例。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="审计思路"><a href="#审计思路" class="headerlink" title="审计思路"></a>审计思路</h2><p>PHP 代码审计的核心是从<strong>用户输入（Source）<strong>追踪到</strong>危险函数（Sink）</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$_GET/$_POST/$_REQUEST/$_COOKIE/$_SERVER[&#x27;REQUEST_URI&#x27;]/file_get_contents(&#x27;php://input&#x27;)</span><br><span class="line">    → 经过过滤/转义（可能被绕过）</span><br><span class="line">    → 到达危险函数</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="危险函数速查表"><a href="#危险函数速查表" class="headerlink" title="危险函数速查表"></a>危险函数速查表</h2><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>函数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>代码执行</td>
+<td><code>eval()</code> <code>assert()</code> <code>preg_replace(&#39;/e&#39;)</code> <code>create_function()</code> <code>call_user_func()</code></td>
+</tr>
+<tr>
+<td>命令执行</td>
+<td><code>system()</code> <code>exec()</code> <code>shell_exec()</code> <code>passthru()</code> <code>popen()</code> <code>proc_open()</code> <code>\</code>`(反引号)&#96;</td>
+</tr>
+<tr>
+<td>文件读取</td>
+<td><code>file_get_contents()</code> <code>readfile()</code> <code>fopen()</code> <code>show_source()</code> <code>highlight_file()</code></td>
+</tr>
+<tr>
+<td>文件包含</td>
+<td><code>include()</code> <code>require()</code> <code>include_once()</code> <code>require_once()</code></td>
+</tr>
+<tr>
+<td>文件写入</td>
+<td><code>file_put_contents()</code> <code>fwrite()</code> <code>move_uploaded_file()</code></td>
+</tr>
+<tr>
+<td>SQL操作</td>
+<td><code>mysql_query()</code> <code>mysqli_query()</code> <code>mssql_query()</code> <code>pg_query()</code></td>
+</tr>
+<tr>
+<td>反序列化</td>
+<td><code>unserialize()</code></td>
+</tr>
+<tr>
+<td>SSRF</td>
+<td><code>curl_exec()</code> <code>file_get_contents(url)</code> <code>fopen(url)</code></td>
+</tr>
+<tr>
+<td>XSS</td>
+<td><code>echo</code> <code>print</code> <code>printf</code> 直接输出未转义变量</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="Source-Sink-追踪实战"><a href="#Source-Sink-追踪实战" class="headerlink" title="Source-Sink 追踪实战"></a>Source-Sink 追踪实战</h2><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Source: 用户输入</span></span><br><span class="line"><span class="variable">$id</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;id&#x27;</span>];</span><br><span class="line"></span><br><span class="line"><span class="comment">// 没有过滤 → Sink: SQL注入</span></span><br><span class="line"><span class="variable">$sql</span> = <span class="string">&quot;SELECT * FROM users WHERE id = <span class="subst">$id</span>&quot;</span>;</span><br><span class="line"><span class="title function_ invoke__">mysql_query</span>(<span class="variable">$sql</span>);  <span class="comment">// ← Sink</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Source: 用户输入</span></span><br><span class="line"><span class="variable">$url</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;url&#x27;</span>];</span><br><span class="line"><span class="comment">// 没有过滤 → Sink: SSRF</span></span><br><span class="line"><span class="variable">$content</span> = <span class="title function_ invoke__">file_get_contents</span>(<span class="variable">$url</span>);  <span class="comment">// ← Sink</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Source: 文件上传</span></span><br><span class="line"><span class="variable">$filename</span> = <span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;name&#x27;</span>];</span><br><span class="line"><span class="comment">// 没有过滤 → Sink: 路径遍历+文件写入</span></span><br><span class="line"><span class="title function_ invoke__">move_uploaded_file</span>(<span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;tmp_name&#x27;</span>], <span class="string">&#x27;/uploads/&#x27;</span> . <span class="variable">$filename</span>);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="框架审计要点"><a href="#框架审计要点" class="headerlink" title="框架审计要点"></a>框架审计要点</h2><h3 id="ThinkPHP"><a href="#ThinkPHP" class="headerlink" title="ThinkPHP"></a>ThinkPHP</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">- where() 直接拼接变量 → SQL注入</span><br><span class="line">- field()/order() 用户可控 → SQL注入</span><br><span class="line">- display()/fetch() 模板变量 → 可能SSTI</span><br><span class="line">- unserialize() 用户可控 → 反序列化</span><br></pre></td></tr></table></figure>
+
+<h3 id="Laravel"><a href="#Laravel" class="headerlink" title="Laravel"></a>Laravel</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">- DB::raw() 拼接用户输入 → SQL注入</span><br><span class="line">- 路由参数未校验 → 越权</span><br><span class="line">- 文件上传未限制类型 → getshell</span><br><span class="line">- debug模式开启 → 信息泄露</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="自动化工具"><a href="#自动化工具" class="headerlink" title="自动化工具"></a>自动化工具</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># RIPS（PHP 静态分析）</span></span><br><span class="line"><span class="comment"># Seay 源代码审计系统（国产，适合初学者）</span></span><br><span class="line"><span class="comment"># Fortify / Checkmarx（企业级）</span></span><br><span class="line"><span class="comment"># 手动 grep 永远最可靠</span></span><br><span class="line">grep -rn <span class="string">&quot;eval\s*(&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br><span class="line">grep -rn <span class="string">&quot;exec\s*(&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br><span class="line">grep -rn <span class="string">&quot;unserialize\s*(&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br><span class="line">grep -rn <span class="string">&quot;\$_GET\|\$_POST\|\$_REQUEST&quot;</span> --include=<span class="string">&quot;*.php&quot;</span> .</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="审计-Checklist"><a href="#审计-Checklist" class="headerlink" title="审计 Checklist"></a>审计 Checklist</h2><ol>
+<li>全局搜索危险函数 → 逐个追溯参数来源</li>
+<li>检查全局过滤函数（<code>addslashes</code> &#x2F; <code>htmlspecialchars</code> &#x2F; <code>intval</code>）是否有绕过</li>
+<li>关注文件上传、文件包含、反序列化三个最高危功能</li>
+<li>框架自带的 ORM&#x2F;模板引擎 → 确认是否用了安全API（如 <code>#{}</code> vs <code>${}</code>）</li>
+<li>检查 <code>@</code> 错误抑制 → 底下可能有被忽略的注入点</li>
+</ol>
+<hr>
+<blockquote>
+<p>本文仅用于授权安全测试与学习，请勿用于非法用途。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag"># 代码审计</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Command-injection-bypass/" rel="prev" title="命令注入绕过技巧汇总">
+                  <i class="fa fa-angle-left"></i> 命令注入绕过技巧汇总
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Framework-Tomcat-exploitation/" rel="next" title="Tomcat漏洞利用">
+                  Tomcat漏洞利用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

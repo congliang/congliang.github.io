@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言密码哈希破解是渗透测试和红队行动中的核心技能之一。从获取哈希到成功还原明文，中间涉及哈希类型识别、攻击策略选择、工具调参与硬件优化等一系列决策。本文系统性梳理哈希破解工作流的全貌：先用 hash-identifier 与 hashid 确认哈希类型，再分别用 John the Ripper 和 hashcat 实施基于规则、掩码和组合的爆破，最后从 GPU&#x2F;CPU 架构层面分析破解效">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hash破解：从识别到爆破">
+<meta property="og:url" content="https://congliang.github.io/Crypto-hash-cracking/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言密码哈希破解是渗透测试和红队行动中的核心技能之一。从获取哈希到成功还原明文，中间涉及哈希类型识别、攻击策略选择、工具调参与硬件优化等一系列决策。本文系统性梳理哈希破解工作流的全貌：先用 hash-identifier 与 hashid 确认哈希类型，再分别用 John the Ripper 和 hashcat 实施基于规则、掩码和组合的爆破，最后从 GPU&#x2F;CPU 架构层面分析破解效">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.849Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="密码学">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Crypto-hash-cracking/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Crypto-hash-cracking/","path":"Crypto-hash-cracking/","title":"Hash破解：从识别到爆破"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Hash破解：从识别到爆破 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E8%AE%A4%E8%AF%86%E5%93%88%E5%B8%8C%E4%B8%8E%E7%A0%B4%E8%A7%A3%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">一、认识哈希与破解模型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%BB%80%E4%B9%88%E6%83%85%E5%86%B5%E4%B8%8B%E9%9C%80%E8%A6%81%E7%A0%B4%E8%A7%A3%E5%93%88%E5%B8%8C"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 什么情况下需要破解哈希</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%8F%AF%E9%80%86%E4%B8%8E%E4%B8%8D%E5%8F%AF%E9%80%86"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 可逆与不可逆</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%93%88%E5%B8%8C%E7%B1%BB%E5%9E%8B%E8%AF%86%E5%88%AB"><span class="nav-number">3.</span> <span class="nav-text">二、哈希类型识别</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-hash-identifier"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 hash-identifier</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-hashid"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 hashid</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%89%8B%E5%B7%A5%E7%89%B9%E5%BE%81%E5%BD%92%E7%BA%B3"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 手工特征归纳</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81John-the-Ripper"><span class="nav-number">4.</span> <span class="nav-text">三、John the Ripper</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95%EF%BC%9Awordlist-%E6%A8%A1%E5%BC%8F"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 基本用法：wordlist 模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E8%A7%84%E5%88%99%E6%A8%A1%E5%BC%8F%EF%BC%88%E2%80%93rules%EF%BC%89"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 规则模式（–rules）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E8%87%AA%E5%AE%9A%E4%B9%89%E8%A7%84%E5%88%99%E8%AF%AD%E6%B3%95"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 自定义规则语法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81hashcat%EF%BC%9AGPU-%E5%8A%A0%E9%80%9F%E7%A0%B4%E8%A7%A3"><span class="nav-number">5.</span> <span class="nav-text">四、hashcat：GPU 加速破解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%9F%BA%E6%9C%AC%E6%94%BB%E5%87%BB%E6%A8%A1%E5%BC%8F"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 基本攻击模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%B8%B8%E7%94%A8-hashcat-%E6%A8%A1%E5%BC%8F%E5%AF%B9%E7%85%A7%E8%A1%A8"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 常用 hashcat 模式对照表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%AD%97%E5%85%B8%E6%94%BB%E5%87%BB%EF%BC%88%E6%A8%A1%E5%BC%8F-0%EF%BC%89"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 字典攻击（模式 0）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E8%BE%93%E5%87%BA%E4%B8%8E%E6%81%A2%E5%A4%8D"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 输出与恢复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E8%A7%84%E5%88%99%E6%94%BB%E5%87%BB%EF%BC%88Rule-Based-Attack%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">五、规则攻击（Rule-Based Attack）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-hashcat-%E5%86%85%E7%BD%AE%E8%A7%84%E5%88%99"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 hashcat 内置规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E8%87%AA%E5%AE%9A%E4%B9%89%E8%A7%84%E5%88%99%E5%86%99%E6%B3%95"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 自定义规则写法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E8%A7%84%E5%88%99%E6%94%BB%E5%87%BB%E5%AE%9E%E6%88%98%E9%93%BE"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 规则攻击实战链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%8E%A9%E7%A0%81%E6%94%BB%E5%87%BB%EF%BC%88Mask-Attack%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">六、掩码攻击（Mask Attack）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%8E%A9%E7%A0%81%E8%AF%AD%E6%B3%95"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 掩码语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%8E%A9%E7%A0%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 掩码示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AD%97%E7%AC%A6%E9%9B%86"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 自定义字符集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-%E6%8E%A9%E7%A0%81%E8%AE%A1%E7%AE%97%E5%99%A8"><span class="nav-number">7.4.</span> <span class="nav-text">6.4 掩码计算器</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E7%BB%84%E5%90%88%E6%94%BB%E5%87%BB%EF%BC%88Combinator-Attack%EF%BC%89"><span class="nav-number">8.</span> <span class="nav-text">七、组合攻击（Combinator Attack）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%9F%BA%E7%A1%80%E7%BB%84%E5%90%88%E6%94%BB%E5%87%BB%EF%BC%88%E6%A8%A1%E5%BC%8F-1%EF%BC%89"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 基础组合攻击（模式 1）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E6%B7%B7%E5%90%88%E6%94%BB%E5%87%BB%EF%BC%88%E6%A8%A1%E5%BC%8F-6-%E4%B8%8E%E6%A8%A1%E5%BC%8F-7%EF%BC%89"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 混合攻击（模式 6 与模式 7）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E7%BB%84%E5%90%88%E6%94%BB%E5%87%BB%E5%AE%9E%E6%88%98"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 组合攻击实战</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81GPU-%E4%B8%8E-CPU-%E6%9E%B6%E6%9E%84%E5%AF%B9%E6%AF%94"><span class="nav-number">9.</span> <span class="nav-text">八、GPU 与 CPU 架构对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E6%9E%B6%E6%9E%84%E5%B7%AE%E5%BC%82"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 架构差异</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E5%AE%9E%E6%B5%8B%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94%EF%BC%88NTLM%EF%BC%8C-m-1000%EF%BC%89"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 实测性能对比（NTLM，-m 1000）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E6%85%A2%E9%80%9F%E7%AE%97%E6%B3%95%E4%B8%8B%E5%B7%AE%E8%B7%9D%E7%BC%A9%E5%B0%8F"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 慢速算法下差距缩小</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98"><span class="nav-number">9.4.</span> <span class="nav-text">8.4 性能调优</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E5%AE%9E%E6%88%98%E5%B7%A5%E4%BD%9C%E6%B5%81"><span class="nav-number">10.</span> <span class="nav-text">九、实战工作流</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#9-1-%E6%A0%87%E5%87%86%E6%B5%81%E7%A8%8B"><span class="nav-number">10.1.</span> <span class="nav-text">9.1 标准流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-2-%E5%AD%97%E5%85%B8%E4%BC%98%E5%85%88%E5%8E%9F%E5%88%99"><span class="nav-number">10.2.</span> <span class="nav-text">9.2 字典优先原则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-3-%E5%AD%97%E5%85%B8%E8%B5%84%E6%BA%90"><span class="nav-number">10.3.</span> <span class="nav-text">9.3 字典资源</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">11.</span> <span class="nav-text">十、防御措施</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90"><span class="nav-number">12.</span> <span class="nav-text">参考资源</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Crypto-hash-cracking/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Hash破解：从识别到爆破 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hash破解：从识别到爆破
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-05-15T08:00:00+08:00">2026-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>密码哈希破解是渗透测试和红队行动中的核心技能之一。从获取哈希到成功还原明文，中间涉及哈希类型识别、攻击策略选择、工具调参与硬件优化等一系列决策。本文系统性梳理哈希破解工作流的全貌：先用 <code>hash-identifier</code> 与 <code>hashid</code> 确认哈希类型，再分别用 John the Ripper 和 hashcat 实施基于规则、掩码和组合的爆破，最后从 GPU&#x2F;CPU 架构层面分析破解效率差异。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术与工具仅用于合法的安全测试、授权评估及学术研究。未经系统所有者书面授权对任何系统进行哈希破解属于违法行为，作者不对滥用行为承担任何责任。</p>
+</blockquote>
+<hr>
+<h2 id="一、认识哈希与破解模型"><a href="#一、认识哈希与破解模型" class="headerlink" title="一、认识哈希与破解模型"></a>一、认识哈希与破解模型</h2><h3 id="1-1-什么情况下需要破解哈希"><a href="#1-1-什么情况下需要破解哈希" class="headerlink" title="1.1 什么情况下需要破解哈希"></a>1.1 什么情况下需要破解哈希</h3><p>渗透测试中常见的哈希获取途径：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>哈希来源</th>
+<th>典型值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据库泄露</td>
+<td>用户密码字段</td>
+<td><code>$2a$10$...</code>（bcrypt）、<code>md5($pass.$salt)</code></td>
+</tr>
+<tr>
+<td>Windows 域渗透</td>
+<td>SAM &#x2F; NTDS.dit</td>
+<td>NTLM：<code>aad3b435b51404eeaad3b435b51404ee</code></td>
+</tr>
+<tr>
+<td>Linux 提权</td>
+<td><code>/etc/shadow</code></td>
+<td><code>$6$salt$hash</code>（SHA-512 crypt）</td>
+</tr>
+<tr>
+<td>Web 应用</td>
+<td>Cookie &#x2F; Token</td>
+<td>JWT HS256 弱密钥、Laravel <code>$2y$</code></td>
+</tr>
+<tr>
+<td>网络嗅探</td>
+<td>Net-NTLMv2、Kerberos TGT</td>
+<td><code>john --format=netntlmv2 hash.txt</code></td>
+</tr>
+</tbody></table>
+<h3 id="1-2-可逆与不可逆"><a href="#1-2-可逆与不可逆" class="headerlink" title="1.2 可逆与不可逆"></a>1.2 可逆与不可逆</h3><p>哈希函数的设计目标是<strong>单向不可逆</strong>——攻击者能做的是穷举可能的输入，计算其哈希并与目标值比对，而非从数学上反解。因此，破解的本质是<strong>猜测</strong>，而工具与策略决定了猜测的速度与覆盖面。</p>
+<hr>
+<h2 id="二、哈希类型识别"><a href="#二、哈希类型识别" class="headerlink" title="二、哈希类型识别"></a>二、哈希类型识别</h2><p>拿到一串哈希后，第一步是确定它属于哪种算法。错误的格式参数会使破解完全无效。</p>
+<h3 id="2-1-hash-identifier"><a href="#2-1-hash-identifier" class="headerlink" title="2.1 hash-identifier"></a>2.1 hash-identifier</h3><p>Kali 内置的 Python 脚本，通过长度与字符集进行启发式判断：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装（Kali 已自带）</span></span><br><span class="line"><span class="built_in">sudo</span> apt install hash-identifier -y</span><br><span class="line"></span><br><span class="line"><span class="comment"># 运行</span></span><br><span class="line">hash-identifier</span><br><span class="line">   HASH: aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c</span><br><span class="line">   Possible Hashs:</span><br><span class="line">   [+] MD5</span><br><span class="line">   [+] Domain Cached Credentials - MD4(MD4((<span class="variable">$pass</span>)).(strtolower(<span class="variable">$username</span>)))</span><br></pre></td></tr></table></figure>
+
+<p>对于标准算法（MD5、SHA1、NTLM）识别率很高，但对加盐变体或自定义算法效果一般。</p>
+<h3 id="2-2-hashid"><a href="#2-2-hashid" class="headerlink" title="2.2 hashid"></a>2.2 hashid</h3><p><code>hashid</code> 提供更丰富的特征库，支持 <code>--mode</code> 直接输出 hashcat&#x2F;JTR 的模式编号：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基础识别</span></span><br><span class="line">hashid <span class="string">&#x27;$2a$10$N9qo8uLOickgxdRtmjMRt.TC5AuMg5f6C4xO8M7F0NcZDs0wzmYyG&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出 hashcat 模式</span></span><br><span class="line">hashid -m <span class="string">&#x27;$6$rounds=5000$useSaltsAreMix$...&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出 John 格式名</span></span><br><span class="line">hashid -j <span class="string">&#x27;$P$BzqRP2fQ0x9lhnk1nTGqKCQ5m&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>识别结果示例</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[+] SHA-512 Crypt</span><br><span class="line">[+] hashcat mode: 1800</span><br><span class="line">[+] John format: sha512crypt</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-手工特征归纳"><a href="#2-3-手工特征归纳" class="headerlink" title="2.3 手工特征归纳"></a>2.3 手工特征归纳</h3><table>
+<thead>
+<tr>
+<th>哈希特征</th>
+<th>算法</th>
+<th>hashcat 模式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>$2a$</code> &#x2F; <code>$2b$</code> &#x2F; <code>$2y$</code> + 60 字符</td>
+<td>bcrypt</td>
+<td>3200</td>
+</tr>
+<tr>
+<td><code>$6$</code> + 86 字符</td>
+<td>SHA-512 Crypt</td>
+<td>1800</td>
+</tr>
+<tr>
+<td><code>$P$</code> &#x2F; <code>$H$</code></td>
+<td>phpBB &#x2F; WordPress</td>
+<td>400</td>
+</tr>
+<tr>
+<td>32 位十六进制</td>
+<td>MD5 &#x2F; NTLM</td>
+<td>0 &#x2F; 1000</td>
+</tr>
+<tr>
+<td>40 位十六进制</td>
+<td>SHA1</td>
+<td>100</td>
+</tr>
+<tr>
+<td>64 位十六进制</td>
+<td>SHA-256</td>
+<td>1400</td>
+</tr>
+<tr>
+<td>128 位十六进制</td>
+<td>SHA-512</td>
+<td>1700</td>
+</tr>
+<tr>
+<td><code>$krb5tgs$23$*</code></td>
+<td>Kerberos TGS-REP</td>
+<td>13100</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="三、John-the-Ripper"><a href="#三、John-the-Ripper" class="headerlink" title="三、John the Ripper"></a>三、John the Ripper</h2><p>John 是历史最悠久的密码破解器，以 CPU 优化见长，规则系统灵活强大。</p>
+<h3 id="3-1-基本用法：wordlist-模式"><a href="#3-1-基本用法：wordlist-模式" class="headerlink" title="3.1 基本用法：wordlist 模式"></a>3.1 基本用法：wordlist 模式</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 最简单：用字典爆破</span></span><br><span class="line">john --wordlist=/usr/share/wordlists/rockyou.txt hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 指定格式（不指定时 John 自动检测，但生产环境务必显式指定）</span></span><br><span class="line">john --wordlist=rockyou.txt --format=Raw-SHA256 hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看已破解</span></span><br><span class="line">john --show --format=Raw-SHA256 hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 恢复中断的会话</span></span><br><span class="line">john --restore</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-规则模式（–rules）"><a href="#3-2-规则模式（–rules）" class="headerlink" title="3.2 规则模式（–rules）"></a>3.2 规则模式（–rules）</h3><p>规则引擎对字典中的每个单词进行<strong>变形</strong>：首字母大写、尾部追加数字、字符替换（<code>a→@</code>、<code>e→3</code>）等。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用内置规则集</span></span><br><span class="line">john --wordlist=rockyou.txt --rules=KoreLogic hashes.txt</span><br><span class="line">john --wordlist=rockyou.txt --rules=Jumbo hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看可用规则</span></span><br><span class="line">john --list=rules | <span class="built_in">head</span> -30</span><br></pre></td></tr></table></figure>
+
+<p><strong>常用内置规则说明</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>规则名</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Single</code></td>
+<td>基于用户名&#x2F;GECOS 字段派生</td>
+<td><code>/etc/shadow</code> 初筛</td>
+</tr>
+<tr>
+<td><code>Wordlist</code></td>
+<td>仅字典匹配（无变形）</td>
+<td>弱密码初步筛查</td>
+</tr>
+<tr>
+<td><code>Jumbo</code></td>
+<td>大量大小写与替换变体</td>
+<td>中等强度密码</td>
+</tr>
+<tr>
+<td><code>KoreLogic</code></td>
+<td>极激进，数十亿候选</td>
+<td>最后手段</td>
+</tr>
+<tr>
+<td><code>best64</code></td>
+<td>效率最高的 64 条规则</td>
+<td>快速命中常见变形</td>
+</tr>
+</tbody></table>
+<h3 id="3-3-自定义规则语法"><a href="#3-3-自定义规则语法" class="headerlink" title="3.3 自定义规则语法"></a>3.3 自定义规则语法</h3><p>John 规则语法简明但功能强大：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编辑 john.conf（或 john-local.conf）</span></span><br><span class="line">[List.Rules:MyCustom]</span><br><span class="line"><span class="comment"># 首字母大写后追加 2024!</span></span><br><span class="line">c Az<span class="string">&quot;2024!&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 每个单词做 1000 次数字追加</span></span><br><span class="line">$[0-9]$[0-9]$[0-9]</span><br><span class="line"></span><br><span class="line"><span class="comment"># 字符替换后追加特殊字符</span></span><br><span class="line">sa@ se3 si1 so0 sas$ Az<span class="string">&quot;!&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 双写单词</span></span><br><span class="line">d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 单词反转后追加 123</span></span><br><span class="line">r Az<span class="string">&quot;123&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>常用规则命令速查：</p>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>含义</th>
+<th>示例输入 <code>password</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>c</code></td>
+<td>首字母大写</td>
+<td><code>Password</code></td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td>全部小写</td>
+<td><code>password</code></td>
+</tr>
+<tr>
+<td><code>u</code></td>
+<td>全部大写</td>
+<td><code>PASSWORD</code></td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td>反转</td>
+<td><code>drowssap</code></td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>双写</td>
+<td><code>passwordpassword</code></td>
+</tr>
+<tr>
+<td><code>f</code></td>
+<td>双写并反转</td>
+<td><code>drowssapdrowssap</code></td>
+</tr>
+<tr>
+<td><code>Az&quot;123&quot;</code></td>
+<td>尾部追加 <code>123</code></td>
+<td><code>password123</code></td>
+</tr>
+<tr>
+<td><code>A0&quot;2024&quot;</code></td>
+<td>头部追加 <code>2024</code></td>
+<td><code>2024password</code></td>
+</tr>
+<tr>
+<td><code>sa@</code></td>
+<td>替换 a→@</td>
+<td><code>p@ssword</code></td>
+</tr>
+<tr>
+<td><code>$[0-9]</code></td>
+<td>追加 0-9（产生 10 个变体）</td>
+<td><code>password0</code> ~ <code>password9</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="四、hashcat：GPU-加速破解"><a href="#四、hashcat：GPU-加速破解" class="headerlink" title="四、hashcat：GPU 加速破解"></a>四、hashcat：GPU 加速破解</h2><p>hashcat 是当前工业级的 GPU 破解工具，支持 450+ 哈希算法，性能远超 CPU。</p>
+<h3 id="4-1-基本攻击模式"><a href="#4-1-基本攻击模式" class="headerlink" title="4.1 基本攻击模式"></a>4.1 基本攻击模式</h3><table>
+<thead>
+<tr>
+<th>模式编号</th>
+<th>模式名</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>Straight</td>
+<td>字典直击</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Combination</td>
+<td>两个字典的笛卡尔积</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Brute-force &#x2F; Mask</td>
+<td>掩码（穷举字符集）</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Hybrid: dict + mask</td>
+<td>字典单词 + 掩码后缀</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Hybrid: mask + dict</td>
+<td>掩码前缀 + 字典单词</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Association</td>
+<td>用户名:密码 对攻击</td>
+</tr>
+</tbody></table>
+<h3 id="4-2-常用-hashcat-模式对照表"><a href="#4-2-常用-hashcat-模式对照表" class="headerlink" title="4.2 常用 hashcat 模式对照表"></a>4.2 常用 hashcat 模式对照表</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 获取完整列表</span></span><br><span class="line">hashcat --<span class="built_in">help</span> | grep -A5 <span class="string">&quot;Hash modes&quot;</span></span><br><span class="line">hashcat --example-hashes</span><br></pre></td></tr></table></figure>
+
+<p>常用模式速查：</p>
+<table>
+<thead>
+<tr>
+<th>hashcat 模式</th>
+<th>算法</th>
+<th>命令示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>MD5</td>
+<td><code>-m 0</code></td>
+</tr>
+<tr>
+<td>100</td>
+<td>SHA1</td>
+<td><code>-m 100</code></td>
+</tr>
+<tr>
+<td>1000</td>
+<td>NTLM</td>
+<td><code>-m 1000</code></td>
+</tr>
+<tr>
+<td>1400</td>
+<td>SHA-256</td>
+<td><code>-m 1400</code></td>
+</tr>
+<tr>
+<td>1700</td>
+<td>SHA-512</td>
+<td><code>-m 1700</code></td>
+</tr>
+<tr>
+<td>1800</td>
+<td>SHA-512 Crypt (<code>$6$</code>)</td>
+<td><code>-m 1800</code></td>
+</tr>
+<tr>
+<td>3200</td>
+<td>bcrypt (<code>$2a$</code>)</td>
+<td><code>-m 3200</code></td>
+</tr>
+<tr>
+<td>5500</td>
+<td>NetNTLMv1</td>
+<td><code>-m 5500</code></td>
+</tr>
+<tr>
+<td>5600</td>
+<td>NetNTLMv2</td>
+<td><code>-m 5600</code></td>
+</tr>
+<tr>
+<td>13100</td>
+<td>Kerberos TGS-REP</td>
+<td><code>-m 13100</code></td>
+</tr>
+<tr>
+<td>18200</td>
+<td>Kerberos AS-REP</td>
+<td><code>-m 18200</code></td>
+</tr>
+<tr>
+<td>22000</td>
+<td>WPA-PBKDF2-PMKID+EAPOL</td>
+<td><code>-m 22000</code></td>
+</tr>
+<tr>
+<td>13400</td>
+<td>Keepass 1&#x2F;2</td>
+<td><code>-m 13400</code></td>
+</tr>
+<tr>
+<td>11600</td>
+<td>7-Zip</td>
+<td><code>-m 11600</code></td>
+</tr>
+<tr>
+<td>13600</td>
+<td>ZIP (WinZip)</td>
+<td><code>-m 13600</code></td>
+</tr>
+<tr>
+<td>11300</td>
+<td>Bitcoin 钱包</td>
+<td><code>-m 11300</code></td>
+</tr>
+</tbody></table>
+<h3 id="4-3-字典攻击（模式-0）"><a href="#4-3-字典攻击（模式-0）" class="headerlink" title="4.3 字典攻击（模式 0）"></a>4.3 字典攻击（模式 0）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基础字典攻击</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启用规则（见第五节）</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt -r rules/best64.rule</span><br><span class="line"></span><br><span class="line"><span class="comment"># 多字典并行</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt wordlist2.txt \</span><br><span class="line">  --stdout | hashcat -m 1000 -a 0 hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 状态监控（实时查看进度）</span></span><br><span class="line">hashcat -m 1000 -a 0 --status --status-timer=5 hashes.txt rockyou.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-输出与恢复"><a href="#4-4-输出与恢复" class="headerlink" title="4.4 输出与恢复"></a>4.4 输出与恢复</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 指定输出文件</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt -o cracked.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 显示已破解（不重新破解）</span></span><br><span class="line">hashcat -m 1000 --show hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 保存/恢复会话</span></span><br><span class="line">hashcat --session=ntlm_crack -m 1000 -a 0 hashes.txt rockyou.txt</span><br><span class="line">hashcat --session=ntlm_crack --restore</span><br><span class="line"></span><br><span class="line"><span class="comment"># 移除已破解行</span></span><br><span class="line">hashcat --remove -m 1000 -a 0 hashes.txt rockyou.txt</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、规则攻击（Rule-Based-Attack）"><a href="#五、规则攻击（Rule-Based-Attack）" class="headerlink" title="五、规则攻击（Rule-Based Attack）"></a>五、规则攻击（Rule-Based Attack）</h2><p>规则攻击在字典基础上逐词应用变形规则，命中率远高于纯字典。</p>
+<h3 id="5-1-hashcat-内置规则"><a href="#5-1-hashcat-内置规则" class="headerlink" title="5.1 hashcat 内置规则"></a>5.1 hashcat 内置规则</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列出所有随 hashcat 分发的规则文件</span></span><br><span class="line"><span class="built_in">ls</span> -la /usr/share/hashcat/rules/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 best64（最快 64 条高效规则）</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt -r rules/best64.rule</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 dive.rule（极大量变形，112 万条规则）</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt -r rules/dive.rule</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-自定义规则写法"><a href="#5-2-自定义规则写法" class="headerlink" title="5.2 自定义规则写法"></a>5.2 自定义规则写法</h3><p>hashcat 规则文件每行一条规则，函数用空格分隔：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># my_rules.rule 示例</span></span><br><span class="line"><span class="comment"># 首字母大写 + 追加 2024!</span></span><br><span class="line">c <span class="variable">$2</span> <span class="variable">$0</span> <span class="variable">$2</span> <span class="variable">$4</span> $!</span><br><span class="line"></span><br><span class="line"><span class="comment"># 全部小写 + 追加两个数字</span></span><br><span class="line">l $?d $?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 字符替换链 + 追加 !</span></span><br><span class="line">sa@ se3 si1 so0 $!</span><br><span class="line"></span><br><span class="line"><span class="comment"># 反转后追加 #</span></span><br><span class="line">r <span class="variable">$#</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 双写并追加年份（支持 2020-2024）</span></span><br><span class="line">d <span class="variable">$2</span> <span class="variable">$0</span> $?d $?d</span><br></pre></td></tr></table></figure>
+
+<p>hashcat 规则函数速查（与 John 语法不同）：</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>l</code></td>
+<td>全小写</td>
+</tr>
+<tr>
+<td><code>u</code></td>
+<td>全大写</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td>首字母大写</td>
+</tr>
+<tr>
+<td><code>C</code></td>
+<td>首字母小写</td>
+</tr>
+<tr>
+<td><code>t</code></td>
+<td>大小写切换（ToggleCase）</td>
+</tr>
+<tr>
+<td><code>r</code></td>
+<td>反转</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>双写</td>
+</tr>
+<tr>
+<td><code>f</code></td>
+<td>双写并反转</td>
+</tr>
+<tr>
+<td><code>$X</code></td>
+<td>尾部追加字符 X</td>
+</tr>
+<tr>
+<td><code>^X</code></td>
+<td>头部追加字符 X</td>
+</tr>
+<tr>
+<td><code>sXY</code></td>
+<td>替换字符 X 为 Y</td>
+</tr>
+<tr>
+<td><code>$?d</code></td>
+<td>尾部追加一位数字</td>
+</tr>
+<tr>
+<td><code>$?l</code></td>
+<td>尾部追加一位小写字母</td>
+</tr>
+<tr>
+<td><code>$?u</code></td>
+<td>尾部追加一位大写字母</td>
+</tr>
+</tbody></table>
+<h3 id="5-3-规则攻击实战链"><a href="#5-3-规则攻击实战链" class="headerlink" title="5.3 规则攻击实战链"></a>5.3 规则攻击实战链</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 第一步：纯字典快速筛查</span></span><br><span class="line">hashcat -m 1000 -a 0 -O hashes.txt rockyou.txt -o step1.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 第二步：best64 规则（高效命中大多数常见变形）</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt \</span><br><span class="line">  -r rules/best64.rule -o step2.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 第三步：中型规则集（T0XlC.rule，约 4 万条）</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt \</span><br><span class="line">  -r rules/T0XlC.rule -o step3.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 第四步：dive.rule（约 112 万条规则，最后手段）</span></span><br><span class="line">hashcat -m 1000 -a 0 hashes.txt rockyou.txt \</span><br><span class="line">  -r rules/dive.rule -o step4.txt</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、掩码攻击（Mask-Attack）"><a href="#六、掩码攻击（Mask-Attack）" class="headerlink" title="六、掩码攻击（Mask Attack）"></a>六、掩码攻击（Mask Attack）</h2><p>当字典与规则均未命中时，掩码攻击按字符集穷举特定位置的字符，适用于已知密码策略的场景。</p>
+<h3 id="6-1-掩码语法"><a href="#6-1-掩码语法" class="headerlink" title="6.1 掩码语法"></a>6.1 掩码语法</h3><p>hashcat 内置字符集：</p>
+<table>
+<thead>
+<tr>
+<th>占位符</th>
+<th>字符集</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>?l</code></td>
+<td><code>abcdefghijklmnopqrstuvwxyz</code></td>
+<td>26</td>
+</tr>
+<tr>
+<td><code>?u</code></td>
+<td><code>ABCDEFGHIJKLMNOPQRSTUVWXYZ</code></td>
+<td>26</td>
+</tr>
+<tr>
+<td><code>?d</code></td>
+<td><code>0123456789</code></td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>?s</code></td>
+<td>特殊字符（可打印）</td>
+<td>33</td>
+</tr>
+<tr>
+<td><code>?a</code></td>
+<td><code>?l?u?d?s</code> 合集</td>
+<td>95</td>
+</tr>
+<tr>
+<td><code>?b</code></td>
+<td>0x00 - 0xFF</td>
+<td>256</td>
+</tr>
+</tbody></table>
+<h3 id="6-2-掩码示例"><a href="#6-2-掩码示例" class="headerlink" title="6.2 掩码示例"></a>6.2 掩码示例</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 8 位纯数字（1 亿候选，几秒完成）</span></span><br><span class="line">hashcat -m 1000 -a 3 hashes.txt ?d?d?d?d?d?d?d?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 常见模式：1 大写 + 6 小写 + 2 数字（如 Password12）</span></span><br><span class="line">hashcat -m 1000 -a 3 hashes.txt ?u?l?l?l?l?l?l?d?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 日韩拼音模式：首字母大写 + 7 小写（1.6×10^10 组合）</span></span><br><span class="line">hashcat -m 1000 -a 3 hashes.txt ?u?l?l?l?l?l?l?l</span><br><span class="line"></span><br><span class="line"><span class="comment"># NTLM 仅大写 + 数字（用于 Windows 口令爆破）</span></span><br><span class="line">hashcat -m 1000 -a 3 hashes.txt -1 ?u?d ?1?1?1?1?1?1?1?1</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-自定义字符集"><a href="#6-3-自定义字符集" class="headerlink" title="6.3 自定义字符集"></a>6.3 自定义字符集</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 自定义字符集 1 为仅元音</span></span><br><span class="line">hashcat -m 1000 -a 3 -1 aeiou hashes.txt ?1?l?l?l?l?l?d?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 自定义字符集 2 为仅常用特殊字符</span></span><br><span class="line">hashcat -m 1000 -a 3 -1 ?l?d -2 !@#$ hashes.txt ?1?1?1?1?1?1?2</span><br><span class="line"></span><br><span class="line"><span class="comment"># 中文常见模式：拼音 + 生日</span></span><br><span class="line">hashcat -m 1000 -a 3 -1 ?l -2 ?d hashes.txt ?1?1?1?1?1?1?2?2?2?2</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-掩码计算器"><a href="#6-4-掩码计算器" class="headerlink" title="6.4 掩码计算器"></a>6.4 掩码计算器</h3><p>评估掩码的搜索空间（keyspace）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># hashcat 内置 keyspace 估算</span></span><br><span class="line">hashcat -m 1000 -a 3 --keyspace ?u?l?l?l?l?l?l?d?d</span><br><span class="line"><span class="comment"># 输出: 2109060870144  (~2.1 × 10^12)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 对于慢速算法（如 bcrypt），小于 10^10 的 keyspace 才具备可行性</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、组合攻击（Combinator-Attack）"><a href="#七、组合攻击（Combinator-Attack）" class="headerlink" title="七、组合攻击（Combinator Attack）"></a>七、组合攻击（Combinator Attack）</h2><p>组合攻击对两个字典取笛卡尔积，将 wordlist1 的每个词与 wordlist2 的每个词拼接，适合破解用户名+数字、常用词拼接等模式。</p>
+<h3 id="7-1-基础组合攻击（模式-1）"><a href="#7-1-基础组合攻击（模式-1）" class="headerlink" title="7.1 基础组合攻击（模式 1）"></a>7.1 基础组合攻击（模式 1）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 两个字典的笛卡尔积</span></span><br><span class="line">hashcat -m 1000 -a 1 hashes.txt words1.txt words2.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 示例：名字 + 姓氏</span></span><br><span class="line"><span class="comment"># words1.txt: alice, bob, john</span></span><br><span class="line"><span class="comment"># words2.txt: smith, jones, wang</span></span><br><span class="line"><span class="comment"># 候选: alicesmith, alicejones, alicewang, bobsmith, ...</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-混合攻击（模式-6-与模式-7）"><a href="#7-2-混合攻击（模式-6-与模式-7）" class="headerlink" title="7.2 混合攻击（模式 6 与模式 7）"></a>7.2 混合攻击（模式 6 与模式 7）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 模式 6：字典在左，掩码在右（如 password + 123）</span></span><br><span class="line">hashcat -m 1000 -a 6 hashes.txt rockyou.txt ?d?d?d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 模式 7：掩码在左，字典在右（如 123 + password）</span></span><br><span class="line">hashcat -m 1000 -a 7 hashes.txt ?d?d?d rockyou.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 常见实战：单词 + 2 位数字 + 特殊字符</span></span><br><span class="line">hashcat -m 1000 -a 6 hashes.txt rockyou.txt ?d?d?s</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-组合攻击实战"><a href="#7-3-组合攻击实战" class="headerlink" title="7.3 组合攻击实战"></a>7.3 组合攻击实战</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 将 first_name.txt 与 last_name.txt 组合后输出为新字典</span></span><br><span class="line">hashcat --stdout -a 1 first_names.txt last_names.txt &gt; full_names.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将组合结果直接输送给 hashcat（避免生成 TB 级中间文件）</span></span><br><span class="line">hashcat --stdout -a 1 first.txt last.txt | hashcat -m 1000 -a 0 hashes.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 多步骤管道</span></span><br><span class="line">hashcat --stdout -a 1 first.txt last.txt \</span><br><span class="line">  | hashcat --stdout -r best64.rule \</span><br><span class="line">  | hashcat -m 1000 -a 0 hashes.txt</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、GPU-与-CPU-架构对比"><a href="#八、GPU-与-CPU-架构对比" class="headerlink" title="八、GPU 与 CPU 架构对比"></a>八、GPU 与 CPU 架构对比</h2><h3 id="8-1-架构差异"><a href="#8-1-架构差异" class="headerlink" title="8.1 架构差异"></a>8.1 架构差异</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>CPU</th>
+<th>GPU</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心数量</td>
+<td>4-64 物理核</td>
+<td>数千~上万 CUDA 核心</td>
+</tr>
+<tr>
+<td>时钟频率</td>
+<td>3-5 GHz（极高单核频率）</td>
+<td>1-2 GHz（频率低但并行度高）</td>
+</tr>
+<tr>
+<td>线程模型</td>
+<td>MIMD（多指令多数据），每核独立</td>
+<td>SIMT（单指令多线程），Warp 锁步执行</td>
+</tr>
+<tr>
+<td>内存带宽</td>
+<td>50-100 GB&#x2F;s（DDR5）</td>
+<td>500-1000 GB&#x2F;s（GDDR6&#x2F;HBM）</td>
+</tr>
+<tr>
+<td>分支预测</td>
+<td>强</td>
+<td>弱（分支发散导致性能骤降）</td>
+</tr>
+<tr>
+<td>适合算法</td>
+<td>慢速带分支的算法（bcrypt、PBKDF2）</td>
+<td>高度并行、无分支的算法（NTLM、SHA256）</td>
+</tr>
+</tbody></table>
+<h3 id="8-2-实测性能对比（NTLM，-m-1000）"><a href="#8-2-实测性能对比（NTLM，-m-1000）" class="headerlink" title="8.2 实测性能对比（NTLM，-m 1000）"></a>8.2 实测性能对比（NTLM，-m 1000）</h3><table>
+<thead>
+<tr>
+<th>硬件</th>
+<th>速度</th>
+<th>相对性能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Intel i7-13700K（16 核）</td>
+<td>~450 MH&#x2F;s</td>
+<td>1×</td>
+</tr>
+<tr>
+<td>NVIDIA RTX 4090</td>
+<td>~300 GH&#x2F;s</td>
+<td>~670×</td>
+</tr>
+<tr>
+<td>NVIDIA RTX 4060</td>
+<td>~50 GH&#x2F;s</td>
+<td>~110×</td>
+</tr>
+<tr>
+<td>8× RTX 4090 集群</td>
+<td>~2.4 TH&#x2F;s</td>
+<td>~5300×</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>（MH&#x2F;s &#x3D; 百万哈希&#x2F;秒，GH&#x2F;s &#x3D; 十亿哈希&#x2F;秒，TH&#x2F;s &#x3D; 万亿哈希&#x2F;秒）</p>
+</blockquote>
+<h3 id="8-3-慢速算法下差距缩小"><a href="#8-3-慢速算法下差距缩小" class="headerlink" title="8.3 慢速算法下差距缩小"></a>8.3 慢速算法下差距缩小</h3><table>
+<thead>
+<tr>
+<th>算法</th>
+<th>RTX 4090</th>
+<th>i7-13700K</th>
+<th>倍率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NTLM (1000)</td>
+<td>300 GH&#x2F;s</td>
+<td>450 MH&#x2F;s</td>
+<td>~670×</td>
+</tr>
+<tr>
+<td>SHA-256 (1400)</td>
+<td>12 GH&#x2F;s</td>
+<td>65 MH&#x2F;s</td>
+<td>~185×</td>
+</tr>
+<tr>
+<td>bcrypt 5 (3200)</td>
+<td>105 kH&#x2F;s</td>
+<td>3.8 kH&#x2F;s</td>
+<td>~28×</td>
+</tr>
+<tr>
+<td>PBKDF2-SHA256 (10900)</td>
+<td>8.5 MH&#x2F;s</td>
+<td>450 kH&#x2F;s</td>
+<td>~19×</td>
+</tr>
+<tr>
+<td>SHA-512 Crypt (1800)</td>
+<td>1.8 MH&#x2F;s</td>
+<td>35 kH&#x2F;s</td>
+<td>~51×</td>
+</tr>
+</tbody></table>
+<p>越是慢速、迭代次数多的算法，GPU 的优势越小——此时破解的关键在于<strong>字典质量</strong>与<strong>规则覆盖面</strong>，而非单纯比拼计算能力。</p>
+<h3 id="8-4-性能调优"><a href="#8-4-性能调优" class="headerlink" title="8.4 性能调优"></a>8.4 性能调优</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 -O 优化内核（牺牲口令长度上限以换取速度）</span></span><br><span class="line">hashcat -O -m 1000 -a 3 hashes.txt ?a?a?a?a?a?a?a?a</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 -w 调整工作负载 profile（1 低延迟桌面 / 4 全速）</span></span><br><span class="line">hashcat -w 4 -m 1000 -a 0 hashes.txt rockyou.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手动指定 GPU（多卡环境）</span></span><br><span class="line">hashcat -d 1,2 -m 1000 -a 0 hashes.txt rockyou.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 基准测试</span></span><br><span class="line">hashcat -b -m 1000</span><br><span class="line">hashcat -b -m 3200 --benchmark-all</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、实战工作流"><a href="#九、实战工作流" class="headerlink" title="九、实战工作流"></a>九、实战工作流</h2><h3 id="9-1-标准流程"><a href="#9-1-标准流程" class="headerlink" title="9.1 标准流程"></a>9.1 标准流程</h3><pre class="mermaid">flowchart TD
+    A[获取哈希] --> B[hash-identifier / hashid 识别]
+    B --> C{哈希类型是否明确?}
+    C -- 是 --> D[选择 hashcat 模式 / John 格式]
+    C -- 否 --> E[查阅文档、社区求助]
+    E --> D
+
+    D --> F[阶段1：纯字典]
+    F --> G{命中率是否足够?}
+    G -- 是 --> Z[输出结果]
+    G -- 否 --> H[阶段2：字典 + best64 规则]
+    H --> I{命中率是否足够?}
+    I -- 是 --> Z
+    I -- 否 --> J[阶段3：字典 + 大规则集 / 组合攻击]
+    J --> K{命中率是否足够?}
+    K -- 是 --> Z
+    K -- 否 --> L[阶段4：掩码攻击 / 管道组合]
+    L --> Z</pre>
+
+<h3 id="9-2-字典优先原则"><a href="#9-2-字典优先原则" class="headerlink" title="9.2 字典优先原则"></a>9.2 字典优先原则</h3><p>破解的优先顺序遵循<strong>投入产出比递减</strong>：</p>
+<ol>
+<li><strong>纯字典</strong>（秒级）：覆盖已知泄露库，命中率与字典质量成正比</li>
+<li><strong>字典 + best64</strong>（分钟级）：覆盖 l33t-speak、大小写、尾部数字</li>
+<li><strong>字典 + 大规则集</strong>（小时级）：覆盖复杂变形</li>
+<li><strong>组合攻击</strong>（小时~天级）：覆盖短语拼接模式</li>
+<li><strong>掩码攻击</strong>（天~年级）：作为最后手段，需要精确预估 keyspace</li>
+</ol>
+<h3 id="9-3-字典资源"><a href="#9-3-字典资源" class="headerlink" title="9.3 字典资源"></a>9.3 字典资源</h3><table>
+<thead>
+<tr>
+<th>字典</th>
+<th>规模</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>rockyou.txt</td>
+<td>1434 万</td>
+<td>2009 年 RockYou 泄露</td>
+</tr>
+<tr>
+<td>SecLists</td>
+<td>多分类</td>
+<td><code>/usr/share/seclists/Passwords/</code></td>
+</tr>
+<tr>
+<td>crackstation.txt</td>
+<td>15G</td>
+<td>crackstation.net</td>
+</tr>
+<tr>
+<td>Probable-Wordlists</td>
+<td>多语言</td>
+<td>GitHub 维护</td>
+</tr>
+<tr>
+<td>weakpass</td>
+<td>97G+</td>
+<td>Weakpass 社区</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十、防御措施"><a href="#十、防御措施" class="headerlink" title="十、防御措施"></a>十、防御措施</h2><p>作为防御方，理解攻击手段有助于加固系统：</p>
+<ol>
+<li><strong>使用自适应哈希算法</strong>：bcrypt（cost ≥ 10）、Argon2id、scrypt（memory ≥ 64MB）</li>
+<li><strong>实施账户锁定与速率限制</strong>：连续 5 次失败后锁定 15 分钟</li>
+<li><strong>强制密码复杂度</strong>：最小 12 字符、避免字典词、支持 Unicode</li>
+<li><strong>加盐策略</strong>：每用户独立随机盐，长度 ≥ 16 字节</li>
+<li><strong>杜绝常见弱密码</strong>：维护黑名单，禁止 <code>password123</code>、<code>admin2024!</code> 等</li>
+<li><strong>定期审计</strong>：用已泄露字典（如 Have I Been Pwned API）检查用户密码</li>
+<li><strong>监控与告警</strong>：检测异常登录模式（异地、高频、不可能时间窗口）</li>
+<li><strong>密码管理器推广</strong>：鼓励员工使用 KeePass &#x2F; Bitwarden 生成随机强密码</li>
+</ol>
+<hr>
+<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://hashcat.net/wiki/">hashcat 官方 Wiki</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/openwall/john">John the Ripper 社区增强版</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/crypto-and-stego/hash-cracking">HackTricks - Hash Cracking</a></li>
+<li><a target="_blank" rel="noopener" href="https://crackstation.net/crackstation-wordlist-password-cracking-dictionary.htm">CrackStation 密码破解字典</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/danielmiessler/SecLists/tree/master/Passwords">SecLists 密码库</a></li>
+<li><a target="_blank" rel="noopener" href="https://weakpass.com/">Weakpass 密码字典集</a></li>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html">OWASP 密码存储速查表</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%AF%86%E7%A0%81%E5%AD%A6/" rel="tag"># 密码学</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Deserialization-shiro-deep/" rel="prev" title="Shiro RememberMe反序列化深度利用">
+                  <i class="fa fa-angle-left"></i> Shiro RememberMe反序列化深度利用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Tools-Nmap-deep-dive/" rel="next" title="Nmap深度使用指南">
+                  Nmap深度使用指南 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

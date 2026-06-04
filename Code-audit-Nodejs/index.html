@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Node.js 凭借事件驱动、非阻塞 I&#x2F;O 在后端领域占据重要地位。然而 JavaScript 的动态特性与庞大的 NPM 生态，使安全审计面临独特挑战。本文聚焦六大核心风险点，逐一剖析漏洞原理、审计方法与修复建议。  免责声明：本文所述技术仅供安全研究和授权测试使用，请勿用于非法用途，违者后果自负。   一、危险函数调用Node.js 核心模块中存在多个可将字符串解析为可执行代码">
+<meta property="og:type" content="article">
+<meta property="og:title" content="代码审计：Node.js审计要点">
+<meta property="og:url" content="https://congliang.github.io/Code-audit-Nodejs/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Node.js 凭借事件驱动、非阻塞 I&#x2F;O 在后端领域占据重要地位。然而 JavaScript 的动态特性与庞大的 NPM 生态，使安全审计面临独特挑战。本文聚焦六大核心风险点，逐一剖析漏洞原理、审计方法与修复建议。  免责声明：本文所述技术仅供安全研究和授权测试使用，请勿用于非法用途，违者后果自负。   一、危险函数调用Node.js 核心模块中存在多个可将字符串解析为可执行代码">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-03-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.838Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="代码审计">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Code-audit-Nodejs/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Code-audit-Nodejs/","path":"Code-audit-Nodejs/","title":"代码审计：Node.js审计要点"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>代码审计：Node.js审计要点 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%8D%B1%E9%99%A9%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">一、危险函数调用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-eval"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 eval()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-child-process-exec-%E4%B8%8E-spawn"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 child_process.exec() 与 spawn()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-vm-%E6%A8%A1%E5%9D%97%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 vm 模块沙箱逃逸</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E5%8A%A8%E6%80%81-require"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 动态 require()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%8E%9F%E5%9E%8B%E9%93%BE%E6%B1%A1%E6%9F%93%EF%BC%88Prototype-Pollution%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">二、原型链污染（Prototype Pollution）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%BC%8F%E6%B4%9E%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 漏洞原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%8D%B1%E9%99%A9%E5%BA%93%E4%B8%8E%E7%89%88%E6%9C%AC"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 危险库与版本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%AE%A1%E8%AE%A1%E4%B8%8E%E4%BF%AE%E5%A4%8D"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 审计与修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E6%BC%8F%E6%B4%9E"><span class="nav-number">4.</span> <span class="nav-text">三、反序列化漏洞</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-node-serialize"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 node-serialize</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-js-yaml-%E4%B8%8D%E5%AE%89%E5%85%A8%E5%8A%A0%E8%BD%BD"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 js-yaml 不安全加载</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%B6%E4%BB%96%E9%A3%8E%E9%99%A9%E5%8C%85"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 其他风险包</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81NoSQL-%E6%B3%A8%E5%85%A5%EF%BC%88MongoDB%EF%BC%89"><span class="nav-number">5.</span> <span class="nav-text">四、NoSQL 注入（MongoDB）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E8%AE%A4%E8%AF%81%E7%BB%95%E8%BF%87"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 认证绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-regex-%E7%9B%B2%E6%B3%A8%E4%B8%8E-where"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 $regex 盲注与 $where</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%AE%A1%E8%AE%A1%E4%B8%8E%E4%BF%AE%E5%A4%8D"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 审计与修复</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%A8%A1%E6%9D%BF%E6%B3%A8%E5%85%A5%EF%BC%88SSTI%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">五、服务端模板注入（SSTI）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-EJS"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 EJS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-Pug"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 Pug</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-Handlebars"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 Handlebars</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E5%AE%A1%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 审计要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81JWT-%E5%AE%89%E5%85%A8%E9%A3%8E%E9%99%A9"><span class="nav-number">7.</span> <span class="nav-text">六、JWT 安全风险</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E2%80%9Cnone%E2%80%9D-%E7%AE%97%E6%B3%95%E6%94%BB%E5%87%BB"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 “none” 算法攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-RC256-HS256-%E7%AE%97%E6%B3%95%E6%B7%B7%E6%B7%86"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 RC256&#x2F;HS256 算法混淆</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%85%B6%E4%BB%96%E5%AE%A1%E8%AE%A1%E8%A6%81%E7%82%B9"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 其他审计要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E7%BB%BC%E5%90%88%E5%AE%A1%E8%AE%A1-Checklist"><span class="nav-number">8.</span> <span class="nav-text">七、综合审计 Checklist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">八、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Code-audit-Nodejs/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="代码审计：Node.js审计要点 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          代码审计：Node.js审计要点
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-03-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-03-15T08:00:00+08:00">2026-03-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Node.js 凭借事件驱动、非阻塞 I&#x2F;O 在后端领域占据重要地位。然而 JavaScript 的动态特性与庞大的 NPM 生态，使安全审计面临独特挑战。本文聚焦六大核心风险点，逐一剖析漏洞原理、审计方法与修复建议。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究和授权测试使用，请勿用于非法用途，违者后果自负。</p>
+</blockquote>
+<hr>
+<h2 id="一、危险函数调用"><a href="#一、危险函数调用" class="headerlink" title="一、危险函数调用"></a>一、危险函数调用</h2><p>Node.js 核心模块中存在多个可将字符串解析为可执行代码的 API，审计时应重点排查。</p>
+<h3 id="1-1-eval"><a href="#1-1-eval" class="headerlink" title="1.1 eval()"></a>1.1 <code>eval()</code></h3><p>全局 <code>eval()</code> 会直接执行传入的 JavaScript 字符串，无任何防护。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：用户输入直接拼入 eval</span></span><br><span class="line">app.<span class="title function_">post</span>(<span class="string">&#x27;/calc&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">  res.<span class="title function_">json</span>(&#123; <span class="attr">result</span>: <span class="built_in">eval</span>(req.<span class="property">body</span>.<span class="property">expr</span>) &#125;);</span><br><span class="line">  <span class="comment">// payload: require(&#x27;child_process&#x27;).execSync(&#x27;whoami&#x27;).toString()</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>审计要点：全局搜索 <code>eval(</code>，检查参数是否包含 <code>req.</code> 来源数据。</p>
+<h3 id="1-2-child-process-exec-与-spawn"><a href="#1-2-child-process-exec-与-spawn" class="headerlink" title="1.2 child_process.exec() 与 spawn()"></a>1.2 <code>child_process.exec()</code> 与 <code>spawn()</code></h3><p><code>exec()</code> 在 shell 中执行命令字符串，拼接外部输入即产生命令注入。<code>spawn()</code> 当 <code>options.shell</code> 为 <code>true</code> 时同样危险。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：ping 功能拼接用户输入</span></span><br><span class="line"><span class="keyword">const</span> &#123; exec &#125; = <span class="built_in">require</span>(<span class="string">&#x27;child_process&#x27;</span>);</span><br><span class="line">app.<span class="title function_">get</span>(<span class="string">&#x27;/ping&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="title function_">exec</span>(<span class="string">`ping -c 4 <span class="subst">$&#123;req.query.host&#125;</span>`</span>, <span class="function">(<span class="params">err, stdout</span>) =&gt;</span> &#123;</span><br><span class="line">    res.<span class="title function_">send</span>(<span class="string">`&lt;pre&gt;<span class="subst">$&#123;stdout&#125;</span>&lt;/pre&gt;`</span>);</span><br><span class="line">  &#125;);</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">// 请求 /ping?host=127.0.0.1;cat /etc/passwd</span></span><br></pre></td></tr></table></figure>
+
+<p>审计要点：搜索 <code>exec(</code>、<code>execSync(</code>、<code>spawn(</code>，核实命令字符串是否包含外部变量。优先使用 <code>execFile()</code> 或以数组参数方式调用 <code>spawn()</code>。</p>
+<h3 id="1-3-vm-模块沙箱逃逸"><a href="#1-3-vm-模块沙箱逃逸" class="headerlink" title="1.3 vm 模块沙箱逃逸"></a>1.3 <code>vm</code> 模块沙箱逃逸</h3><p><code>vm.runInNewContext()</code> 与 <code>vm.runInThisContext()</code> 虽提供沙箱，但历史上存在大量逃逸漏洞。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：服务端沙箱执行用户代码</span></span><br><span class="line"><span class="keyword">const</span> vm = <span class="built_in">require</span>(<span class="string">&#x27;vm&#x27;</span>);</span><br><span class="line">app.<span class="title function_">post</span>(<span class="string">&#x27;/sandbox&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">  vm.<span class="title function_">runInNewContext</span>(req.<span class="property">body</span>.<span class="property">code</span>, vm.<span class="title function_">createContext</span>(&#123;&#125;));</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">// 逃逸 payload：</span></span><br><span class="line"><span class="comment">// this.constructor.constructor(&#x27;return process&#x27;)().mainModule.require(&#x27;child_process&#x27;).execSync(&#x27;id&#x27;).toString()</span></span><br></pre></td></tr></table></figure>
+
+<p>审计要点：非必要不应将用户代码交给 <code>vm</code> 模块。如需隔离执行，使用 <code>isolated-vm</code>。</p>
+<h3 id="1-4-动态-require"><a href="#1-4-动态-require" class="headerlink" title="1.4 动态 require()"></a>1.4 动态 <code>require()</code></h3><p>拼接模块路径可导致路径穿越或加载恶意包。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：动态加载路由</span></span><br><span class="line"><span class="keyword">const</span> handler = <span class="built_in">require</span>(<span class="string">`./routes/<span class="subst">$&#123;req.query.<span class="variable language_">module</span>&#125;</span>`</span>); <span class="comment">// 路径穿越 ../../evil</span></span><br><span class="line"><span class="keyword">const</span> mod = <span class="built_in">require</span>(req.<span class="property">body</span>.<span class="property">pkg</span>);                         <span class="comment">// 加载任意包</span></span><br></pre></td></tr></table></figure>
+
+<p>审计要点：<code>require()</code> 参数应为静态字面量或强约束白名单。</p>
+<hr>
+<h2 id="二、原型链污染（Prototype-Pollution）"><a href="#二、原型链污染（Prototype-Pollution）" class="headerlink" title="二、原型链污染（Prototype Pollution）"></a>二、原型链污染（Prototype Pollution）</h2><p>原型链污染是 JavaScript 特有的漏洞——在对象属性合并时未过滤 <code>__proto__</code> 和 <code>constructor.prototype</code> 键，导致攻击者污染 <code>Object.prototype</code>。</p>
+<h3 id="2-1-漏洞原理"><a href="#2-1-漏洞原理" class="headerlink" title="2.1 漏洞原理"></a>2.1 漏洞原理</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 攻击者提交 JSON payload</span></span><br><span class="line"><span class="keyword">const</span> malicious = <span class="title class_">JSON</span>.<span class="title function_">parse</span>(<span class="string">&#x27;&#123;&quot;__proto__&quot;: &#123;&quot;isAdmin&quot;: true&#125;&#125;&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">merge</span>(<span class="params">dst, src</span>) &#123;</span><br><span class="line">  <span class="keyword">for</span> (<span class="keyword">let</span> key <span class="keyword">in</span> src) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">typeof</span> src[key] === <span class="string">&#x27;object&#x27;</span> &amp;&amp; src[key] !== <span class="literal">null</span>) &#123;</span><br><span class="line">      <span class="keyword">if</span> (!dst[key]) dst[key] = &#123;&#125;;</span><br><span class="line">      <span class="title function_">merge</span>(dst[key], src[key]);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123; dst[key] = src[key]; &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="title function_">merge</span>(&#123;&#125;, malicious);</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(&#123;&#125;.<span class="property">isAdmin</span>);  <span class="comment">// true —— 全局污染生效</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-危险库与版本"><a href="#2-2-危险库与版本" class="headerlink" title="2.2 危险库与版本"></a>2.2 危险库与版本</h3><table>
+<thead>
+<tr>
+<th>包名</th>
+<th>受影响版本</th>
+<th>修复版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>lodash (merge&#x2F;defaultsDeep)</td>
+<td>&lt; 4.17.12</td>
+<td>&gt;&#x3D; 4.17.12</td>
+</tr>
+<tr>
+<td>Hoek.merge</td>
+<td>&lt; 4.2.1 &#x2F; 5.0.3</td>
+<td>升级</td>
+</tr>
+<tr>
+<td>dot-prop</td>
+<td>&lt; 5.1.1</td>
+<td>&gt;&#x3D; 5.1.1</td>
+</tr>
+<tr>
+<td>merge (npm 包)</td>
+<td>&lt; 2.1.1</td>
+<td>&gt;&#x3D; 2.1.1</td>
+</tr>
+</tbody></table>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">_.<span class="title function_">defaultsDeep</span>(&#123;&#125;, <span class="title class_">JSON</span>.<span class="title function_">parse</span>(<span class="string">&#x27;&#123;&quot;__proto__&quot;: &#123;&quot;polluted&quot;: true&#125;&#125;&#x27;</span>));</span><br><span class="line">_.<span class="title function_">merge</span>(&#123;&#125;, <span class="title class_">JSON</span>.<span class="title function_">parse</span>(<span class="string">&#x27;&#123;&quot;constructor&quot;: &#123;&quot;prototype&quot;: &#123;&quot;polluted&quot;: true&#125;&#125;&#125;&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-审计与修复"><a href="#2-3-审计与修复" class="headerlink" title="2.3 审计与修复"></a>2.3 审计与修复</h3><ul>
+<li>搜索 <code>req.body</code>、<code>req.query</code> 是否流入 <code>merge</code>&#x2F;<code>extend</code>&#x2F;<code>Object.assign</code> 操作。</li>
+<li>修复：使用 <code>Object.create(null)</code> 创建无原型对象；合并时过滤 <code>__proto__</code> 键；必要时 <code>Object.freeze(Object.prototype)</code>；升级受影响包至安全版本。</li>
+</ul>
+<hr>
+<h2 id="三、反序列化漏洞"><a href="#三、反序列化漏洞" class="headerlink" title="三、反序列化漏洞"></a>三、反序列化漏洞</h2><h3 id="3-1-node-serialize"><a href="#3-1-node-serialize" class="headerlink" title="3.1 node-serialize"></a>3.1 <code>node-serialize</code></h3><p>该包的 <code>unserialize()</code> 使用 <code>eval()</code> 执行 <code>_$$ND_FUNC$$_</code> 标记的函数体，可直接 RCE。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> serialize = <span class="built_in">require</span>(<span class="string">&#x27;node-serialize&#x27;</span>);</span><br><span class="line">app.<span class="title function_">post</span>(<span class="string">&#x27;/profile&#x27;</span>, <span class="function">(<span class="params">req, res</span>) =&gt;</span> &#123;</span><br><span class="line">  res.<span class="title function_">json</span>(serialize.<span class="title function_">unserialize</span>(req.<span class="property">body</span>.<span class="property">data</span>));</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">// payload:</span></span><br><span class="line"><span class="comment">// &#123;&quot;rce&quot;:&quot;_$$ND_FUNC$$_function()&#123;require(&#x27;child_process&#x27;).execSync(&#x27;whoami&#x27;)&#125;()&quot;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-js-yaml-不安全加载"><a href="#3-2-js-yaml-不安全加载" class="headerlink" title="3.2 js-yaml 不安全加载"></a>3.2 <code>js-yaml</code> 不安全加载</h3><p><code>load()</code> 默认支持 <code>!!js/function</code> 标签执行 JavaScript。应改用 <code>safeLoad()</code> 或 <code>load(str, { schema: JSON_SCHEMA })</code>。</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yaml.load() 的恶意 payload：</span></span><br><span class="line"><span class="type">!!js/function</span> <span class="string">&gt;</span> <span class="string">require(&#x27;child_process&#x27;).execSync(&#x27;whoami&#x27;)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-其他风险包"><a href="#3-3-其他风险包" class="headerlink" title="3.3 其他风险包"></a>3.3 其他风险包</h3><p><code>cryo</code>、<code>funcster</code>、<code>serialize-to-js</code> 的 <code>unserialize</code> 方法同样调用 <code>eval</code>。审计时搜索 <code>unserialize</code>、<code>deserialize</code>、<code>fromString</code> 等关键字，优先使用纯数据序列化方案（<code>JSON.parse</code>）。</p>
+<hr>
+<h2 id="四、NoSQL-注入（MongoDB）"><a href="#四、NoSQL-注入（MongoDB）" class="headerlink" title="四、NoSQL 注入（MongoDB）"></a>四、NoSQL 注入（MongoDB）</h2><p>MongoDB 使用 BSON 查询语法，用户输入直接作为查询对象时，字符串匹配可被转换为逻辑操作符注入。</p>
+<h3 id="4-1-认证绕过"><a href="#4-1-认证绕过" class="headerlink" title="4.1 认证绕过"></a>4.1 认证绕过</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：直接使用用户输入构建查询</span></span><br><span class="line"><span class="keyword">const</span> user = <span class="keyword">await</span> <span class="title class_">User</span>.<span class="title function_">findOne</span>(&#123; <span class="attr">username</span>: req.<span class="property">body</span>.<span class="property">username</span>, <span class="attr">password</span>: req.<span class="property">body</span>.<span class="property">password</span> &#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 攻击者发送 JSON：</span></span><br><span class="line"><span class="comment">// &#123;&quot;username&quot;: &#123;&quot;$ne&quot;: &quot;&quot;&#125;, &quot;password&quot;: &#123;&quot;$ne&quot;: &quot;&quot;&#125;&#125;</span></span><br><span class="line"><span class="comment">// 构造查询 &#123; username: &#123; $ne: &quot;&quot; &#125;, password: &#123; $ne: &quot;&quot; &#125; &#125; —— 匹配任意用户，绕过认证</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-regex-盲注与-where"><a href="#4-2-regex-盲注与-where" class="headerlink" title="4.2 $regex 盲注与 $where"></a>4.2 <code>$regex</code> 盲注与 <code>$where</code></h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// $regex 逐字符爆破密码</span></span><br><span class="line">&#123;<span class="string">&quot;username&quot;</span>: <span class="string">&quot;admin&quot;</span>, <span class="string">&quot;password&quot;</span>: &#123;<span class="string">&quot;$regex&quot;</span>: <span class="string">&quot;^a&quot;</span>&#125;&#125;  <span class="comment">// 若登录成功则密码以 a 开头</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// $where 嵌入 JavaScript 表达式（风险最高）</span></span><br><span class="line"><span class="keyword">const</span> users = <span class="keyword">await</span> <span class="title class_">User</span>.<span class="title function_">find</span>(&#123; <span class="attr">$where</span>: <span class="string">`this.username == &#x27;<span class="subst">$&#123;req.query.name&#125;</span>&#x27;`</span> &#125;);</span><br><span class="line"><span class="comment">// payload: admin&#x27;; return 1==1;//</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-审计与修复"><a href="#4-3-审计与修复" class="headerlink" title="4.3 审计与修复"></a>4.3 审计与修复</h3><ul>
+<li>搜索 <code>.find(</code>、<code>.findOne(</code>、<code>.update(</code>、<code>.deleteOne(</code> 是否正确校验 <code>req.body</code> 中参数类型。</li>
+<li>修复：使用 <code>mongo-sanitize</code> &#x2F; <code>express-mongo-sanitize</code> 过滤 <code>$</code> 开头的键；对参数做 <code>typeof x === &#39;string&#39;</code> 校验；利用 Mongoose Schema type 约束拒绝对象类型输入。</li>
+</ul>
+<hr>
+<h2 id="五、服务端模板注入（SSTI）"><a href="#五、服务端模板注入（SSTI）" class="headerlink" title="五、服务端模板注入（SSTI）"></a>五、服务端模板注入（SSTI）</h2><p>将用户输入直接拼入模板引擎的模板字符串或数据上下文，可导致任意代码执行。</p>
+<h3 id="5-1-EJS"><a href="#5-1-EJS" class="headerlink" title="5.1 EJS"></a>5.1 EJS</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> ejs = <span class="built_in">require</span>(<span class="string">&#x27;ejs&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> html = ejs.<span class="title function_">render</span>(<span class="string">`&lt;h1&gt;欢迎，&lt;%= <span class="subst">$&#123;req.query.name&#125;</span> %&gt;&lt;/h1&gt;`</span>);</span><br><span class="line"><span class="comment">// payload: ?name=global.process.mainModule.require(&#x27;child_process&#x27;).execSync(&#x27;whoami&#x27;)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-Pug"><a href="#5-2-Pug" class="headerlink" title="5.2 Pug"></a>5.2 Pug</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> pug = <span class="built_in">require</span>(<span class="string">&#x27;pug&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> html = pug.<span class="title function_">compile</span>(req.<span class="property">body</span>.<span class="property">template</span>)();</span><br><span class="line"><span class="comment">// payload: #&#123;global.process.mainModule.require(&#x27;child_process&#x27;).execSync(&#x27;whoami&#x27;)&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-Handlebars"><a href="#5-3-Handlebars" class="headerlink" title="5.3 Handlebars"></a>5.3 Handlebars</h3><p>Handlebars 本身安全度较高，但若 <code>lookup</code> helper 开启，可借助 <code>this.constructor.constructor</code> 链逃逸：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> template = <span class="title class_">Handlebars</span>.<span class="title function_">compile</span>(<span class="string">`&lt;body class=&quot;<span class="subst">$&#123;req.query.theme&#125;</span>&quot;&gt;`</span>);</span><br><span class="line"><span class="comment">// payload 借助 string.sub.constructor 链获取 Function，构造 RCE</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-审计要点"><a href="#5-4-审计要点" class="headerlink" title="5.4 审计要点"></a>5.4 审计要点</h3><ul>
+<li>搜索 <code>.render(</code>、<code>.compile(</code>，判断模板内容或数据对象是否受外部控制。</li>
+<li>修复：避免将用户输入拼入模板字符串；若需用户自定义模板，使用无逻辑插值引擎（Mustache）；Handlebars 启用 <code>knownHelpersOnly</code> 模式。</li>
+</ul>
+<hr>
+<h2 id="六、JWT-安全风险"><a href="#六、JWT-安全风险" class="headerlink" title="六、JWT 安全风险"></a>六、JWT 安全风险</h2><h3 id="6-1-“none”-算法攻击"><a href="#6-1-“none”-算法攻击" class="headerlink" title="6.1 “none” 算法攻击"></a>6.1 “none” 算法攻击</h3><p>JWT 标准允许 <code>alg: &quot;none&quot;</code> 表示不签名。若 <code>jsonwebtoken.verify()</code> 未显式限制 <code>algorithms</code>，默认接受该算法。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：未指定 algorithms</span></span><br><span class="line"><span class="keyword">const</span> decoded = jwt.<span class="title function_">verify</span>(token, <span class="string">&#x27;secret&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 攻击者构造：</span></span><br><span class="line"><span class="comment">// Header: &#123;&quot;alg&quot;: &quot;none&quot;, &quot;typ&quot;: &quot;JWT&quot;&#125;</span></span><br><span class="line"><span class="comment">// Payload: &#123;&quot;user&quot;: &quot;admin&quot;&#125;</span></span><br><span class="line"><span class="comment">// 签名部分留空，token 形如 eyJ...In0.eyJ...fQ.</span></span><br></pre></td></tr></table></figure>
+
+<p>修复：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">jwt.<span class="title function_">verify</span>(token, <span class="string">&#x27;secret&#x27;</span>, &#123; <span class="attr">algorithms</span>: [<span class="string">&#x27;HS256&#x27;</span>] &#125;);</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-RC256-HS256-算法混淆"><a href="#6-2-RC256-HS256-算法混淆" class="headerlink" title="6.2 RC256&#x2F;HS256 算法混淆"></a>6.2 RC256&#x2F;HS256 算法混淆</h3><p>服务端使用 RSA 公钥验证时，若同时接受 HS256，攻击者用公钥作为 HMAC 密钥伪造 token。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 攻击流程：获取 publicKey → 以 publicKey 为密钥、HS256 签发恶意 token</span></span><br><span class="line"><span class="comment">// 服务端验证时：jwt.verify(token, publicKey) —— 公钥被当作 HMAC 密钥，签名验证通过</span></span><br></pre></td></tr></table></figure>
+
+<p>修复：显式指定 <code>{ algorithms: [&#39;RS256&#39;] }</code>，避免 HS 与 RS 算法混用。</p>
+<h3 id="6-3-其他审计要点"><a href="#6-3-其他审计要点" class="headerlink" title="6.3 其他审计要点"></a>6.3 其他审计要点</h3><ul>
+<li><strong>弱密钥</strong>：HS256 密钥长度不低于 256 位，禁止使用 <code>secret</code>、<code>123456</code> 等。</li>
+<li><strong><code>kid</code> 注入</strong>：JWT Header 中 <code>kid</code> 若被用于文件路径或 SQL 拼接，可导致路径穿越或注入。</li>
+<li><strong><code>jku</code>&#x2F;<code>jwk</code> 注入</strong>：若信任 Header 内嵌的 <code>jku</code> 或 <code>jwk</code>，攻击者可自建密钥对签发 token。</li>
+<li><strong>过期校验</strong>：确认 <code>exp</code>、<code>nbf</code> 声明被正确校验，并实现 token 吊销机制（黑名单&#x2F;版本号）。</li>
+<li><strong><code>aud</code> 校验</strong>：未校验 audience 可导致 token 跨系统复用。</li>
+</ul>
+<hr>
+<h2 id="七、综合审计-Checklist"><a href="#七、综合审计-Checklist" class="headerlink" title="七、综合审计 Checklist"></a>七、综合审计 Checklist</h2><table>
+<thead>
+<tr>
+<th>#</th>
+<th>检查项</th>
+<th>搜索关键词</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>动态代码执行</td>
+<td><code>eval(</code> <code>new Function(</code> <code>setTimeout(</code>(字符串)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>命令执行</td>
+<td><code>exec(</code> <code>spawn(</code> <code>child_process</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>vm 模块执行用户代码</td>
+<td><code>vm.runIn</code> <code>vm.createContext</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>动态 require</td>
+<td><code>require(</code> + 变量参数</td>
+</tr>
+<tr>
+<td>5</td>
+<td>不安全对象合并</td>
+<td><code>merge(</code> <code>_.merge</code> <code>_.defaultsDeep</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>反序列化漏洞</td>
+<td><code>unserialize</code> <code>deserialize</code> <code>js-yaml.load</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>NoSQL 操作符注入</td>
+<td><code>.find(</code> <code>.findOne(</code> 参数类型未校验</td>
+</tr>
+<tr>
+<td>8</td>
+<td>模板注入</td>
+<td><code>ejs.render</code> <code>pug.compile</code> <code>Handlebars.compile</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>JWT 校验缺失</td>
+<td><code>.verify(</code> 未限定 <code>algorithms</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td>依赖包安全</td>
+<td><code>npm audit</code> &#x2F; <code>snyk</code> &#x2F; <code>retire.js</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><p>Node.js 代码审计需兼顾语言特性（原型链、动态类型）与生态安全（NPM 供应链）。核心思路：</p>
+<ol>
+<li><strong>追踪污点</strong>：所有 <code>req.*</code> 来源视为不可信输入，跟踪其流向判断是否进入 sink（eval、exec、模板渲染等）。</li>
+<li><strong>强制类型约束</strong>：API 边界对参数做严格 <code>typeof</code> + 白名单校验，将攻击面缩小至可控范围。</li>
+<li><strong>最小权限与纵深防御</strong>：容器化用非 root 用户；依赖锁版本 + <code>npm audit</code>；WAF 拦截特征 payload。</li>
+<li><strong>依赖持续监控</strong>：即使业务代码通过审计，依赖树中仍可能藏有已知 CVE，建议结合 <code>npm audit --audit-level=high</code> 与 Dependabot &#x2F; Snyk 持续跟踪。</li>
+</ol>
+<hr>
+<p><em>本文完成于 2026 年 3 月，部分漏洞细节可能随包版本升级而变化，请以最新文档为准。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag"># 代码审计</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/SSTI-other-engines/" rel="prev" title="SSTI：Freemarker&#x2F;Twig&#x2F;Velocity&#x2F;Smarty 利用">
+                  <i class="fa fa-angle-left"></i> SSTI：Freemarker/Twig/Velocity/Smarty 利用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Tools-Cobalt-Strike-basics/" rel="next" title="Cobalt Strike基础使用">
+                  Cobalt Strike基础使用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

