@@ -1,6 +1,6 @@
 ---
 title: Kerberoasting与AS-REP Roasting
-date: 2025-05-05 08:00:00
+date: 2025-12-24 04:45:29
 tags:
   - 内网渗透
   - 密码学

@@ -1,6 +1,6 @@
 ---
 title: Spring Boot Actuator 漏洞利用
-date: 2025-07-20 08:00:00
+date: 2026-03-01 03:36:53
 tags:
   - 框架安全
   - 渗透测试

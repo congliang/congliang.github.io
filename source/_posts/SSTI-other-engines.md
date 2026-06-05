@@ -1,6 +1,6 @@
 ---
 title: SSTI：Freemarker/Twig/Velocity/Smarty 利用
-date: 2026-03-15 08:00:00
+date: 2025-12-07 11:02:38
 tags:
   - Web安全
   - 框架安全

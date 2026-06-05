@@ -1,7 +1,6 @@
 ---
 title: VulnHub DC-3 靶机笔记 — Joomla 注入拿后台
-date: 2024-08-10 08:00:00
-updated: 2026-04-05 08:00:00
+date: 2024-07-12 03:48:34
 tags:
   - 工具
   - Web安全
