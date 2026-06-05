@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
 
-<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js" defer></script>
+<script class="next-config" data-name="main" type="application/json">{"hostname":"congliang.github.io","root":"/","images":"/images","scheme":"Pisces","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.json","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
 
     <meta name="description" content="域控制器攻击——DCSync、Zerologon、sAMAccountName 冒充与 RBCD 攻击。">
 <meta property="og:type" content="article">
@@ -27,7 +27,7 @@
 <meta property="og:description" content="域控制器攻击——DCSync、Zerologon、sAMAccountName 冒充与 RBCD 攻击。">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2025-10-05T00:00:00.000Z">
-<meta property="article:modified_time" content="2026-06-04T16:11:42.913Z">
+<meta property="article:modified_time" content="2026-06-05T05:34:14.106Z">
 <meta property="article:author" content="YunShang">
 <meta property="article:tag" content="内网渗透">
 <meta property="article:tag" content="渗透测试">
@@ -54,7 +54,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
 <script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
 
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
 
   <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"default","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
   <script src="/js/third-party/tags/mermaid.js" defer></script>
@@ -100,6 +102,7 @@
 
   <div class="site-nav-right">
     <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
     </div>
   </div>
 </div>
@@ -108,11 +111,37 @@
 
 <nav class="site-nav">
   <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
   </ul>
 </nav>
 
 
 
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </header>
         
@@ -154,8 +183,9 @@
         <span class="site-state-item-name">分类</span>
       </div>
       <div class="site-state-item site-state-tags">
+          <a href="/tags/">
         <span class="site-state-item-count">18</span>
-        <span class="site-state-item-name">标签</span>
+        <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
 </div>
@@ -167,6 +197,37 @@
         <a href="mailto:yunshang0069@126.com" title="E-Mail → mailto:yunshang0069@126.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
       </span>
   </div>
+<div class="sidebar-tags">
+  <div class="sidebar-title">标签</div>
+  <div class="tag-cloud">
+    <a href="/tags/Web安全/" style="font-size: 1.4em; color: #e74c3c;">Web安全</a>
+    <a href="/tags/渗透测试/" style="font-size: 1.6em; color: #e74c3c;">渗透测试</a>
+    <a href="/tags/框架安全/" style="font-size: 1.2em;">框架安全</a>
+    <a href="/tags/内网渗透/" style="font-size: 1.1em;">内网渗透</a>
+    <a href="/tags/权限提升/" style="font-size: 1.1em;">权限提升</a>
+    <a href="/tags/云安全/" style="font-size: 1em;">云安全</a>
+    <a href="/tags/工具/" style="font-size: 1em;">工具</a>
+    <a href="/tags/靶场/" style="font-size: 1em;">靶场</a>
+    <a href="/tags/反序列化/" style="font-size: 0.95em;">反序列化</a>
+    <a href="/tags/移动安全/" style="font-size: 0.9em;">移动安全</a>
+    <a href="/tags/代码审计/" style="font-size: 0.9em;">代码审计</a>
+    <a href="/tags/数据库安全/" style="font-size: 0.85em;">数据库安全</a>
+    <a href="/tags/后渗透/" style="font-size: 0.85em;">后渗透</a>
+    <a href="/tags/密码学/" style="font-size: 0.8em;">密码学</a>
+    <a href="/tags/认证安全/" style="font-size: 0.8em;">认证安全</a>
+    <a href="/tags/信息收集/" style="font-size: 0.75em;">信息收集</a>
+    <a href="/tags/方法论/" style="font-size: 0.75em;">方法论</a>
+    <a href="/tags/安全运维/" style="font-size: 0.75em;">安全运维</a>
+  </div>
+</div>
+
+<style>
+.sidebar-tags { margin-top: 20px; padding: 0 15px; }
+.sidebar-tags .sidebar-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; color: #555; }
+.sidebar-tags .tag-cloud { line-height: 2; }
+.sidebar-tags .tag-cloud a { display: inline-block; margin: 0 8px 4px 0; padding: 2px 8px; border-radius: 3px; background: #f5f5f5; text-decoration: none; border-bottom: none; }
+.sidebar-tags .tag-cloud a:hover { background: #e74c3c; color: #fff !important; }
+</style>
 
         </div>
       </div>
@@ -225,7 +286,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-06-05 00:11:42" itemprop="dateModified" datetime="2026-06-05T00:11:42+08:00">2026-06-05</time>
+      <time title="修改时间：2026-06-05 13:34:14" itemprop="dateModified" datetime="2026-06-05T13:34:14+08:00">2026-06-05</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -249,17 +310,17 @@
     
     <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>域控制器（Domain Controller, DC）是 Active Directory 的核心，承载着域内所有的身份认证与资源授权。一旦域控制器被攻陷，整个域便彻底沦陷。本文系统梳理当前主流的域控制器攻击技术，覆盖从凭证窃取到权限提升的完整攻击链，并结合流程图、代码示例与防御建议，帮助渗透测试人员和安全从业者理解这些攻击的原理与防护方法。</p>
 <h2 id="攻击技术全景流程图"><a href="#攻击技术全景流程图" class="headerlink" title="攻击技术全景流程图"></a>攻击技术全景流程图</h2><pre class="mermaid">flowchart TB
-    A[入口点: 普通域用户] --> B{当前权限}
-    B -->|无特权| C[信息收集<br/>BloodHound / ADExplorer]
+    A["入口点: 普通域用户"] --> B{当前权限}
+    B -->|无特权| C["信息收集 BloodHound / ADExplorer"]
     B -->|机器账户| D[MachineAccountQuota 攻击]
     C --> E{发现攻击路径}
-    E -->|ESI 权限| F[DCSync 攻击<br/>模拟域控复制凭据]
-    E -->|Netlogon 漏洞| G[Zerologon<br/>CVE-2020-1472]
-    E -->|sAMAccountName 篡改| H[sAMAccountName 冒充<br/>CVE-2021-42278 / 42287]
-    E -->|打印服务开启| I[Print Spooler<br/>PrintNightmare]
-    E -->|DFSCoerce 路径| J[DFSCoerce<br/>强制认证中继]
-    E -->|KeyTrust 支持| K[Shadow Credentials<br/>替代 Key Credential]
-    E -->|ACL 可编辑| L[RBCD 攻击<br/>基于资源的约束委派]
+    E -->|ESI 权限| F[DCSync 攻击 模拟域控复制凭据]
+    E -->|Netlogon 漏洞| G[Zerologon CVE-2020-1472]
+    E -->|sAMAccountName 篡改| H["sAMAccountName 冒充 CVE-2021-42278 / 42287"]
+    E -->|打印服务开启| I[Print Spooler PrintNightmare]
+    E -->|DFSCoerce 路径| J[DFSCoerce 强制认证中继]
+    E -->|KeyTrust 支持| K[Shadow Credentials 替代 Key Credential]
+    E -->|ACL 可编辑| L[RBCD 攻击 基于资源的约束委派]
     F --> Z[获取 NTDS.dit 中全部凭据]
     G --> Z[重置 DC 机器账户密码为空]
     H --> Z[获取 DC 机器账户 TGT]
@@ -268,7 +329,7 @@
     K --> Z[获取 DC 机器账户 TGT]
     L --> Z[以 DC 身份访问服务]
     Z --> M[完全控制域控制器]
-    M --> N[持久化 / 横向移动 / 数据窃取]</pre>
+    M --> N["持久化 / 横向移动 / 数据窃取"]</pre>
 
 <h2 id="一、DCSync-——-模拟域控制器复制凭据"><a href="#一、DCSync-——-模拟域控制器复制凭据" class="headerlink" title="一、DCSync —— 模拟域控制器复制凭据"></a>一、DCSync —— 模拟域控制器复制凭据</h2><h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>Active Directory 支持多域控制器之间通过 <strong>MS-DRSR（Directory Replication Service）</strong> 协议同步数据。<code>GetNCChanges</code> 是该协议的核心操作，允许一个域控制器从另一个域控制器拉取目录分区更新。拥有 <strong>DS-Replication-Get-Changes</strong> 和 <strong>DS-Replication-Get-Changes-All</strong> 权限（默认由 Domain Admins、Enterprise Admins、Administrators 组持有）的用户可以伪装成域控制器，向真实的 DC 发起目录复制请求，从而获取包括 Kerberos 密钥（AES256、AES128）、NTLM Hash 在内的所有用户凭据。</p>
 <h3 id="攻击条件"><a href="#攻击条件" class="headerlink" title="攻击条件"></a>攻击条件</h3><ul>
@@ -446,8 +507,8 @@
 
           <div class="post-nav">
             <div class="post-nav-item">
-                <a href="/Docker-K8s-security/" rel="prev" title="云原生：Docker与Kubernetes安全">
-                  <i class="fa fa-angle-left"></i> 云原生：Docker与Kubernetes安全
+                <a href="/File-inclusion-defense/" rel="prev" title="文件包含漏洞：防御与代码审计">
+                  <i class="fa fa-angle-left"></i> 文件包含漏洞：防御与代码审计
                 </a>
             </div>
             <div class="post-nav-item">
